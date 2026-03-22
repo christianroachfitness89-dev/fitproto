@@ -21,9 +21,10 @@ import {
   UserCog,
   X,
   Menu,
-  Settings,
+  LogOut,
 } from 'lucide-react'
 import clsx from 'clsx'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface LibraryItem {
   label: string
@@ -50,6 +51,7 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
   const [libraryOpen, setLibraryOpen] = useState(false)
   const location = useLocation()
   const isLibraryActive = location.pathname.startsWith('/library')
+  const { profile, signOut } = useAuth()
 
   const navItemClass = ({ isActive }: { isActive: boolean }) =>
     clsx(
@@ -244,13 +246,19 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
         <div className="h-px bg-sidebar-border mb-3" />
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-sidebar-hover cursor-pointer transition-colors group">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-md shadow-brand-900/40">
-            CR
+            {profile?.initials ?? '?'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-semibold truncate">Christian Roach</p>
-            <p className="text-gray-500 text-xs truncate">Head Coach</p>
+            <p className="text-white text-sm font-semibold truncate">{profile?.full_name ?? 'Coach'}</p>
+            <p className="text-gray-500 text-xs truncate capitalize">{profile?.role ?? 'owner'}</p>
           </div>
-          <Settings size={14} className="text-gray-600 group-hover:text-gray-400 transition-colors flex-shrink-0" />
+          <button
+            onClick={signOut}
+            title="Sign out"
+            className="text-gray-600 hover:text-gray-300 transition-colors flex-shrink-0 p-1 rounded"
+          >
+            <LogOut size={14} />
+          </button>
         </div>
       </div>
     </div>

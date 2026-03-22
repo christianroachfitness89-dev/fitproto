@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Search, Bell, CheckSquare, Sparkles } from 'lucide-react'
 import { MobileMenuButton } from './Sidebar'
-import { mockNotifications } from '../../data/mockData'
+import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications'
 import clsx from 'clsx'
 
 interface HeaderProps {
@@ -11,7 +11,10 @@ interface HeaderProps {
 
 export default function Header({ title, onMenuClick }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false)
-  const unreadCount = mockNotifications.filter((n) => !n.read).length
+  const { data: notifications = [] } = useNotifications()
+  const markAllRead = useMarkAllNotificationsRead()
+
+  const unreadCount = notifications.filter(n => !n.read).length
 
   return (
     <header className="h-16 glass border-b border-white/60 flex items-center px-6 gap-4 sticky top-0 z-20">
@@ -31,13 +34,11 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-1.5 ml-auto">
-        {/* Tasks */}
         <button className="p-2 rounded-lg text-gray-400 hover:bg-white hover:text-gray-600 transition-all hover:shadow-sm">
           <CheckSquare size={18} />
         </button>
 
-        {/* Upgrade */}
-        <button className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 text-white text-xs font-semibold rounded-lg transition-all shadow-md shadow-brand-500/25 hover:shadow-brand-500/40">
+        <button className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 text-white text-xs font-semibold rounded-lg transition-all shadow-md shadow-brand-500/25">
           <Sparkles size={13} />
           Upgrade
         </button>
@@ -45,12 +46,12 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
         {/* Notifications */}
         <div className="relative">
           <button
-            onClick={() => setShowNotifications(!showNotifications)}
+            onClick={() => setShowNotifications(v => !v)}
             className="relative p-2 rounded-lg text-gray-400 hover:bg-white hover:text-gray-600 transition-all hover:shadow-sm"
           >
             <Bell size={18} />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-500 rounded-full ring-2 ring-white" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-500 rounded-full ring-2 ring-white/60" />
             )}
           </button>
 
@@ -58,33 +59,48 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
             <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-card-lg border border-gray-100 overflow-hidden z-50">
               <div className="px-4 py-3.5 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="font-semibold text-gray-800 text-sm">Notifications</h3>
-                {unreadCount > 0 && (
-                  <span className="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full">{unreadCount} new</span>
-                )}
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <span className="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full">{unreadCount} new</span>
+                  )}
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={() => markAllRead.mutate()}
+                      className="text-xs text-gray-400 hover:text-gray-600"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="max-h-80 overflow-y-auto">
-                {mockNotifications.map((notif) => (
-                  <div
-                    key={notif.id}
-                    className={clsx(
-                      'px-4 py-3 border-b border-gray-50 hover:bg-gray-50/80 cursor-pointer transition-colors',
-                      !notif.read && 'bg-brand-50/40'
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      {!notif.read && (
-                        <div className="w-1.5 h-1.5 rounded-full bg-brand-500 mt-2 flex-shrink-0" />
+                {notifications.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <Bell size={24} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">No notifications</p>
+                  </div>
+                ) : (
+                  notifications.map(notif => (
+                    <div
+                      key={notif.id}
+                      className={clsx(
+                        'px-4 py-3 border-b border-gray-50 hover:bg-gray-50/80 cursor-pointer transition-colors',
+                        !notif.read && 'bg-brand-50/40'
                       )}
-                      <div className={clsx(!notif.read ? '' : 'ml-[18px]')}>
-                        <p className="text-sm font-medium text-gray-800">{notif.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{notif.body}</p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
+                    >
+                      <div className="flex items-start gap-3">
+                        {!notif.read && <div className="w-1.5 h-1.5 rounded-full bg-brand-500 mt-2 flex-shrink-0" />}
+                        <div className={!notif.read ? '' : 'ml-[18px]'}>
+                          <p className="text-sm font-medium text-gray-800">{notif.title}</p>
+                          {notif.body && <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{notif.body}</p>}
+                          <p className="text-xs text-gray-400 mt-1">
+                            {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
               <div className="px-4 py-3 text-center bg-gray-50/50">
                 <button className="text-sm text-brand-600 font-medium hover:text-brand-700">

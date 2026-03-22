@@ -1,4 +1,7 @@
-import { HashRouter as BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { isConfigured } from './lib/supabase'
 import AppLayout from './components/layout/AppLayout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -8,30 +11,93 @@ import Library from './pages/Library'
 import Inbox from './pages/Inbox'
 import Placeholder from './pages/Placeholder'
 
-export default function App() {
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 30,       // 30s before background refetch
+      retry: 1,
+    },
+  },
+})
+
+// ─── Guard: redirect to /login if not authenticated ──────────
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth()
+  if (loading) return <FullPageLoader />
+  if (!user) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
+
+// ─── Guard: redirect to /dashboard if already logged in ──────
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth()
+  if (loading) return <FullPageLoader />
+  if (user) return <Navigate to="/dashboard" replace />
+  return <>{children}</>
+}
+
+function FullPageLoader() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<AppLayout />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="clients" element={<Clients />} />
-          <Route path="clients/:id" element={<ClientDetail />} />
-          <Route path="library/:section" element={<Library />} />
-          <Route path="library" element={<Navigate to="/library/exercises" replace />} />
-          <Route path="inbox" element={<Inbox />} />
-          <Route path="automation" element={<Placeholder title="Automation" description="Set up automated workflows, reminders, and check-ins for your clients." />} />
-          <Route path="on-demand" element={<Placeholder title="On-demand Content" description="Create and manage on-demand video content and resources for your clients." />} />
-          <Route path="community" element={<Placeholder title="Community Forums" description="Build an engaged community with group discussions and challenges." />} />
-          <Route path="payments" element={<Placeholder title="Payment & Packages" description="Manage subscriptions, packages, and payment processing." />} />
-          <Route path="marketplace" element={<Placeholder title="Marketplace" description="Discover and share programs and content with other coaches." />} />
-          <Route path="referral" element={<Placeholder title="Referral Program" description="Earn rewards by referring other coaches to FitProto." />} />
-          <Route path="teammates" element={<Placeholder title="Teammates" description="Invite and manage team members who help you coach clients." />} />
-          <Route path="quick-start" element={<Placeholder title="Quick Start Guide" description="Everything you need to get started with FitProto." />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <div className="min-h-screen bg-gradient-to-br from-sidebar-bg via-[#1e1e35] to-[#2a1a4e] flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+}
+
+// ─── Setup screen when Supabase isn't configured ─────────────
+function SetupRequired() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-sidebar-bg via-[#1e1e35] to-[#2a1a4e] flex items-center justify-center p-6">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full">
+        <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center mb-4">
+          <span className="text-2xl">⚙️</span>
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Setup Required</h2>
+        <p className="text-gray-600 text-sm mb-4">
+          Connect your Supabase project to get started. Create a <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">.env.local</code> file in <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">packages/web/</code> with:
+        </p>
+        <pre className="bg-gray-900 text-emerald-400 text-xs p-4 rounded-xl font-mono mb-4 overflow-x-auto">
+{`VITE_SUPABASE_URL=https://xxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key`}
+        </pre>
+        <p className="text-gray-500 text-xs">
+          Then run the SQL in <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono">supabase/schema.sql</code> in your Supabase SQL Editor, and restart the dev server.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default function App() {
+  if (!isConfigured) return <SetupRequired />
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <HashRouter>
+          <Routes>
+            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="clients" element={<Clients />} />
+              <Route path="clients/:id" element={<ClientDetail />} />
+              <Route path="library/:section" element={<Library />} />
+              <Route path="library" element={<Navigate to="/library/exercises" replace />} />
+              <Route path="inbox" element={<Inbox />} />
+              <Route path="automation" element={<Placeholder title="Automation" description="Set up automated workflows, reminders, and check-ins for your clients." />} />
+              <Route path="on-demand" element={<Placeholder title="On-demand Content" description="Create and manage on-demand video content and resources for your clients." />} />
+              <Route path="community" element={<Placeholder title="Community Forums" description="Build an engaged community with group discussions and challenges." />} />
+              <Route path="payments" element={<Placeholder title="Payment & Packages" description="Manage subscriptions, packages, and payment processing." />} />
+              <Route path="marketplace" element={<Placeholder title="Marketplace" description="Discover and share programs and content with other coaches." />} />
+              <Route path="referral" element={<Placeholder title="Referral Program" description="Earn rewards by referring other coaches to FitProto." />} />
+              <Route path="teammates" element={<Placeholder title="Teammates" description="Invite and manage team members who help you coach clients." />} />
+              <Route path="quick-start" element={<Placeholder title="Quick Start Guide" description="Everything you need to get started with FitProto." />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </HashRouter>
+      </AuthProvider>
+    </QueryClientProvider>
   )
 }
