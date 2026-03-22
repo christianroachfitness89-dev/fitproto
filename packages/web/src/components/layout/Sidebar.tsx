@@ -21,6 +21,7 @@ import {
   UserCog,
   X,
   Menu,
+  Settings,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -31,13 +32,13 @@ interface LibraryItem {
 }
 
 const libraryItems: LibraryItem[] = [
-  { label: 'Exercises', href: '/library/exercises', icon: <Dumbbell size={16} /> },
-  { label: 'Workouts', href: '/library/workouts', icon: <ClipboardList size={16} /> },
-  { label: 'Programs', href: '/library/programs', icon: <BarChart3 size={16} /> },
-  { label: 'Tasks', href: '/library/tasks', icon: <CheckSquare size={16} /> },
-  { label: 'Forms & Questionnaires', href: '/library/forms', icon: <BookOpen size={16} /> },
-  { label: 'Meal Plan Templates', href: '/library/meals', icon: <Utensils size={16} /> },
-  { label: 'Metric Groups', href: '/library/metrics', icon: <BarChart3 size={16} /> },
+  { label: 'Exercises', href: '/library/exercises', icon: <Dumbbell size={14} /> },
+  { label: 'Workouts', href: '/library/workouts', icon: <ClipboardList size={14} /> },
+  { label: 'Programs', href: '/library/programs', icon: <BarChart3 size={14} /> },
+  { label: 'Tasks', href: '/library/tasks', icon: <CheckSquare size={14} /> },
+  { label: 'Forms & Questionnaires', href: '/library/forms', icon: <BookOpen size={14} /> },
+  { label: 'Meal Plan Templates', href: '/library/meals', icon: <Utensils size={14} /> },
+  { label: 'Metric Groups', href: '/library/metrics', icon: <BarChart3 size={14} /> },
 ]
 
 interface SidebarProps {
@@ -52,41 +53,50 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
 
   const navItemClass = ({ isActive }: { isActive: boolean }) =>
     clsx(
-      'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group',
+      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group relative',
       isActive
-        ? 'bg-sidebar-active text-white'
-        : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+        ? 'bg-gradient-to-r from-brand-600/25 to-brand-500/10 text-white border border-brand-500/20'
+        : 'text-gray-400 hover:bg-sidebar-hover hover:text-gray-200 border border-transparent'
     )
 
   return (
-    <div className="h-full flex flex-col bg-sidebar-bg w-64 select-none">
+    <div className="h-full flex flex-col bg-sidebar-bg w-64 select-none border-r border-sidebar-border">
       {/* Logo */}
-      <div className="flex items-center justify-between px-5 py-5 border-b border-sidebar-border">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center">
-            <Dumbbell size={18} className="text-white" />
+      <div className="flex items-center justify-between px-4 py-5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-violet-600 rounded-lg flex items-center justify-center shadow-lg shadow-brand-600/30">
+            <Dumbbell size={16} className="text-white" />
           </div>
-          <span className="text-white font-bold text-lg tracking-tight">FitProto</span>
+          <span className="text-white font-bold text-base tracking-tight">FitProto</span>
         </div>
         {mobile && (
-          <button onClick={onClose} className="text-gray-400 hover:text-white p-1 rounded">
-            <X size={20} />
+          <button onClick={onClose} className="text-gray-500 hover:text-white p-1 rounded transition-colors">
+            <X size={18} />
           </button>
         )}
       </div>
 
+      {/* Divider */}
+      <div className="mx-4 h-px bg-sidebar-border" />
+
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
         <NavLink to="/dashboard" className={navItemClass}>
-          <LayoutDashboard size={18} />
-          Dashboard
+          {({ isActive }) => (
+            <>
+              <LayoutDashboard size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
+              Dashboard
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/clients" className={navItemClass}>
           {({ isActive }) => (
             <>
-              <Users size={18} className={isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'} />
+              <Users size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
               Clients
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
             </>
           )}
         </NavLink>
@@ -96,21 +106,22 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
           <button
             onClick={() => setLibraryOpen(!libraryOpen)}
             className={clsx(
-              'w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 border relative',
               isLibraryActive
-                ? 'bg-sidebar-active text-white'
-                : 'text-gray-400 hover:bg-sidebar-hover hover:text-white'
+                ? 'bg-gradient-to-r from-brand-600/25 to-brand-500/10 text-white border-brand-500/20'
+                : 'text-gray-400 hover:bg-sidebar-hover hover:text-gray-200 border-transparent'
             )}
           >
-            <BookOpen size={18} />
+            {isLibraryActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            <BookOpen size={17} className={isLibraryActive ? 'text-brand-400' : 'text-gray-500'} />
             <span className="flex-1 text-left">Library</span>
             <ChevronDown
-              size={16}
-              className={clsx('transition-transform duration-200', (libraryOpen || isLibraryActive) && 'rotate-180')}
+              size={14}
+              className={clsx('transition-transform duration-200 text-gray-500', (libraryOpen || isLibraryActive) && 'rotate-180')}
             />
           </button>
           {(libraryOpen || isLibraryActive) && (
-            <div className="mt-1 ml-4 space-y-0.5 border-l border-sidebar-border pl-3">
+            <div className="mt-1 ml-3 space-y-0.5 border-l border-sidebar-border pl-3">
               {libraryItems.map((item) => (
                 <NavLink
                   key={item.href}
@@ -119,7 +130,7 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
                     clsx(
                       'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all',
                       isActive
-                        ? 'text-brand-400 bg-brand-500/10'
+                        ? 'text-brand-300 bg-brand-500/10'
                         : 'text-gray-500 hover:text-gray-300 hover:bg-sidebar-hover'
                     )
                   }
@@ -133,65 +144,113 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
         </div>
 
         <NavLink to="/inbox" className={navItemClass}>
-          <MessageSquare size={18} />
-          Inbox
+          {({ isActive }) => (
+            <>
+              <MessageSquare size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
+              Inbox
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/automation" className={navItemClass}>
-          <Zap size={18} />
-          Automation
+          {({ isActive }) => (
+            <>
+              <Zap size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
+              Automation
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/on-demand" className={navItemClass}>
-          <PlayCircle size={18} />
-          On-demand
+          {({ isActive }) => (
+            <>
+              <PlayCircle size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
+              On-demand
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/community" className={navItemClass}>
-          <Users2 size={18} />
-          Community Forums
+          {({ isActive }) => (
+            <>
+              <Users2 size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
+              Community Forums
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/payments" className={navItemClass}>
-          <CreditCard size={18} />
-          Payment & Packages
+          {({ isActive }) => (
+            <>
+              <CreditCard size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
+              Payment & Packages
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            </>
+          )}
         </NavLink>
 
         <div className="pt-3 pb-1">
-          <div className="h-px bg-sidebar-border mx-2" />
+          <div className="h-px bg-sidebar-border mx-1" />
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-600 px-3 mt-3 mb-1">More</p>
         </div>
 
         <NavLink to="/quick-start" className={navItemClass}>
-          <HelpCircle size={18} />
-          Quick Start Guide
+          {({ isActive }) => (
+            <>
+              <HelpCircle size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
+              Quick Start Guide
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/marketplace" className={navItemClass}>
-          <ShoppingBag size={18} />
-          Marketplace
+          {({ isActive }) => (
+            <>
+              <ShoppingBag size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
+              Marketplace
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/referral" className={navItemClass}>
-          <Gift size={18} />
-          Referral Program
+          {({ isActive }) => (
+            <>
+              <Gift size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
+              Referral Program
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/teammates" className={navItemClass}>
-          <UserCog size={18} />
-          Teammates
+          {({ isActive }) => (
+            <>
+              <UserCog size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
+              Teammates
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            </>
+          )}
         </NavLink>
       </nav>
 
       {/* Coach profile */}
-      <div className="px-3 py-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-sidebar-hover cursor-pointer transition-colors">
-          <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+      <div className="px-3 pb-4">
+        <div className="h-px bg-sidebar-border mb-3" />
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-sidebar-hover cursor-pointer transition-colors group">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-md shadow-brand-900/40">
             CR
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-medium truncate">Christian Roach</p>
+            <p className="text-white text-sm font-semibold truncate">Christian Roach</p>
             <p className="text-gray-500 text-xs truncate">Head Coach</p>
           </div>
+          <Settings size={14} className="text-gray-600 group-hover:text-gray-400 transition-colors flex-shrink-0" />
         </div>
       </div>
     </div>
@@ -202,7 +261,7 @@ export function MobileMenuButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors lg:hidden"
+      className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors lg:hidden"
     >
       <Menu size={22} />
     </button>

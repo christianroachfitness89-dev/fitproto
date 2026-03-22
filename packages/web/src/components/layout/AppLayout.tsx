@@ -31,7 +31,7 @@ export default function AppLayout() {
   const title = pageTitles[location.pathname] ?? 'FitProto'
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-surface-100">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex flex-shrink-0">
         <Sidebar />
