@@ -2,13 +2,16 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   Dumbbell, CheckCircle2, Clock, Calendar, ChevronDown, ChevronUp,
-  Loader2, Target, ClipboardList, X, ArrowLeft,
+  Loader2, Target, ClipboardList, ArrowLeft, Lock,
+  BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { playRestEndChime } from '@/lib/sound'
 import clsx from 'clsx'
 
-// ─── RPC response types ────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────
+type ActiveSection = 'workouts' | 'history' | 'metrics' | 'nutrition' | null
+
 interface PortalWorkout {
   id: string
   status: 'assigned' | 'completed' | 'skipped'
@@ -30,6 +33,7 @@ interface PortalData {
   status: string
   goal: string | null
   workouts: PortalWorkout[]
+  portal_sections: string[]
 }
 
 interface PortalSet {
@@ -57,19 +61,75 @@ interface PortalWorkoutDetail {
   exercises: PortalExercise[] | null
 }
 
-// ─── Shared helpers ────────────────────────────────────────────
+interface PortalHistoryEntry {
+  id: string
+  completed_at: string
+  notes: string | null
+  workout_name: string
+  set_count: number
+  exercises: string[]
+}
+
+interface PortalMetricEntry {
+  id: string
+  checked_in_at: string
+  weight_kg: number | null
+  body_fat_pct: number | null
+  energy_level: number | null
+  sleep_hours: number | null
+  notes: string | null
+}
+
+// ─── Constants ─────────────────────────────────────────────────
 const DIFFICULTY_COLORS = {
   beginner:     'bg-emerald-500/20 text-emerald-300',
   intermediate: 'bg-amber-500/20 text-amber-300',
   advanced:     'bg-rose-500/20 text-rose-300',
 }
 
+const SECTION_DEFS = [
+  {
+    id:       'workouts' as const,
+    label:    'Workouts',
+    desc:     'Your training sessions',
+    icon:     Dumbbell,
+    gradient: 'from-violet-600 to-brand-600',
+    glow:     'shadow-violet-500/40',
+    bg:       'bg-violet-500/10',
+  },
+  {
+    id:       'history' as const,
+    label:    'History',
+    desc:     'Past sessions & logs',
+    icon:     History,
+    gradient: 'from-amber-500 to-orange-500',
+    glow:     'shadow-amber-500/40',
+    bg:       'bg-amber-500/10',
+  },
+  {
+    id:       'metrics' as const,
+    label:    'Metrics',
+    desc:     'Progress & measurements',
+    icon:     BarChart2,
+    gradient: 'from-emerald-500 to-teal-500',
+    glow:     'shadow-emerald-500/40',
+    bg:       'bg-emerald-500/10',
+  },
+  {
+    id:       'nutrition' as const,
+    label:    'Nutrition',
+    desc:     'Meal plans & guidance',
+    icon:     Utensils,
+    gradient: 'from-rose-500 to-pink-500',
+    glow:     'shadow-rose-500/40',
+    bg:       'bg-rose-500/10',
+  },
+]
+
 type SetEntry = { reps: string; weight: string; duration: string; distance: string; rpe: string }
 
-// ─── Rest timer overlay ───────────────────────────────────────
-function RestTimer({
-  restSeconds, label, onDone,
-}: {
+// ─── Rest timer overlay ────────────────────────────────────────
+function RestTimer({ restSeconds, label, onDone }: {
   restSeconds: number
   label: string
   onDone: () => void
@@ -82,29 +142,22 @@ function RestTimer({
     return () => clearTimeout(t)
   }, [remaining])
 
-  const radius       = 64
-  const circumference = 2 * Math.PI * radius
-  const progress     = restSeconds > 0 ? remaining / restSeconds : 0
-  // offset goes from 0 (full ring) → circumference (empty ring)
-  const strokeOffset = circumference * (1 - progress)
-
-  const mins = Math.floor(remaining / 60)
-  const secs = remaining % 60
+  const circumference = 2 * Math.PI * 64
+  const strokeOffset  = circumference * (1 - (restSeconds > 0 ? remaining / restSeconds : 0))
+  const mins    = Math.floor(remaining / 60)
+  const secs    = remaining % 60
   const display = mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : `${secs}`
 
   return (
-    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#08081a]/96 backdrop-blur-sm">
-      <p className="text-white/30 text-xs uppercase tracking-[0.2em] mb-1">Rest Period</p>
-      <p className="text-white/60 text-sm font-medium mb-8 max-w-[220px] text-center">{label}</p>
+    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#060616]/98 backdrop-blur-xl">
+      <p className="text-brand-400/70 text-[10px] font-bold uppercase tracking-[0.25em] mb-1">Rest Period</p>
+      <p className="text-white/50 text-sm font-medium mb-2 max-w-[240px] text-center px-4 leading-relaxed">{label}</p>
+      <p className="text-white/20 text-[10px] uppercase tracking-widest font-semibold mb-6">Time remaining</p>
 
-      {/* Countdown ring */}
-      <div className="relative w-48 h-48">
+      <div className="relative w-56 h-56">
         <svg viewBox="0 0 160 160" className="w-full h-full -rotate-90">
-          {/* Track */}
-          <circle cx="80" cy="80" r={radius}
-            stroke="rgba(255,255,255,0.06)" strokeWidth="10" fill="none" />
-          {/* Progress */}
-          <circle cx="80" cy="80" r={radius}
+          <circle cx="80" cy="80" r="64" stroke="rgba(255,255,255,0.06)" strokeWidth="10" fill="none" />
+          <circle cx="80" cy="80" r="64"
             stroke="url(#timerGrad)" strokeWidth="10" fill="none"
             strokeLinecap="round"
             strokeDasharray={circumference}
@@ -112,85 +165,71 @@ function RestTimer({
             style={{ transition: 'stroke-dashoffset 0.85s linear' }} />
           <defs>
             <linearGradient id="timerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#7c3aed" />
+              <stop offset="0%" stopColor="#6366f1" />
               <stop offset="100%" stopColor="#a855f7" />
             </linearGradient>
           </defs>
         </svg>
-        {/* Time */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-5xl font-bold text-white tabular-nums leading-none">{display}</span>
-          <span className="text-white/30 text-xs mt-1">seconds</span>
+          <span className="text-6xl font-black text-white tabular-nums leading-none">{display}</span>
+          <span className="text-white/25 text-[10px] uppercase tracking-widest font-semibold mt-1">seconds</span>
         </div>
       </div>
 
-      {/* ±15 s controls */}
       <div className="mt-8 flex items-center gap-3">
         <button
           onClick={() => setRemaining(r => Math.max(0, r - 15))}
-          className="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-lg font-bold transition-colors border border-white/10 flex items-center justify-center"
-        >
-          −15
-        </button>
+          className="w-12 h-12 rounded-2xl bg-white/8 hover:bg-white/15 text-white/60 hover:text-white text-sm font-bold transition-all border border-white/10 flex items-center justify-center hover:scale-105 active:scale-95"
+        >−15</button>
         <button
           onClick={onDone}
-          className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-semibold rounded-2xl transition-colors border border-white/10"
-        >
-          Skip
-        </button>
+          className="px-8 py-3 bg-white/10 hover:bg-white/18 text-white/80 hover:text-white text-sm font-semibold rounded-full transition-all border border-white/15"
+        >Skip</button>
         <button
           onClick={() => setRemaining(r => r + 15)}
-          className="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-lg font-bold transition-colors border border-white/10 flex items-center justify-center"
-        >
-          +15
-        </button>
+          className="w-12 h-12 rounded-2xl bg-white/8 hover:bg-white/15 text-white/60 hover:text-white text-sm font-bold transition-all border border-white/10 flex items-center justify-center hover:scale-105 active:scale-95"
+        >+15</button>
       </div>
     </div>
   )
 }
 
-// ─── Portal log session overlay ───────────────────────────────
-function PortalLogOverlay({
-  cw, clientId, onClose, onDone,
-}: {
+// ─── Log session overlay ───────────────────────────────────────
+function PortalLogOverlay({ cw, clientId, onClose, onDone }: {
   cw: PortalWorkout
   clientId: string
   onClose: () => void
   onDone: (id: string) => void
 }) {
-  const [detail, setDetail]   = useState<PortalWorkoutDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [entries, setEntries] = useState<Record<string, SetEntry>>({})
+  const [detail, setDetail]     = useState<PortalWorkoutDetail | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [entries, setEntries]   = useState<Record<string, SetEntry>>({})
   const [completedAt, setCompletedAt] = useState(() => {
     const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
   })
-  const [notes, setNotes]   = useState('')
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved]   = useState(false)
-  const [error, setError]   = useState<string | null>(null)
+  const [notes, setNotes]       = useState('')
+  const [saving, setSaving]     = useState(false)
+  const [saved, setSaved]       = useState(false)
+  const [error, setError]       = useState<string | null>(null)
   const [doneSets, setDoneSets] = useState<Set<string>>(new Set())
   const [restTimer, setRestTimer] = useState<{ restSeconds: number; label: string } | null>(null)
 
   function handleSetDone(key: string, exerciseName: string, setNumber: number, restSeconds: number) {
     setDoneSets(prev => new Set([...prev, key]))
-    if (restSeconds > 0) {
-      setRestTimer({ restSeconds, label: `${exerciseName} — Set ${setNumber} complete` })
-    }
+    if (restSeconds > 0) setRestTimer({ restSeconds, label: `${exerciseName} — Set ${setNumber} complete` })
   }
 
   useEffect(() => {
     supabase.rpc('get_portal_workout_detail', {
-      p_client_workout_id: cw.id,
-      p_client_id: clientId,
+      p_client_workout_id: cw.id, p_client_id: clientId,
     }).then(({ data, error: err }) => {
       if (!err && data) {
         const d = data as PortalWorkoutDetail
         setDetail(d)
-        // Pre-fill entries from programmed values
         const init: Record<string, SetEntry> = {}
-        for (const ex of d.exercises ?? []) {
-          for (const s of ex.sets ?? []) {
+        for (const ex of d.exercises ?? [])
+          for (const s of ex.sets ?? [])
             init[`${ex.id}-${s.set_number}`] = {
               reps:     s.reps?.toString()             ?? '',
               weight:   s.weight?.toString()           ?? '',
@@ -198,8 +237,6 @@ function PortalLogOverlay({
               distance: s.distance_meters?.toString()  ?? '',
               rpe:      '',
             }
-          }
-        }
         setEntries(init)
       }
       setLoading(false)
@@ -211,8 +248,7 @@ function PortalLogOverlay({
   }
 
   async function submit() {
-    setError(null)
-    setSaving(true)
+    setError(null); setSaving(true)
     const setLogs = (detail?.exercises ?? []).flatMap(ex =>
       (ex.sets ?? []).map(s => {
         const e = entries[`${ex.id}-${s.set_number}`] ?? {} as SetEntry
@@ -228,72 +264,98 @@ function PortalLogOverlay({
       })
     )
     const { data: result, error: err } = await supabase.rpc('log_portal_workout', {
-      p_client_workout_id: cw.id,
-      p_client_id: clientId,
-      p_completed_at: completedAt,
-      p_notes: notes,
-      p_set_logs: setLogs as any,
+      p_client_workout_id: cw.id, p_client_id: clientId,
+      p_completed_at: completedAt, p_notes: notes, p_set_logs: setLogs as any,
     })
     setSaving(false)
     if (err || (result as any)?.error) {
-      setError(err?.message ?? (result as any)?.error ?? 'Something went wrong')
-      return
+      setError(err?.message ?? (result as any)?.error ?? 'Something went wrong'); return
     }
     setSaved(true)
     setTimeout(() => { onDone(cw.id); onClose() }, 1000)
   }
 
-  const inp = 'w-full px-2 py-2 text-sm text-center bg-white/10 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-brand-400 focus:bg-white/15'
+  const inp = 'w-full px-2 py-2 text-[13px] text-center bg-white/8 border border-white/12 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 transition-all'
+
+  // Count total and done sets for progress
+  const totalSets = (detail?.exercises ?? []).reduce((n, ex) => n + (ex.sets?.length ?? 0), 0)
+  const doneSetsCount = doneSets.size
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-br from-[#0a0a1a] via-[#161630] to-[#200f3a] flex flex-col relative">
-      {/* Rest timer — overlays the form */}
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-[#0a0a1a] via-[#12122a] to-[#1a0f30] flex flex-col">
       {restTimer && (
-        <RestTimer
-          restSeconds={restTimer.restSeconds}
-          label={restTimer.label}
-          onDone={() => setRestTimer(null)}
-        />
+        <RestTimer restSeconds={restTimer.restSeconds} label={restTimer.label} onDone={() => setRestTimer(null)} />
       )}
+
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-safe pt-6 pb-4 border-b border-white/10">
-        <button onClick={onClose} className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors">
-          <ArrowLeft size={20} />
+      <div className="flex items-center gap-3 px-4 pt-12 pb-4 border-b border-white/8">
+        <button onClick={onClose}
+          className="w-10 h-10 rounded-2xl bg-white/8 border border-white/10 hover:bg-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all">
+          <ArrowLeft size={18} />
         </button>
         <div className="flex-1 min-w-0">
-          <p className="text-white font-bold truncate">{cw.workout.name}</p>
-          <p className="text-white/40 text-xs">Log your session</p>
+          <p className="text-white font-bold text-base truncate">{cw.workout.name}</p>
+          <p className="text-white/35 text-xs tracking-wide">
+            {loading ? 'Loading…' : `${doneSetsCount} / ${totalSets} sets done`}
+          </p>
         </div>
         <input type="date" value={completedAt} onChange={e => setCompletedAt(e.target.value)}
-          className="px-3 py-1.5 text-xs bg-white/10 border border-white/10 rounded-xl text-white/80 focus:outline-none focus:border-brand-400" />
+          className="px-3 py-2 text-[11px] bg-white/8 border border-white/12 rounded-2xl text-white/80 focus:outline-none focus:border-brand-400" />
       </div>
 
+      {/* Progress bar */}
+      {!loading && totalSets > 0 && (
+        <div className="h-0.5 bg-white/5">
+          <div
+            className="h-full bg-gradient-to-r from-brand-500 to-violet-500 transition-all duration-500"
+            style={{ width: `${(doneSetsCount / totalSets) * 100}%` }}
+          />
+        </div>
+      )}
+
       {/* Exercises */}
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
+      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
         {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/6 border border-white/10 flex items-center justify-center">
+              <div className="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+            <p className="text-white/30 text-xs tracking-widest uppercase">Loading exercises</p>
           </div>
-        ) : (detail?.exercises ?? []).map(ex => {
-          const metric      = ex.metric_type ?? 'reps_weight'
-          const isWeighted  = metric === 'reps_weight'
-          const isTimed     = metric === 'time'
-          const isDistance  = metric === 'distance'
-          const colClass    = isWeighted
-            ? 'grid-cols-[24px_1fr_1fr_56px_40px]'
-            : 'grid-cols-[24px_1fr_56px_40px]'
+        ) : (detail?.exercises ?? []).map((ex, idx) => {
+          const metric     = ex.metric_type ?? 'reps_weight'
+          const isWeighted = metric === 'reps_weight'
+          const isTimed    = metric === 'time'
+          const isDistance = metric === 'distance'
+          const colClass   = isWeighted
+            ? 'grid-cols-[28px_1fr_1fr_52px_38px]'
+            : 'grid-cols-[28px_1fr_52px_38px]'
+
+          const exSets    = ex.sets ?? []
+          const exDone    = exSets.filter(s => doneSets.has(`${ex.id}-${s.set_number}`)).length
+
           return (
-            <div key={ex.id}>
-              <div className="flex items-center gap-2 mb-3">
-                <p className="text-white font-semibold text-sm">{ex.name}</p>
-                {ex.muscle_group && (
-                  <span className="text-xs text-white/40 bg-white/5 px-2 py-0.5 rounded-full">
-                    {ex.muscle_group}
+            <div key={ex.id} className="rounded-2xl bg-white/5 border border-white/8 p-4">
+              {/* Exercise header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-[11px] font-bold text-white/50 flex-shrink-0">
+                  {idx + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-bold text-[15px] leading-tight">{ex.name}</p>
+                  {ex.muscle_group && (
+                    <p className="text-white/35 text-[11px] font-medium mt-0.5">{ex.muscle_group}</p>
+                  )}
+                </div>
+                {exSets.length > 0 && (
+                  <span className="text-[11px] font-semibold text-white/30">
+                    {exDone}/{exSets.length}
                   </span>
                 )}
               </div>
-              {/* Headers */}
-              <div className={clsx('grid gap-2 text-xs text-white/30 font-semibold uppercase tracking-wide px-1 mb-2', colClass)}>
+
+              {/* Column headers */}
+              <div className={clsx('grid gap-2 text-[10px] text-white/25 font-bold uppercase tracking-wide px-1 pb-2 mb-2 border-b border-white/6', colClass)}>
                 <span>#</span>
                 {isWeighted && <><span>Reps</span><span>Weight</span></>}
                 {isTimed    && <span>Duration (s)</span>}
@@ -302,67 +364,69 @@ function PortalLogOverlay({
                 <span>RPE</span>
                 <span />
               </div>
+
               {/* Set rows */}
               <div className="space-y-2">
-                {(ex.sets ?? []).map(s => {
+                {exSets.map(s => {
                   const key  = `${ex.id}-${s.set_number}`
                   const e    = entries[key] ?? { reps: '', weight: '', duration: '', distance: '', rpe: '' }
                   const done = doneSets.has(key)
                   return (
                     <div key={s.set_number}
-                      className={clsx('grid gap-2 items-center rounded-xl px-1 py-1 transition-colors',
-                        done ? 'bg-emerald-500/10' : '',
+                      className={clsx('grid gap-2 items-center rounded-xl px-2 py-1.5 border transition-all',
+                        done
+                          ? 'bg-emerald-500/10 border-emerald-500/20'
+                          : 'bg-white/4 border-white/8',
                         colClass,
                       )}>
-                      <span className={clsx('text-xs font-bold text-center',
-                        done ? 'text-emerald-400' : 'text-white/40')}>
+                      <div className={clsx(
+                        'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mx-auto',
+                        done ? 'bg-emerald-500/25 text-emerald-400' : 'text-white/35',
+                      )}>
                         {s.set_number}
-                      </span>
+                      </div>
                       {isWeighted && (
                         <>
                           <input type="number" inputMode="numeric" min={0} value={e.reps}
                             onChange={ev => setField(key, 'reps', ev.target.value)}
                             placeholder={s.reps?.toString() ?? '—'}
-                            className={clsx(inp, done && 'opacity-60')} />
+                            className={clsx(inp, done && 'opacity-50')} />
                           <input type="number" inputMode="decimal" min={0} step={0.5} value={e.weight}
                             onChange={ev => setField(key, 'weight', ev.target.value)}
                             placeholder={s.weight?.toString() ?? '—'}
-                            className={clsx(inp, done && 'opacity-60')} />
+                            className={clsx(inp, done && 'opacity-50')} />
                         </>
                       )}
                       {isTimed && (
                         <input type="number" inputMode="numeric" min={0} value={e.duration}
                           onChange={ev => setField(key, 'duration', ev.target.value)}
                           placeholder={s.duration_seconds?.toString() ?? '—'}
-                          className={clsx(inp, done && 'opacity-60')} />
+                          className={clsx(inp, done && 'opacity-50')} />
                       )}
                       {isDistance && (
                         <input type="number" inputMode="decimal" min={0} step={0.1} value={e.distance}
                           onChange={ev => setField(key, 'distance', ev.target.value)}
                           placeholder={s.distance_meters?.toString() ?? '—'}
-                          className={clsx(inp, done && 'opacity-60')} />
+                          className={clsx(inp, done && 'opacity-50')} />
                       )}
                       {metric === 'reps' && (
                         <input type="number" inputMode="numeric" min={0} value={e.reps}
                           onChange={ev => setField(key, 'reps', ev.target.value)}
                           placeholder={s.reps?.toString() ?? '—'}
-                          className={clsx(inp, done && 'opacity-60')} />
+                          className={clsx(inp, done && 'opacity-50')} />
                       )}
                       <input type="number" inputMode="numeric" min={1} max={10} value={e.rpe}
                         onChange={ev => setField(key, 'rpe', ev.target.value)}
                         placeholder="RPE"
-                        className={clsx(inp, done && 'opacity-60')} />
-                      {/* Done button */}
-                      <button
-                        type="button"
+                        className={clsx(inp, done && 'opacity-50')} />
+                      <button type="button"
                         onClick={() => handleSetDone(key, ex.name, s.set_number, s.rest_seconds ?? 0)}
                         className={clsx(
                           'w-9 h-9 rounded-xl flex items-center justify-center transition-all flex-shrink-0',
                           done
-                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-                            : 'bg-white/10 text-white/40 hover:bg-white/20 hover:text-white border border-white/10',
-                        )}
-                      >
+                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/40'
+                            : 'bg-white/8 text-white/35 hover:bg-white/18 hover:text-white border border-white/10',
+                        )}>
                         <CheckCircle2 size={16} />
                       </button>
                     </div>
@@ -375,21 +439,27 @@ function PortalLogOverlay({
       </div>
 
       {/* Bottom bar */}
-      <div className="px-4 pb-safe pb-6 pt-4 border-t border-white/10 space-y-3">
+      <div className="px-4 pb-8 pt-4 border-t border-white/8 space-y-3 bg-[#0a0a1a]/60 backdrop-blur-md">
         {error && (
-          <p className="text-sm text-rose-400 bg-rose-500/10 px-3 py-2 rounded-xl text-center">{error}</p>
+          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 text-rose-300 text-sm">
+            {error}
+          </div>
         )}
         <textarea
           value={notes} onChange={e => setNotes(e.target.value)}
           placeholder="Session notes (optional)..."
           rows={2}
-          className="w-full px-3.5 py-2.5 text-sm bg-white/10 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-brand-400 resize-none"
+          className="w-full px-3.5 py-2.5 text-sm bg-white/6 border border-white/10 rounded-2xl text-white placeholder-white/25 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/15 transition-all resize-none leading-relaxed"
         />
         <button
           onClick={submit}
           disabled={saving || saved || loading}
-          className="w-full flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-2xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all"
-        >
+          className={clsx(
+            'w-full flex items-center justify-center gap-2 py-4 text-[15px] font-bold tracking-wide text-white rounded-2xl transition-all active:scale-[0.98] disabled:opacity-50 shadow-xl',
+            saved
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-600/30'
+              : 'bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 shadow-brand-600/30',
+          )}>
           {saving
             ? <><Loader2 size={16} className="animate-spin" />Saving…</>
             : saved
@@ -401,10 +471,8 @@ function PortalLogOverlay({
   )
 }
 
-// ─── Workout card ─────────────────────────────────────────────
-function WorkoutCard({
-  cw, clientId, onLog, onQuickComplete,
-}: {
+// ─── Workout card ──────────────────────────────────────────────
+function WorkoutCard({ cw, clientId, onLog, onQuickComplete }: {
   cw: PortalWorkout
   clientId: string
   onLog: (cw: PortalWorkout) => void
@@ -417,8 +485,7 @@ function WorkoutCard({
   async function handleQuickComplete() {
     setCompleting(true)
     await supabase.rpc('complete_portal_workout', {
-      p_client_workout_id: cw.id,
-      p_client_id: clientId,
+      p_client_workout_id: cw.id, p_client_id: clientId,
     })
     onQuickComplete(cw.id)
     setCompleting(false)
@@ -426,79 +493,92 @@ function WorkoutCard({
 
   return (
     <div className={clsx(
-      'rounded-2xl border transition-all',
-      done ? 'bg-white/5 border-white/5' : 'bg-white/10 border-white/15 shadow-lg shadow-black/20',
+      'rounded-2xl border overflow-hidden transition-all',
+      done
+        ? 'bg-white/4 border-white/6 opacity-70'
+        : 'bg-gradient-to-br from-white/10 to-white/5 border-white/12 shadow-xl shadow-black/30',
     )}>
+      {/* Left accent bar */}
+      {!done && (
+        <div className="h-0.5 bg-gradient-to-r from-brand-500 to-violet-500" />
+      )}
       <div className="p-4">
         <div className="flex items-start gap-3">
           <div className={clsx(
-            'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
-            done ? 'bg-emerald-500/20' : 'bg-gradient-to-br from-brand-500 to-violet-600',
+            'w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg',
+            done
+              ? 'bg-emerald-500/15 shadow-emerald-500/20'
+              : 'bg-gradient-to-br from-brand-500 to-violet-600 shadow-brand-500/30',
           )}>
             {done
-              ? <CheckCircle2 size={20} className="text-emerald-400" />
-              : <Dumbbell size={20} className="text-white" />}
+              ? <CheckCircle2 size={22} className="text-emerald-400" />
+              : <Dumbbell size={22} className="text-white" />}
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className={clsx('font-semibold text-sm', done ? 'text-white/40 line-through' : 'text-white')}>
+              <h3 className={clsx('font-bold text-[15px] leading-tight',
+                done ? 'text-white/35 line-through' : 'text-white')}>
                 {cw.workout.name}
               </h3>
               {cw.workout.difficulty && (
-                <span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium', DIFFICULTY_COLORS[cw.workout.difficulty])}>
+                <span className={clsx('text-[11px] px-2.5 py-0.5 rounded-full font-semibold tracking-wide',
+                  DIFFICULTY_COLORS[cw.workout.difficulty])}>
                   {cw.workout.difficulty}
                 </span>
               )}
               {done && (
-                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-500/20 text-emerald-400">
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold bg-emerald-500/20 text-emerald-400">
                   Done
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <div className="flex items-center gap-4 mt-1.5 flex-wrap">
               {cw.workout.duration_minutes && (
-                <span className="text-xs text-white/40 flex items-center gap-1">
-                  <Clock size={10} />{cw.workout.duration_minutes} min
+                <span className="text-xs text-white/40 flex items-center gap-1.5">
+                  <Clock size={12} />{cw.workout.duration_minutes} min
                 </span>
               )}
               {cw.due_date && (
-                <span className="text-xs text-white/40 flex items-center gap-1">
-                  <Calendar size={10} />Due {new Date(cw.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
+                <span className="text-xs text-white/40 flex items-center gap-1.5">
+                  <Calendar size={12} />Due {new Date(cw.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
                 </span>
               )}
             </div>
-            {cw.notes && <p className="mt-1.5 text-xs text-white/40 italic">{cw.notes}</p>}
+            {cw.notes && (
+              <p className="mt-2 text-xs text-white/35 leading-relaxed border-l-2 border-white/15 pl-2.5">
+                {cw.notes}
+              </p>
+            )}
           </div>
 
           {cw.workout.description && (
-            <button onClick={() => setExpanded(e => !e)} className="p-1 text-white/30 hover:text-white/60 flex-shrink-0">
+            <button onClick={() => setExpanded(e => !e)}
+              className="p-1.5 text-white/25 hover:text-white/60 flex-shrink-0 transition-colors">
               {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
           )}
         </div>
 
         {expanded && cw.workout.description && (
-          <p className="mt-3 text-sm text-white/50 leading-relaxed border-t border-white/10 pt-3">
+          <p className="mt-3 text-sm text-white/45 leading-relaxed border-t border-white/8 pt-3">
             {cw.workout.description}
           </p>
         )}
 
         {!done && (
-          <div className="mt-3 pt-3 border-t border-white/10 flex gap-2">
-            {/* Primary: Log Session */}
+          <div className="mt-4 pt-4 border-t border-white/8 flex gap-2">
             <button
               onClick={() => onLog(cw)}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all"
+              className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold tracking-wide text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-2xl hover:from-brand-700 hover:to-violet-700 transition-all shadow-lg shadow-brand-600/30 active:scale-[0.98]"
             >
               <ClipboardList size={15} /> Log Session
             </button>
-            {/* Secondary: quick complete (no details) */}
             <button
               onClick={handleQuickComplete}
               disabled={completing}
               title="Mark done without logging"
-              className="px-3 py-2.5 text-white/50 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+              className="w-10 h-10 rounded-xl bg-white/8 border border-white/10 text-white/40 hover:bg-emerald-500/20 hover:border-emerald-500/30 hover:text-emerald-400 flex items-center justify-center transition-all"
             >
               {completing ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
             </button>
@@ -509,13 +589,452 @@ function WorkoutCard({
   )
 }
 
-// ─── Main portal ──────────────────────────────────────────────
+// ─── Workouts section view ─────────────────────────────────────
+function WorkoutsView({ data, clientId, onBack, onMarkComplete }: {
+  data: PortalData
+  clientId: string
+  onBack: () => void
+  onMarkComplete: (id: string) => void
+}) {
+  const [logging, setLogging] = useState<PortalWorkout | null>(null)
+  const assigned  = data.workouts.filter(w => w.status === 'assigned')
+  const completed = data.workouts.filter(w => w.status === 'completed')
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
+      {logging && (
+        <PortalLogOverlay
+          cw={logging}
+          clientId={clientId}
+          onClose={() => setLogging(null)}
+          onDone={(id) => { onMarkComplete(id); setLogging(null) }}
+        />
+      )}
+
+      {/* Section header */}
+      <div className="flex items-center gap-3 px-4 pt-12 pb-5 border-b border-white/8">
+        <button onClick={onBack}
+          className="w-10 h-10 rounded-2xl bg-white/8 border border-white/10 hover:bg-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all">
+          <ArrowLeft size={18} />
+        </button>
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-600 to-brand-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+          <Dumbbell size={18} className="text-white" />
+        </div>
+        <div>
+          <p className="text-white font-bold text-base">Workouts</p>
+          <p className="text-white/35 text-xs">{assigned.length} pending · {completed.length} done</p>
+        </div>
+      </div>
+
+      <div className="max-w-lg mx-auto px-4 py-5 space-y-6 pb-12">
+        {assigned.length > 0 && (
+          <div>
+            <SectionLabel>Assigned</SectionLabel>
+            <div className="space-y-3">
+              {assigned.map(cw => (
+                <WorkoutCard key={cw.id} cw={cw} clientId={clientId}
+                  onLog={setLogging} onQuickComplete={onMarkComplete} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {assigned.length === 0 && (
+          <EmptyState
+            icon={<Dumbbell size={28} className="text-violet-400/60" />}
+            title="All caught up!"
+            subtitle="No workouts pending. Check back soon."
+            gradient="from-violet-500/10 to-brand-500/10"
+          />
+        )}
+
+        {completed.length > 0 && (
+          <div>
+            <SectionLabel>Completed</SectionLabel>
+            <div className="space-y-3">
+              {completed.map(cw => (
+                <WorkoutCard key={cw.id} cw={cw} clientId={clientId}
+                  onLog={setLogging} onQuickComplete={onMarkComplete} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── History section view ──────────────────────────────────────
+function HistoryView({ clientId, onBack }: { clientId: string; onBack: () => void }) {
+  const [entries, setEntries] = useState<PortalHistoryEntry[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.rpc('get_portal_history', { p_client_id: clientId }).then(({ data }) => {
+      setEntries((data as PortalHistoryEntry[]) ?? [])
+      setLoading(false)
+    })
+  }, [clientId])
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
+      {/* Section header */}
+      <div className="flex items-center gap-3 px-4 pt-12 pb-5 border-b border-white/8">
+        <button onClick={onBack}
+          className="w-10 h-10 rounded-2xl bg-white/8 border border-white/10 hover:bg-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all">
+          <ArrowLeft size={18} />
+        </button>
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+          <History size={18} className="text-white" />
+        </div>
+        <div>
+          <p className="text-white font-bold text-base">History</p>
+          <p className="text-white/35 text-xs">{loading ? '…' : `${entries.length} sessions logged`}</p>
+        </div>
+      </div>
+
+      <div className="max-w-lg mx-auto px-4 py-5 space-y-3 pb-12">
+        {loading ? (
+          <LoadingCard label="Loading history" />
+        ) : entries.length === 0 ? (
+          <EmptyState
+            icon={<History size={28} className="text-amber-400/60" />}
+            title="No sessions yet"
+            subtitle="Your completed sessions will appear here."
+            gradient="from-amber-500/10 to-orange-500/10"
+          />
+        ) : entries.map(entry => (
+          <div key={entry.id}
+            className="rounded-2xl bg-gradient-to-br from-white/8 to-white/4 border border-white/10 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-bold text-[15px] leading-tight truncate">
+                  {entry.workout_name}
+                </p>
+                <p className="text-white/40 text-xs mt-1 flex items-center gap-1.5">
+                  <Calendar size={11} />
+                  {new Date(entry.completed_at).toLocaleDateString('en-AU', {
+                    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+                  })}
+                </p>
+              </div>
+              {entry.set_count > 0 && (
+                <div className="text-right flex-shrink-0">
+                  <p className="text-amber-400 font-bold text-lg leading-none">{entry.set_count}</p>
+                  <p className="text-white/30 text-[10px] uppercase tracking-wide">sets</p>
+                </div>
+              )}
+            </div>
+
+            {entry.exercises?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {entry.exercises.slice(0, 5).map(name => (
+                  <span key={name}
+                    className="text-[11px] font-medium text-white/50 bg-white/8 border border-white/10 px-2.5 py-0.5 rounded-full">
+                    {name}
+                  </span>
+                ))}
+                {entry.exercises.length > 5 && (
+                  <span className="text-[11px] font-medium text-white/30 px-2 py-0.5">
+                    +{entry.exercises.length - 5} more
+                  </span>
+                )}
+              </div>
+            )}
+
+            {entry.notes && (
+              <p className="mt-3 text-xs text-white/35 leading-relaxed border-t border-white/8 pt-3 italic">
+                {entry.notes}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Metrics section view ──────────────────────────────────────
+function MetricsView({ clientId, onBack }: { clientId: string; onBack: () => void }) {
+  const [entries, setEntries] = useState<PortalMetricEntry[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.rpc('get_portal_metrics', { p_client_id: clientId }).then(({ data }) => {
+      setEntries((data as PortalMetricEntry[]) ?? [])
+      setLoading(false)
+    })
+  }, [clientId])
+
+  const latest = entries[0]
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
+      {/* Section header */}
+      <div className="flex items-center gap-3 px-4 pt-12 pb-5 border-b border-white/8">
+        <button onClick={onBack}
+          className="w-10 h-10 rounded-2xl bg-white/8 border border-white/10 hover:bg-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all">
+          <ArrowLeft size={18} />
+        </button>
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+          <BarChart2 size={18} className="text-white" />
+        </div>
+        <div>
+          <p className="text-white font-bold text-base">Metrics</p>
+          <p className="text-white/35 text-xs">{loading ? '…' : `${entries.length} check-ins recorded`}</p>
+        </div>
+      </div>
+
+      <div className="max-w-lg mx-auto px-4 py-5 space-y-4 pb-12">
+        {loading ? (
+          <LoadingCard label="Loading metrics" />
+        ) : entries.length === 0 ? (
+          <EmptyState
+            icon={<BarChart2 size={28} className="text-emerald-400/60" />}
+            title="No check-ins yet"
+            subtitle="Your coach will record metrics here after each check-in."
+            gradient="from-emerald-500/10 to-teal-500/10"
+          />
+        ) : (
+          <>
+            {/* Latest snapshot */}
+            {latest && (
+              <div className="rounded-2xl bg-gradient-to-br from-emerald-500/15 to-teal-500/10 border border-emerald-500/20 p-5">
+                <p className="text-emerald-400/80 text-[10px] font-bold uppercase tracking-[0.2em] mb-3">Latest Check-in</p>
+                <p className="text-white/40 text-xs mb-4 flex items-center gap-1.5">
+                  <Calendar size={11} />
+                  {new Date(latest.checked_in_at).toLocaleDateString('en-AU', {
+                    weekday: 'long', day: 'numeric', month: 'long',
+                  })}
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {latest.weight_kg != null && (
+                    <MetricPill icon={<Scale size={13} />} label="Weight" value={`${latest.weight_kg} kg`} color="text-emerald-300" />
+                  )}
+                  {latest.body_fat_pct != null && (
+                    <MetricPill icon={<TrendingUp size={13} />} label="Body Fat" value={`${latest.body_fat_pct}%`} color="text-teal-300" />
+                  )}
+                  {latest.energy_level != null && (
+                    <MetricPill icon={<Zap size={13} />} label="Energy" value={`${latest.energy_level}/10`} color="text-amber-300" />
+                  )}
+                  {latest.sleep_hours != null && (
+                    <MetricPill icon={<Moon size={13} />} label="Sleep" value={`${latest.sleep_hours}h`} color="text-violet-300" />
+                  )}
+                </div>
+                {latest.notes && (
+                  <p className="mt-4 text-xs text-white/35 leading-relaxed border-t border-white/10 pt-3 italic">
+                    {latest.notes}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* History list */}
+            {entries.length > 1 && (
+              <>
+                <SectionLabel>All Check-ins</SectionLabel>
+                <div className="space-y-2">
+                  {entries.slice(1).map(entry => (
+                    <div key={entry.id}
+                      className="rounded-2xl bg-white/5 border border-white/8 px-4 py-3 flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white/60 text-xs flex items-center gap-1.5">
+                          <Calendar size={11} />
+                          {new Date(entry.checked_in_at).toLocaleDateString('en-AU', {
+                            day: 'numeric', month: 'short', year: 'numeric',
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4 text-right">
+                        {entry.weight_kg != null && (
+                          <div>
+                            <p className="text-white font-semibold text-sm">{entry.weight_kg}<span className="text-white/30 text-xs ml-0.5">kg</span></p>
+                          </div>
+                        )}
+                        {entry.body_fat_pct != null && (
+                          <div>
+                            <p className="text-white/60 text-sm">{entry.body_fat_pct}<span className="text-white/30 text-xs ml-0.5">%</span></p>
+                          </div>
+                        )}
+                        {entry.energy_level != null && (
+                          <div className="flex items-center gap-1">
+                            <Zap size={11} className="text-amber-400/60" />
+                            <p className="text-white/50 text-xs">{entry.energy_level}/10</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Nutrition placeholder view ────────────────────────────────
+function NutritionView({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
+      <div className="flex items-center gap-3 px-4 pt-12 pb-5 border-b border-white/8">
+        <button onClick={onBack}
+          className="w-10 h-10 rounded-2xl bg-white/8 border border-white/10 hover:bg-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all">
+          <ArrowLeft size={18} />
+        </button>
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center shadow-lg shadow-rose-500/30">
+          <Utensils size={18} className="text-white" />
+        </div>
+        <div>
+          <p className="text-white font-bold text-base">Nutrition</p>
+          <p className="text-white/35 text-xs">Meal plans & guidance</p>
+        </div>
+      </div>
+      <div className="flex items-center justify-center min-h-[60vh] px-6">
+        <EmptyState
+          icon={<Utensils size={28} className="text-rose-400/60" />}
+          title="Coming soon"
+          subtitle="Your nutrition plans and meal guidance will appear here once your coach sets it up."
+          gradient="from-rose-500/10 to-pink-500/10"
+        />
+      </div>
+    </div>
+  )
+}
+
+// ─── Shared UI helpers ─────────────────────────────────────────
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 mb-3">
+      <div className="flex-1 h-px bg-white/8" />
+      <p className="text-white/40 text-[11px] font-bold uppercase tracking-[0.15em] flex-shrink-0">{children}</p>
+      <div className="flex-1 h-px bg-white/8" />
+    </div>
+  )
+}
+
+function EmptyState({ icon, title, subtitle, gradient }: {
+  icon: React.ReactNode
+  title: string
+  subtitle: string
+  gradient: string
+}) {
+  return (
+    <div className={clsx('rounded-3xl bg-gradient-to-br border border-white/8 p-10 text-center backdrop-blur-sm', gradient)}>
+      <div className="w-16 h-16 rounded-2xl bg-white/8 border border-white/10 flex items-center justify-center mx-auto mb-5">
+        {icon}
+      </div>
+      <p className="text-white/70 font-semibold text-base">{title}</p>
+      <p className="text-white/30 text-sm mt-2 leading-relaxed">{subtitle}</p>
+    </div>
+  )
+}
+
+function LoadingCard({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <div className="w-12 h-12 rounded-2xl bg-white/6 border border-white/10 flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+      <p className="text-white/30 text-xs tracking-widest uppercase">{label}</p>
+    </div>
+  )
+}
+
+function MetricPill({ icon, label, value, color }: {
+  icon: React.ReactNode
+  label: string
+  value: string
+  color: string
+}) {
+  return (
+    <div className="bg-white/8 border border-white/10 rounded-xl px-3 py-2.5">
+      <div className={clsx('flex items-center gap-1.5 mb-1', color)}>{icon}
+        <span className="text-[10px] font-bold uppercase tracking-wide opacity-70">{label}</span>
+      </div>
+      <p className={clsx('text-lg font-bold leading-none', color)}>{value}</p>
+    </div>
+  )
+}
+
+// ─── Dashboard section card ────────────────────────────────────
+function DashboardCard({
+  def, unlocked, workoutCount, completedCount, onClick,
+}: {
+  def: typeof SECTION_DEFS[number]
+  unlocked: boolean
+  workoutCount?: number
+  completedCount?: number
+  onClick: () => void
+}) {
+  const Icon = def.icon
+
+  return (
+    <button
+      onClick={unlocked ? onClick : undefined}
+      className={clsx(
+        'relative rounded-2xl border p-5 text-left transition-all overflow-hidden',
+        unlocked
+          ? 'bg-gradient-to-br from-white/10 to-white/5 border-white/12 hover:from-white/14 hover:to-white/8 active:scale-[0.97] shadow-xl shadow-black/30'
+          : 'bg-white/4 border-white/8 cursor-default',
+      )}>
+      {/* Icon */}
+      <div className={clsx(
+        'w-12 h-12 rounded-2xl flex items-center justify-center mb-3 shadow-lg',
+        unlocked
+          ? `bg-gradient-to-br ${def.gradient} ${def.glow}`
+          : 'bg-white/8',
+      )}>
+        <Icon size={22} className={unlocked ? 'text-white' : 'text-white/25'} />
+      </div>
+
+      <p className={clsx('font-bold text-[15px] leading-tight',
+        unlocked ? 'text-white' : 'text-white/25')}>
+        {def.label}
+      </p>
+      <p className={clsx('text-xs mt-0.5 leading-snug',
+        unlocked ? 'text-white/45' : 'text-white/20')}>
+        {def.desc}
+      </p>
+
+      {/* Workout badge */}
+      {def.id === 'workouts' && unlocked && workoutCount != null && (
+        <div className="mt-3 flex items-center gap-2">
+          {(workoutCount - (completedCount ?? 0)) > 0 && (
+            <span className="text-[11px] font-semibold bg-brand-500/25 text-brand-300 px-2 py-0.5 rounded-full">
+              {workoutCount - (completedCount ?? 0)} pending
+            </span>
+          )}
+          {(completedCount ?? 0) > 0 && (
+            <span className="text-[11px] font-semibold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">
+              {completedCount} done
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Lock overlay */}
+      {!unlocked && (
+        <div className="absolute inset-0 rounded-2xl flex flex-col items-center justify-center gap-2 bg-black/30 backdrop-blur-[2px]">
+          <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center">
+            <Lock size={16} className="text-white/40" />
+          </div>
+          <p className="text-white/30 text-[10px] font-semibold uppercase tracking-wide">Locked</p>
+        </div>
+      )}
+    </button>
+  )
+}
+
+// ─── Main portal ───────────────────────────────────────────────
 export default function ClientPortal() {
   const { clientId } = useParams<{ clientId: string }>()
-  const [data, setData]         = useState<PortalData | null>(null)
-  const [loading, setLoading]   = useState(true)
-  const [notFound, setNotFound] = useState(false)
-  const [logging, setLogging]   = useState<PortalWorkout | null>(null)
+  const [data, setData]           = useState<PortalData | null>(null)
+  const [loading, setLoading]     = useState(true)
+  const [notFound, setNotFound]   = useState(false)
+  const [activeSection, setActiveSection] = useState<ActiveSection>(null)
 
   useEffect(() => {
     if (!clientId) return
@@ -533,104 +1052,125 @@ export default function ClientPortal() {
     } : prev)
   }
 
+  // ── Loading ──
   if (loading) return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f0f23] via-[#1e1e35] to-[#2a1a4e] flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
-
-  if (notFound || !data) return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f0f23] via-[#1e1e35] to-[#2a1a4e] flex items-center justify-center p-6">
-      <div className="text-center">
-        <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <Dumbbell size={32} className="text-white/40" />
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-xl shadow-brand-500/30">
+          <Dumbbell size={24} className="text-white" />
         </div>
-        <h2 className="text-white font-bold text-xl mb-2">Portal not found</h2>
-        <p className="text-white/50 text-sm">This link may be invalid or expired.</p>
+        <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
       </div>
     </div>
   )
 
-  const assigned  = data.workouts.filter(w => w.status === 'assigned')
-  const completed = data.workouts.filter(w => w.status === 'completed')
-  const initials  = data.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
+  // ── Not found ──
+  if (notFound || !data) return (
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] flex items-center justify-center p-6">
+      <EmptyState
+        icon={<Dumbbell size={28} className="text-white/30" />}
+        title="Portal not found"
+        subtitle="This link may be invalid or expired. Contact your coach for a new link."
+        gradient="from-white/5 to-white/3"
+      />
+    </div>
+  )
+
+  // ── Section views ──
+  if (activeSection === 'workouts') return (
+    <WorkoutsView data={data} clientId={clientId!}
+      onBack={() => setActiveSection(null)} onMarkComplete={markComplete} />
+  )
+  if (activeSection === 'history') return (
+    <HistoryView clientId={clientId!} onBack={() => setActiveSection(null)} />
+  )
+  if (activeSection === 'metrics') return (
+    <MetricsView clientId={clientId!} onBack={() => setActiveSection(null)} />
+  )
+  if (activeSection === 'nutrition') return (
+    <NutritionView onBack={() => setActiveSection(null)} />
+  )
+
+  // ── Dashboard ──
+  const totalWorkouts     = data.workouts.length
+  const completedWorkouts = data.workouts.filter(w => w.status === 'completed').length
+  const initials          = data.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
+  const completionRatio   = totalWorkouts > 0 ? completedWorkouts / totalWorkouts : 0
+  const circumference     = 2 * Math.PI * 44
+  const unlocked          = data.portal_sections ?? ['workouts']
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f0f23] via-[#1e1e35] to-[#2a1a4e]">
-      {/* Full-screen log overlay */}
-      {logging && (
-        <PortalLogOverlay
-          cw={logging}
-          clientId={clientId!}
-          onClose={() => setLogging(null)}
-          onDone={markComplete}
-        />
-      )}
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
 
-      {/* Header */}
-      <div className="px-4 pt-10 pb-6 text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-violet-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold mx-auto mb-4 shadow-lg shadow-brand-500/30">
-          {initials}
-        </div>
-        <h1 className="text-2xl font-bold text-white">{data.name}</h1>
-        {data.goal && (
-          <div className="flex items-center justify-center gap-1.5 mt-2 text-white/50 text-sm">
-            <Target size={13} />{data.goal}
+      {/* Hero header */}
+      <div className="relative overflow-hidden px-4 pt-14 pb-8 text-center">
+        {/* Glow blob */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-64 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col items-center">
+          {/* Avatar with progress ring */}
+          <div className="relative w-20 h-20 mb-5">
+            <svg className="absolute -inset-3 w-[104px] h-[104px] -rotate-90" viewBox="0 0 104 104">
+              <circle cx="52" cy="52" r="44" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
+              <circle cx="52" cy="52" r="44" fill="none" stroke="url(#progressGrad)" strokeWidth="5"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={circumference * (1 - completionRatio)} />
+              <defs>
+                <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#7c3aed" />
+                  <stop offset="100%" stopColor="#10b981" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-2xl font-extrabold shadow-2xl shadow-brand-500/40">
+              {initials}
+            </div>
           </div>
-        )}
-        <div className="flex items-center justify-center gap-4 mt-5">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-white">{assigned.length}</p>
-            <p className="text-xs text-white/40">Pending</p>
-          </div>
-          <div className="w-px h-8 bg-white/10" />
-          <div className="text-center">
-            <p className="text-2xl font-bold text-white">{completed.length}</p>
-            <p className="text-xs text-white/40">Completed</p>
-          </div>
-          <div className="w-px h-8 bg-white/10" />
-          <div className="text-center">
-            <p className="text-2xl font-bold text-white">{data.workouts.length}</p>
-            <p className="text-xs text-white/40">Total</p>
+
+          <h1 className="text-3xl font-extrabold tracking-tight text-white">{data.name}</h1>
+
+          {data.goal && (
+            <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-white/8 border border-white/10 text-white/50 text-xs font-medium backdrop-blur-sm">
+              <Target size={11} />{data.goal}
+            </div>
+          )}
+
+          {/* Stats glass card */}
+          <div className="mt-6 w-full max-w-xs rounded-2xl bg-white/6 border border-white/10 backdrop-blur-sm divide-x divide-white/10 flex">
+            {[
+              { value: totalWorkouts - completedWorkouts, label: 'Pending' },
+              { value: completedWorkouts, label: 'Done' },
+              { value: totalWorkouts, label: 'Total' },
+            ].map(stat => (
+              <div key={stat.label} className="flex-1 py-4 text-center">
+                <p className="text-3xl font-bold tracking-tight text-white leading-none">{stat.value}</p>
+                <p className="text-[11px] uppercase tracking-widest text-white/35 mt-1 font-semibold">{stat.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Workout list */}
-      <div className="max-w-lg mx-auto px-4 pb-12 space-y-6">
-        {assigned.length > 0 && (
-          <div>
-            <h2 className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-3">Your Workouts</h2>
-            <div className="space-y-3">
-              {assigned.map(cw => (
-                <WorkoutCard key={cw.id} cw={cw} clientId={clientId!}
-                  onLog={setLogging} onQuickComplete={markComplete} />
-              ))}
-            </div>
-          </div>
-        )}
+      {/* Section grid */}
+      <div className="max-w-lg mx-auto px-4 pb-12">
+        <SectionLabel>Your Portal</SectionLabel>
+        <div className="grid grid-cols-2 gap-3">
+          {SECTION_DEFS.map(def => (
+            <DashboardCard
+              key={def.id}
+              def={def}
+              unlocked={unlocked.includes(def.id)}
+              workoutCount={def.id === 'workouts' ? totalWorkouts : undefined}
+              completedCount={def.id === 'workouts' ? completedWorkouts : undefined}
+              onClick={() => setActiveSection(def.id)}
+            />
+          ))}
+        </div>
 
-        {assigned.length === 0 && (
-          <div className="bg-white/5 rounded-2xl p-8 text-center border border-white/10">
-            <Dumbbell size={32} className="text-white/20 mx-auto mb-3" />
-            <p className="text-white/60 font-medium">No workouts assigned yet</p>
-            <p className="text-white/30 text-sm mt-1">Check back soon!</p>
-          </div>
-        )}
-
-        {completed.length > 0 && (
-          <div>
-            <h2 className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-3">Completed</h2>
-            <div className="space-y-3">
-              {completed.map(cw => (
-                <WorkoutCard key={cw.id} cw={cw} clientId={clientId!}
-                  onLog={setLogging} onQuickComplete={markComplete} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        <p className="text-center text-xs text-white/20 pt-4">Powered by FitProto</p>
+        <p className="text-center text-[11px] text-white/15 pt-10 uppercase tracking-[0.2em] font-medium">
+          Powered by FitProto
+        </p>
       </div>
     </div>
   )
