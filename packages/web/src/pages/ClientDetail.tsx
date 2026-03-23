@@ -3,12 +3,14 @@ import { useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft, Mail, Phone, MessageSquare, Dumbbell,
   Calendar, Tag, MoreHorizontal, Plus, CheckCircle2,
-  Clock, Loader2, X, ChevronDown,
+  Clock, Loader2, X, ChevronDown, Trash2, Send,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useClient, useUpdateClient } from '@/hooks/useClients'
 import { useTasks, useCreateTask, useToggleTask } from '@/hooks/useTasks'
-import type { DbClient, DbTask } from '@/lib/database.types'
+import { useClientWorkouts, useAssignWorkout, useUpdateClientWorkoutStatus, useRemoveClientWorkout } from '@/hooks/useClientWorkouts'
+import { useWorkouts } from '@/hooks/useWorkouts'
+import type { DbClient, DbTask, DbClientWorkoutWithWorkout } from '@/lib/database.types'
 
 type Tab = 'overview' | 'workouts' | 'nutrition' | 'metrics' | 'notes'
 
@@ -177,6 +179,243 @@ function EditClientModal({ client, onClose }: { client: DbClient; onClose: () =>
           </div>
         </form>
       </div>
+    </div>
+  )
+}
+
+// ─── Assign workout modal ─────────────────────────────────────
+function AssignWorkoutModal({ clientId, onClose }: { clientId: string; onClose: () => void }) {
+  const { data: workouts = [], isLoading } = useWorkouts()
+  const assign = useAssignWorkout()
+  const [search, setSearch]   = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [notes, setNotes]     = useState('')
+  const [selected, setSelected] = useState<string | null>(null)
+  const [error, setError]       = useState<string | null>(null)
+
+  const filtered = workouts.filter(w =>
+    w.name.toLowerCase().includes(search.toLowerCase())
+  )
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!selected) { setError('Please select a workout'); return }
+    setError(null)
+    try {
+      await assign.mutateAsync({
+        client_id:  clientId,
+        workout_id: selected,
+        due_date:   dueDate || undefined,
+        notes:      notes   || undefined,
+      })
+      onClose()
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-gray-900">Assign Workout</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18} /></button>
+        </div>
+
+        {error && <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">{error}</div>}
+
+        {/* Workout search */}
+        <div className="relative mb-3">
+          <input
+            value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search workouts..."
+            className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
+          />
+        </div>
+
+        {/* Workout list */}
+        <div className="flex-1 overflow-y-auto space-y-1.5 mb-4 min-h-0" style={{ maxHeight: 260 }}>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 size={20} className="animate-spin text-gray-300" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">No workouts found</p>
+          ) : filtered.map(w => (
+            <button
+              key={w.id}
+              type="button"
+              onClick={() => setSelected(w.id)}
+              className={clsx(
+                'w-full text-left px-4 py-3 rounded-xl border-2 transition-all',
+                selected === w.id
+                  ? 'border-brand-500 bg-brand-50'
+                  : 'border-transparent bg-gray-50 hover:bg-gray-100',
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className={clsx('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                  selected === w.id ? 'bg-brand-600' : 'bg-gray-200')}>
+                  <Dumbbell size={15} className={selected === w.id ? 'text-white' : 'text-gray-500'} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">{w.name}</p>
+                  <p className="text-xs text-gray-500">
+                    {(w as any).workout_exercises?.length ?? 0} exercises
+                    {w.duration_minutes ? ` · ${w.duration_minutes} min` : ''}
+                    {w.difficulty ? ` · ${w.difficulty}` : ''}
+                  </p>
+                </div>
+                {selected === w.id && <CheckCircle2 size={16} className="text-brand-600 flex-shrink-0" />}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={submit} className="space-y-3 border-t border-gray-100 pt-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Due Date</label>
+              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Notes</label>
+              <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional..."
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+              Cancel
+            </button>
+            <button type="submit" disabled={!selected || assign.isPending}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all">
+              {assign.isPending ? <Loader2 size={15} className="animate-spin" /> : <><Send size={14} /> Assign</>}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ─── Workouts tab ─────────────────────────────────────────────
+const STATUS_STYLES: Record<DbClientWorkoutWithWorkout['status'], string> = {
+  assigned:  'bg-brand-50 text-brand-700',
+  completed: 'bg-emerald-50 text-emerald-700',
+  skipped:   'bg-gray-100 text-gray-500',
+}
+
+function WorkoutsTab({ clientId }: { clientId: string }) {
+  const { data: assignments = [], isLoading } = useClientWorkouts(clientId)
+  const updateStatus = useUpdateClientWorkoutStatus()
+  const remove       = useRemoveClientWorkout()
+  const [showAssign, setShowAssign] = useState(false)
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center py-16"><Loader2 size={22} className="animate-spin text-gray-300" /></div>
+  }
+
+  return (
+    <div>
+      {showAssign && <AssignWorkoutModal clientId={clientId} onClose={() => setShowAssign(false)} />}
+
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <span className="text-sm font-semibold text-gray-800">{assignments.length} workout{assignments.length !== 1 ? 's' : ''} assigned</span>
+          {assignments.filter(a => a.status === 'completed').length > 0 && (
+            <span className="ml-2 text-xs text-emerald-600 font-medium">
+              · {assignments.filter(a => a.status === 'completed').length} completed
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setShowAssign(true)}
+          className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-xs font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all shadow-sm"
+        >
+          <Plus size={13} /> Assign Workout
+        </button>
+      </div>
+
+      {assignments.length === 0 ? (
+        <div className="text-center py-14">
+          <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <Dumbbell size={28} className="text-gray-300" />
+          </div>
+          <p className="text-gray-500 font-medium mb-1">No workouts assigned yet</p>
+          <p className="text-xs text-gray-400 mb-4">Push a workout from your library to this client</p>
+          <button onClick={() => setShowAssign(true)}
+            className="px-4 py-2 bg-brand-50 text-brand-600 text-sm font-semibold rounded-xl hover:bg-brand-100 transition-colors">
+            + Assign Workout
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {assignments.map(a => (
+            <div key={a.id} className="flex items-center gap-3 p-3.5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
+              <div className={clsx('w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
+                a.status === 'completed' ? 'bg-emerald-100' : 'bg-brand-100')}>
+                {a.status === 'completed'
+                  ? <CheckCircle2 size={16} className="text-emerald-600" />
+                  : <Dumbbell size={16} className="text-brand-600" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={clsx('text-sm font-semibold truncate',
+                  a.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-800')}>
+                  {a.workout.name}
+                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium', STATUS_STYLES[a.status])}>
+                    {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
+                  </span>
+                  {a.due_date && (
+                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <Clock size={10} /> Due {new Date(a.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
+                    </span>
+                  )}
+                  {a.workout.difficulty && (
+                    <span className="text-xs text-gray-400">{a.workout.difficulty}</span>
+                  )}
+                </div>
+                {a.notes && <p className="text-xs text-gray-400 italic mt-0.5">{a.notes}</p>}
+              </div>
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                {a.status !== 'completed' && (
+                  <button
+                    onClick={() => updateStatus.mutate({ id: a.id, status: 'completed', clientId })}
+                    disabled={updateStatus.isPending}
+                    title="Mark complete"
+                    className="p-1.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors"
+                  >
+                    <CheckCircle2 size={14} />
+                  </button>
+                )}
+                {a.status !== 'skipped' && a.status !== 'completed' && (
+                  <button
+                    onClick={() => updateStatus.mutate({ id: a.id, status: 'skipped', clientId })}
+                    disabled={updateStatus.isPending}
+                    title="Mark skipped"
+                    className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+                <button
+                  onClick={() => remove.mutate({ id: a.id, clientId })}
+                  disabled={remove.isPending}
+                  title="Remove"
+                  className="p-1.5 rounded-lg hover:bg-rose-50 text-gray-300 hover:text-rose-500 transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -432,7 +671,7 @@ export default function ClientDetail() {
             </div>
           )}
 
-          {activeTab === 'workouts'  && <ComingSoon label="Workout history" />}
+          {activeTab === 'workouts'  && <WorkoutsTab clientId={client.id} />}
           {activeTab === 'nutrition' && <ComingSoon label="Nutrition plans" />}
           {activeTab === 'metrics'   && <ComingSoon label="Client metrics" />}
           {activeTab === 'notes'     && <ComingSoon label="Coach notes" />}

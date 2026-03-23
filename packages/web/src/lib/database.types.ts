@@ -158,6 +158,35 @@ export interface DbWorkoutLog {
   created_at: string
 }
 
+export type ClientWorkoutStatus = 'assigned' | 'completed' | 'skipped'
+
+export interface DbClientWorkout {
+  id: string
+  client_id: string
+  workout_id: string
+  assigned_at: string
+  due_date: string | null
+  status: ClientWorkoutStatus
+  notes: string | null
+  created_at: string
+}
+
+export interface DbClientWorkoutWithWorkout extends DbClientWorkout {
+  workout: DbWorkout
+}
+
+export interface DbCheckIn {
+  id: string
+  client_id: string
+  checked_in_at: string
+  weight_kg: number | null
+  body_fat_pct: number | null
+  notes: string | null
+  energy_level: number | null
+  sleep_hours: number | null
+  created_at: string
+}
+
 export interface DbNotification {
   id: string
   org_id: string
@@ -185,8 +214,10 @@ export interface Database {
       conversations:      { Row: DbConversation;    Insert: Omit<DbConversation, 'id' | 'created_at'>;    Update: Partial<DbConversation> }
       messages:           { Row: DbMessage;         Insert: Omit<DbMessage, 'id' | 'created_at'>;         Update: Partial<DbMessage> }
       tasks:              { Row: DbTask;            Insert: Omit<DbTask, 'id' | 'created_at'>;            Update: Partial<DbTask> }
-      workout_logs:       { Row: DbWorkoutLog;      Insert: Omit<DbWorkoutLog, 'id' | 'created_at'>;      Update: Partial<DbWorkoutLog> }
-      notifications:      { Row: DbNotification;    Insert: Omit<DbNotification, 'id' | 'created_at'>;    Update: Partial<DbNotification> }
+      workout_logs:       { Row: DbWorkoutLog;        Insert: Omit<DbWorkoutLog, 'id' | 'created_at'>;        Update: Partial<DbWorkoutLog> }
+      client_workouts:    { Row: DbClientWorkout;    Insert: Omit<DbClientWorkout, 'id' | 'created_at'>;    Update: Partial<DbClientWorkout> }
+      check_ins:          { Row: DbCheckIn;          Insert: Omit<DbCheckIn, 'id' | 'created_at'>;          Update: Partial<DbCheckIn> }
+      notifications:      { Row: DbNotification;     Insert: Omit<DbNotification, 'id' | 'created_at'>;     Update: Partial<DbNotification> }
     }
   }
 }

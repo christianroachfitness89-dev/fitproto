@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Search, Plus, Dumbbell,
-  Clock, BarChart3, X, Loader2, Trash2, ChevronRight,
+  Clock, BarChart3, X, Loader2, Trash2, ChevronRight, Send, CheckCircle2,
 } from 'lucide-react'
 import clsx from 'clsx'
 import {
@@ -10,6 +10,8 @@ import {
   useWorkouts,  useCreateWorkout,  useDeleteWorkout,
   usePrograms,  useCreateProgram,
 } from '@/hooks/useWorkouts'
+import { useClients } from '@/hooks/useClients'
+import { useAssignWorkout } from '@/hooks/useClientWorkouts'
 import type { DbExercise, DbWorkout, DbProgram, Difficulty, ExerciseMetricType } from '@/lib/database.types'
 
 const METRIC_OPTIONS: { value: ExerciseMetricType; label: string; desc: string; icon: string }[] = [
@@ -352,11 +354,127 @@ function ExercisesList() {
   )
 }
 
+// ─── Assign to client modal ───────────────────────────────────
+function AssignToClientModal({ workout, onClose }: { workout: DbWorkout; onClose: () => void }) {
+  const { data: clients = [], isLoading } = useClients()
+  const assign = useAssignWorkout()
+  const [selected, setSelected] = useState<string | null>(null)
+  const [dueDate, setDueDate]   = useState('')
+  const [notes, setNotes]       = useState('')
+  const [done, setDone]         = useState(false)
+  const [error, setError]       = useState<string | null>(null)
+
+  const activeClients = clients.filter(c => c.status === 'active')
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!selected) { setError('Select a client'); return }
+    setError(null)
+    try {
+      await assign.mutateAsync({
+        client_id:  selected,
+        workout_id: workout.id,
+        due_date:   dueDate || undefined,
+        notes:      notes   || undefined,
+      })
+      setDone(true)
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10">
+        {done ? (
+          <div className="text-center py-4">
+            <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 size={28} className="text-emerald-600" />
+            </div>
+            <h3 className="font-bold text-gray-900 mb-1">Workout assigned!</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              <span className="font-medium">{workout.name}</span> has been sent to{' '}
+              <span className="font-medium">{clients.find(c => c.id === selected)?.name}</span>
+            </p>
+            <button onClick={onClose}
+              className="w-full py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl">
+              Done
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Assign to Client</h2>
+                <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[220px]">{workout.name}</p>
+              </div>
+              <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18} /></button>
+            </div>
+
+            {error && <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">{error}</div>}
+
+            <form onSubmit={submit} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Client *</label>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-6"><Loader2 size={18} className="animate-spin text-gray-300" /></div>
+                ) : (
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                    {activeClients.length === 0 && (
+                      <p className="text-sm text-gray-400 text-center py-4">No active clients yet</p>
+                    )}
+                    {activeClients.map(c => {
+                      const initials = c.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
+                      return (
+                        <button key={c.id} type="button" onClick={() => setSelected(c.id)}
+                          className={clsx('w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all text-left',
+                            selected === c.id ? 'border-brand-500 bg-brand-50' : 'border-transparent bg-gray-50 hover:bg-gray-100')}>
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            {initials}
+                          </div>
+                          <span className="text-sm font-medium text-gray-800 flex-1 truncate">{c.name}</span>
+                          {selected === c.id && <CheckCircle2 size={15} className="text-brand-600 flex-shrink-0" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Due Date</label>
+                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Notes</label>
+                <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. Focus on form..."
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={onClose}
+                  className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={!selected || assign.isPending}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all">
+                  {assign.isPending ? <Loader2 size={14} className="animate-spin" /> : <><Send size={13} /> Assign</>}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Workouts list ────────────────────────────────────────────
 function WorkoutsList() {
   const navigate = useNavigate()
   const [search, setSearch]       = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [assigning, setAssigning] = useState<DbWorkout | null>(null)
 
   const { data: workouts = [], isLoading } = useWorkouts(search.length >= 2 ? search : undefined)
   const deleteWorkout = useDeleteWorkout()
@@ -364,6 +482,7 @@ function WorkoutsList() {
   return (
     <div className="space-y-4">
       {showModal && <WorkoutModal onClose={() => setShowModal(false)} />}
+      {assigning && <AssignToClientModal workout={assigning} onClose={() => setAssigning(null)} />}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
@@ -401,17 +520,26 @@ function WorkoutsList() {
               onClick={() => navigate(`/library/workouts/${workout.id}`)}
               className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-card-hover hover:border-brand-200 transition-all group relative cursor-pointer"
             >
-              <button
-                onClick={e => { e.stopPropagation(); deleteWorkout.mutate(workout.id) }}
-                disabled={deleteWorkout.isPending}
-                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-50 text-gray-300 hover:text-rose-500 transition-all disabled:opacity-50"
-              >
-                <Trash2 size={14} />
-              </button>
+              <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                <button
+                  onClick={e => { e.stopPropagation(); setAssigning(workout) }}
+                  title="Assign to client"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 text-xs font-semibold transition-colors"
+                >
+                  <Send size={11} /> Assign
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); deleteWorkout.mutate(workout.id) }}
+                  disabled={deleteWorkout.isPending}
+                  className="p-1.5 rounded-lg hover:bg-rose-50 text-gray-300 hover:text-rose-500 transition-all disabled:opacity-50"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
               <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center mb-3">
                 <Dumbbell size={20} className="text-brand-600" />
               </div>
-              <h3 className="font-semibold text-gray-800 mb-1 pr-6">{workout.name}</h3>
+              <h3 className="font-semibold text-gray-800 mb-1 pr-16">{workout.name}</h3>
               {workout.description && (
                 <p className="text-xs text-gray-500 mb-3 line-clamp-2">{workout.description}</p>
               )}
