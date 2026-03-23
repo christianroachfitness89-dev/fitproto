@@ -15,13 +15,17 @@ import {
   useExercises, type WorkoutExerciseWithSets,
 } from '@/hooks/useWorkouts'
 import type { DbWorkoutSet, ExerciseMetricType, ProgressionType } from '@/lib/database.types'
+import { weightLabel, useUnitSystem, type UnitSystem } from '@/lib/units'
 
 // ─── Helpers ──────────────────────────────────────────────────
-const METRIC_LABELS: Record<ExerciseMetricType, { icon: string; label: string; cols: string[] }> = {
-  reps_weight:  { icon: '🏋️', label: 'Reps + Weight', cols: ['Set', 'Reps', 'Weight (lbs)', 'Rest (s)'] },
-  reps:         { icon: '🔄', label: 'Reps only',     cols: ['Set', 'Reps', 'Rest (s)'] },
-  time:         { icon: '⏱️', label: 'Timed',          cols: ['Set', 'Duration (s)', 'Rest (s)'] },
-  distance:     { icon: '📏', label: 'Distance',       cols: ['Set', 'Distance (m)', 'Rest (s)'] },
+function buildMetricLabels(unit: UnitSystem): Record<ExerciseMetricType, { icon: string; label: string; cols: string[] }> {
+  const wt = weightLabel(unit)
+  return {
+    reps_weight:  { icon: '🏋️', label: 'Reps + Weight', cols: ['Set', 'Reps', `Weight (${wt})`, 'Rest (s)'] },
+    reps:         { icon: '🔄', label: 'Reps only',     cols: ['Set', 'Reps', 'Rest (s)'] },
+    time:         { icon: '⏱️', label: 'Timed',          cols: ['Set', 'Duration (s)', 'Rest (s)'] },
+    distance:     { icon: '📏', label: 'Distance',       cols: ['Set', 'Distance (m)', 'Rest (s)'] },
+  }
 }
 
 const PROGRESSION_LABELS: Record<ProgressionType, string> = {
@@ -31,19 +35,23 @@ const PROGRESSION_LABELS: Record<ProgressionType, string> = {
   double_progression:   'Double progression (reps → weight)',
 }
 
-const PROGRESSION_UNIT: Record<ProgressionType, Record<ExerciseMetricType, string>> = {
-  none:               { reps_weight: '', reps: '', time: '', distance: '' },
-  linear:             { reps_weight: 'lbs/session', reps: 'reps/session', time: 'sec/session', distance: 'm/session' },
-  percentage:         { reps_weight: '% / session', reps: '% / session', time: '% / session', distance: '% / session' },
-  double_progression: { reps_weight: 'lbs when all sets hit top rep', reps: 'n/a', time: 'n/a', distance: 'n/a' },
+function buildProgressionUnit(unit: UnitSystem): Record<ProgressionType, Record<ExerciseMetricType, string>> {
+  const wt = weightLabel(unit)
+  return {
+    none:               { reps_weight: '', reps: '', time: '', distance: '' },
+    linear:             { reps_weight: `${wt}/session`, reps: 'reps/session', time: 'sec/session', distance: 'm/session' },
+    percentage:         { reps_weight: '% / session', reps: '% / session', time: '% / session', distance: '% / session' },
+    double_progression: { reps_weight: `Add ${wt} once all sets hit top rep`, reps: 'n/a', time: 'n/a', distance: 'n/a' },
+  }
 }
 
-function progressionHint(pt: ProgressionType, pv: number | null, metric: ExerciseMetricType): string {
+function progressionHint(pt: ProgressionType, pv: number | null, metric: ExerciseMetricType, unit: UnitSystem): string {
   if (pt === 'none' || !pv) return ''
-  const unit = PROGRESSION_UNIT[pt][metric]
-  if (pt === 'linear') return `+${pv} ${unit}`
+  const unitMap = buildProgressionUnit(unit)
+  const u = unitMap[pt][metric]
+  if (pt === 'linear') return `+${pv} ${u}`
   if (pt === 'percentage') return `+${pv}% each session`
-  if (pt === 'double_progression') return `Add ${pv} lbs once all sets hit max reps`
+  if (pt === 'double_progression') return `Add ${pv} ${weightLabel(unit)} once all sets hit max reps`
   return ''
 }
 
@@ -56,6 +64,8 @@ function ExercisePicker({
 }) {
   const [search, setSearch] = useState('')
   const { data: exercises = [], isLoading } = useExercises(search.length >= 1 ? search : undefined)
+  const unit = useUnitSystem()
+  const metricLabels = buildMetricLabels(unit)
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
@@ -91,12 +101,12 @@ function ExercisePicker({
                 className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-brand-50 transition-colors border-b border-gray-50 last:border-0"
               >
                 <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center flex-shrink-0 text-base">
-                  {METRIC_LABELS[ex.metric_type]?.icon ?? '🏋️'}
+                  {metricLabels[ex.metric_type]?.icon ?? '🏋️'}
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-800">{ex.name}</p>
                   <p className="text-xs text-gray-400">
-                    {[ex.muscle_group, ex.category, METRIC_LABELS[ex.metric_type]?.label].filter(Boolean).join(' · ')}
+                    {[ex.muscle_group, ex.category, metricLabels[ex.metric_type]?.label].filter(Boolean).join(' · ')}
                   </p>
                 </div>
               </button>
@@ -202,6 +212,7 @@ function ProgressionConfig({
   progressionValue: number | null
 }) {
   const updateExercise = useUpdateWorkoutExercise(workoutId)
+  const unit = useUnitSystem()
   const [type, setType] = useState<ProgressionType>(progressionType)
   const [value, setValue] = useState<string>(progressionValue?.toString() ?? '')
 
@@ -244,13 +255,13 @@ function ProgressionConfig({
             placeholder="amount"
             className="w-16 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 text-center"
           />
-          <span className="text-xs text-gray-400">{PROGRESSION_UNIT[type][metric]}</span>
+          <span className="text-xs text-gray-400">{buildProgressionUnit(unit)[type][metric]}</span>
         </div>
       )}
 
       {type !== 'none' && value && (
         <span className="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-1 rounded-lg">
-          {progressionHint(type, parseFloat(value) || null, metric)}
+          {progressionHint(type, parseFloat(value) || null, metric, unit)}
         </span>
       )}
     </div>
@@ -278,9 +289,11 @@ function ExerciseBlock({
   const addSet = useAddWorkoutSet(workoutId)
   const updateSet = useUpdateWorkoutSet(workoutId)
   const removeSet = useRemoveWorkoutSet(workoutId)
+  const unit = useUnitSystem()
+  const metricLabels = buildMetricLabels(unit)
 
   const metric: ExerciseMetricType = we.exercise?.metric_type ?? 'reps_weight'
-  const cols = METRIC_LABELS[metric].cols
+  const cols = metricLabels[metric].cols
 
   function handleAddSet() {
     const lastSet = we.workout_sets[we.workout_sets.length - 1]
@@ -313,13 +326,13 @@ function ExerciseBlock({
         </div>
 
         <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center text-lg flex-shrink-0">
-          {METRIC_LABELS[metric].icon}
+          {metricLabels[metric].icon}
         </div>
 
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-gray-800 truncate">{we.exercise_name}</p>
           <div className="flex items-center gap-2 text-xs text-gray-400">
-            <span>{METRIC_LABELS[metric].label}</span>
+            <span>{metricLabels[metric].label}</span>
             {we.exercise?.muscle_group && <><span>·</span><span>{we.exercise.muscle_group}</span></>}
             {we.exercise?.equipment && <><span>·</span><span>{we.exercise.equipment}</span></>}
           </div>

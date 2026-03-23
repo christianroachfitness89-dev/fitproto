@@ -12,6 +12,7 @@ interface AuthContextValue {
   profileLoading: boolean
   profileError: string | null
   retryProfile: () => void
+  refreshOrg: () => Promise<void>
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
@@ -103,6 +104,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (uid) loadProfileAndOrg(uid)
   }, [])
 
+  const refreshOrg = useCallback(async () => {
+    const currentProfile = await supabase.from('profiles').select('org_id').eq('id', userRef.current?.id ?? '').maybeSingle()
+    const orgId = currentProfile.data?.org_id
+    if (!orgId) return
+    const { data } = await supabase.from('organizations').select('*').eq('id', orgId).maybeSingle()
+    if (data) setOrg(data)
+  }, [])
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
@@ -155,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, session, profile, org,
-      loading, profileLoading, profileError, retryProfile,
+      loading, profileLoading, profileError, retryProfile, refreshOrg,
       signIn, signUp, signOut,
     }}>
       {children}

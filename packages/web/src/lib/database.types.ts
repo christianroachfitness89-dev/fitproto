@@ -12,10 +12,13 @@ export type ExerciseMetricType = 'reps_weight' | 'reps' | 'time' | 'distance'
 /** Progressive overload strategy for a workout exercise */
 export type ProgressionType = 'none' | 'linear' | 'percentage' | 'double_progression'
 
+export type UnitSystem = 'imperial' | 'metric'
+
 export interface DbOrganization {
   id: string
   name: string
   owner_id: string
+  unit_system: UnitSystem
   created_at: string
 }
 
