@@ -6,11 +6,6 @@ import type {
   DbProgram, ProgressionType,
 } from '@/lib/database.types'
 
-function requireOrgId(orgId: string | undefined): string {
-  if (!orgId) throw new Error('Profile not loaded — please refresh and try again.')
-  return orgId
-}
-
 // ─── Exercises ────────────────────────────────────────────────
 export function useExercises(search?: string) {
   const { profile } = useAuth()
@@ -35,20 +30,21 @@ export function useCreateExercise() {
 
   return useMutation({
     mutationFn: async (input: Omit<DbExercise, 'id' | 'created_at' | 'org_id'>) => {
+      const orgId = profile?.org_id
+      if (!orgId) throw new Error('Session not ready — please wait a moment and try again.')
       const { data, error } = await supabase
         .from('exercises')
-        .insert({ ...input, org_id: requireOrgId(profile?.org_id) } as any)
+        .insert({ ...input, org_id: orgId } as any)
         .select()
         .single()
       if (error) throw error
       return data as DbExercise
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises', requireOrgId(profile?.org_id)] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises'] }),
   })
 }
 
 export function useDeleteExercise() {
-  const { profile } = useAuth()
   const qc = useQueryClient()
 
   return useMutation({
@@ -56,7 +52,7 @@ export function useDeleteExercise() {
       const { error } = await supabase.from('exercises').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises', requireOrgId(profile?.org_id)] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises'] }),
   })
 }
 
@@ -88,20 +84,21 @@ export function useCreateWorkout() {
 
   return useMutation({
     mutationFn: async (input: Omit<DbWorkout, 'id' | 'created_at' | 'org_id'>) => {
+      const orgId = profile?.org_id
+      if (!orgId) throw new Error('Session not ready — please wait a moment and try again.')
       const { data, error } = await supabase
         .from('workouts')
-        .insert({ ...input, org_id: requireOrgId(profile?.org_id) } as any)
+        .insert({ ...input, org_id: orgId } as any)
         .select()
         .single()
       if (error) throw error
       return data as DbWorkout
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workouts', requireOrgId(profile?.org_id)] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workouts'] }),
   })
 }
 
 export function useDeleteWorkout() {
-  const { profile } = useAuth()
   const qc = useQueryClient()
 
   return useMutation({
@@ -109,7 +106,7 @@ export function useDeleteWorkout() {
       const { error } = await supabase.from('workouts').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workouts', requireOrgId(profile?.org_id)] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workouts'] }),
   })
 }
 
@@ -141,7 +138,6 @@ export function useWorkoutDetail(workoutId: string | undefined) {
         .single()
       if (error) throw error
 
-      // Sort workout_exercises by order_index, sets by set_number
       const result = data as WorkoutDetail
       result.workout_exercises.sort((a, b) => a.order_index - b.order_index)
       result.workout_exercises.forEach(we =>
@@ -231,7 +227,6 @@ export function useReorderWorkoutExercises(workoutId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (exercises: { id: string; order_index: number }[]) => {
-      // Upsert order_index for each exercise
       const updates = exercises.map(e =>
         supabase.from('workout_exercises').update({ order_index: e.order_index } as any).eq('id', e.id)
       )
@@ -281,12 +276,10 @@ export function useRemoveWorkoutSet(workoutId: string) {
 }
 
 // ─── Last-performance lookup ──────────────────────────────────
-/** Returns the most recent set logs for a given workout_exercise_id */
 export function useLastPerformance(workoutExerciseId: string | undefined) {
   return useQuery({
     queryKey: ['last-performance', workoutExerciseId],
     queryFn: async () => {
-      // Find the latest workout_log that contains this exercise
       const { data, error } = await supabase
         .from('workout_set_logs')
         .select('*')
@@ -325,14 +318,16 @@ export function useCreateProgram() {
 
   return useMutation({
     mutationFn: async (input: Omit<DbProgram, 'id' | 'created_at' | 'org_id'>) => {
+      const orgId = profile?.org_id
+      if (!orgId) throw new Error('Session not ready — please wait a moment and try again.')
       const { data, error } = await supabase
         .from('programs')
-        .insert({ ...input, org_id: requireOrgId(profile?.org_id) } as any)
+        .insert({ ...input, org_id: orgId } as any)
         .select()
         .single()
       if (error) throw error
       return data as DbProgram
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['programs', requireOrgId(profile?.org_id)] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['programs'] }),
   })
 }

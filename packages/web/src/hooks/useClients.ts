@@ -3,11 +3,6 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import type { DbClient } from '@/lib/database.types'
 
-function requireProfile(profile: { id: string; org_id: string } | null) {
-  if (!profile) throw new Error('Profile not loaded — please refresh and try again.')
-  return profile
-}
-
 // ─── Query keys ──────────────────────────────────────────────
 export const clientKeys = {
   all:    (orgId: string) => ['clients', orgId] as const,
@@ -75,17 +70,21 @@ export function useCreateClient() {
       goal?: string
       category?: string
     }) => {
-      const p = requireProfile(profile)
+      // Read orgId fresh inside mutationFn so we always have the latest value
+      const orgId = profile?.org_id
+      const coachId = profile?.id
+      if (!orgId || !coachId) throw new Error('Session not ready — please wait a moment and try again.')
+
       const { data, error } = await supabase
         .from('clients')
         .insert({
-          org_id:            p.org_id,
-          assigned_coach_id: p.id,
+          org_id:            orgId,
+          assigned_coach_id: coachId,
           name:              input.name,
-          email:             input.email ?? null,
-          phone:             input.phone ?? null,
+          email:             input.email  ?? null,
+          phone:             input.phone  ?? null,
           status:            input.status ?? 'active',
-          goal:              input.goal ?? null,
+          goal:              input.goal   ?? null,
           category:          input.category ?? null,
         } as any)
         .select()
@@ -93,15 +92,13 @@ export function useCreateClient() {
       if (error) throw error
       return data as DbClient
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: clientKeys.all(requireProfile(profile).org_id) })
-    },
+    // Broad invalidation — no profile dependency needed
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
   })
 }
 
 // ─── Update client ────────────────────────────────────────────
 export function useUpdateClient() {
-  const { profile } = useAuth()
   const qc = useQueryClient()
 
   return useMutation({
@@ -116,7 +113,7 @@ export function useUpdateClient() {
       return data as DbClient
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: clientKeys.all(requireProfile(profile).org_id) })
+      qc.invalidateQueries({ queryKey: ['clients'] })
       qc.invalidateQueries({ queryKey: clientKeys.detail(data.id) })
     },
   })
@@ -124,7 +121,6 @@ export function useUpdateClient() {
 
 // ─── Delete client ────────────────────────────────────────────
 export function useDeleteClient() {
-  const { profile } = useAuth()
   const qc = useQueryClient()
 
   return useMutation({
@@ -132,8 +128,6 @@ export function useDeleteClient() {
       const { error } = await supabase.from('clients').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: clientKeys.all(requireProfile(profile).org_id) })
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
   })
 }
