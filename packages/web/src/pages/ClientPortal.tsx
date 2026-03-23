@@ -1186,9 +1186,14 @@ function MessagesView({ clientId }: { clientId: string }) {
   const bottomRef               = useRef<HTMLDivElement>(null)
 
   async function fetchMessages() {
-    // Ensure conversation exists, then load all messages
-    await supabase.rpc('get_portal_conversation', { p_client_id: clientId })
-    const { data } = await supabase.rpc('get_portal_messages', { p_client_id: clientId })
+    const { data: convId, error: convErr } = await supabase.rpc('get_portal_conversation', { p_client_id: clientId })
+    if (convErr) console.error('[portal] get_portal_conversation error:', convErr)
+    else console.log('[portal] conversation id:', convId)
+
+    const { data, error: msgErr } = await supabase.rpc('get_portal_messages', { p_client_id: clientId })
+    if (msgErr) console.error('[portal] get_portal_messages error:', msgErr)
+    else console.log('[portal] messages:', data)
+
     setMessages((data as PortalMessage[]) ?? [])
     setLoading(false)
   }
