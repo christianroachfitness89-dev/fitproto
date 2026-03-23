@@ -13,7 +13,7 @@ security definer
 set search_path = public
 as $$
   select jsonb_build_object(
-    'workout_name',  wl.workout_name,
+    'workout_name',  w.name,
     'completed_at',  wl.completed_at,
     'notes',         wl.notes,
     'exercises',     coalesce((
@@ -49,6 +49,7 @@ as $$
     ), '[]'::jsonb)
   )
   from public.workout_logs wl
+  join public.workouts w on w.id = wl.workout_id
   where wl.id        = p_workout_log_id
     and wl.client_id = p_client_id
 $$;
