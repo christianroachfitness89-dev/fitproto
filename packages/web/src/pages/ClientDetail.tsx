@@ -6,8 +6,10 @@ import {
   Clock, Loader2, X, ChevronDown, Trash2, Send,
   ClipboardList, ChevronLeft, ChevronRight, ClipboardCheck,
   SkipForward, ExternalLink, Copy, History, BarChart2, Utensils, Lock,
+  ChevronUp, Scale, Zap, TrendingUp,
 } from 'lucide-react'
 import clsx from 'clsx'
+import { supabase } from '@/lib/supabase'
 import { useClient, useUpdateClient } from '@/hooks/useClients'
 import { useTasks, useCreateTask, useToggleTask } from '@/hooks/useTasks'
 import {
@@ -19,7 +21,42 @@ import { useUnitSystem, weightLabel } from '@/lib/units'
 import { playRestEndChime } from '@/lib/sound'
 import type { DbClient, DbTask, DbClientWorkoutWithWorkout, PortalSection } from '@/lib/database.types'
 
-type Tab = 'overview' | 'workouts' | 'nutrition' | 'metrics' | 'notes'
+type Tab = 'overview' | 'workouts' | 'history' | 'nutrition' | 'metrics' | 'notes'
+
+// ─── Types for session history ─────────────────────────────────
+interface CoachHistoryEntry {
+  id: string
+  completed_at: string
+  workout_name: string
+  set_count: number
+  exercises: string[]
+  notes: string | null
+}
+
+interface CoachSessionSet {
+  set_number: number
+  reps_achieved: number | null
+  weight_used: number | null
+  duration_seconds: number | null
+  distance_meters: number | null
+  rpe: number | null
+}
+
+interface CoachSessionExercise {
+  exercise_id: string
+  name: string
+  muscle_group: string | null
+  metric_type: string
+  order_index: number
+  sets: CoachSessionSet[]
+}
+
+interface CoachSessionDetail {
+  workout_name: string
+  completed_at: string
+  notes: string | null
+  exercises: CoachSessionExercise[]
+}
 
 // ─── Portal section definitions ───────────────────────────────
 const PORTAL_SECTIONS: {
@@ -1012,6 +1049,260 @@ function WorkoutsTab({ clientId }: { clientId: string }) {
   )
 }
 
+// ─── History tab ──────────────────────────────────────────────
+function HistoryTab({ clientId }: { clientId: string }) {
+  const [entries, setEntries]   = useState<CoachHistoryEntry[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const [detail, setDetail]     = useState<Record<string, CoachSessionDetail>>({})
+  const [loadingDetail, setLoadingDetail] = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase.rpc('get_portal_history', { p_client_id: clientId }).then(({ data }) => {
+      setEntries((data as CoachHistoryEntry[]) ?? [])
+      setLoading(false)
+    })
+  }, [clientId])
+
+  async function toggleSession(id: string) {
+    if (expanded === id) { setExpanded(null); return }
+    setExpanded(id)
+    if (detail[id]) return
+    setLoadingDetail(id)
+    const { data } = await supabase.rpc('get_portal_session_detail', {
+      p_client_id: clientId, p_workout_log_id: id,
+    })
+    setDetail(prev => ({ ...prev, [id]: data as CoachSessionDetail }))
+    setLoadingDetail(null)
+  }
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <Loader2 size={24} className="text-brand-500 animate-spin" />
+      <p className="text-sm text-gray-400">Loading history…</p>
+    </div>
+  )
+
+  if (entries.length === 0) return (
+    <div className="text-center py-16">
+      <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
+        <History size={28} className="text-amber-400" />
+      </div>
+      <p className="text-gray-600 font-medium">No sessions logged yet</p>
+      <p className="text-sm text-gray-400 mt-1">Completed sessions will appear here with full set data.</p>
+    </div>
+  )
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="font-semibold text-gray-800">Session History</h3>
+        <span className="text-xs text-gray-400">{entries.length} sessions</span>
+      </div>
+
+      {entries.map(entry => {
+        const isOpen   = expanded === entry.id
+        const d        = detail[entry.id]
+        const isLoading = loadingDetail === entry.id
+        const dateStr  = new Date(entry.completed_at).toLocaleDateString('en-AU', {
+          weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+        })
+
+        return (
+          <div key={entry.id}
+            className="rounded-2xl border border-gray-100 overflow-hidden shadow-sm bg-white">
+            {/* Summary row */}
+            <button
+              onClick={() => toggleSession(entry.id)}
+              className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition-colors"
+            >
+              {/* Date badge */}
+              <div className="w-10 h-10 rounded-xl bg-amber-50 flex flex-col items-center justify-center flex-shrink-0">
+                <History size={16} className="text-amber-500" />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900 text-[15px] leading-tight truncate">
+                  {entry.workout_name}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
+                  <Calendar size={11} />{dateStr}
+                </p>
+                {entry.exercises?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {entry.exercises.slice(0, 4).map(name => (
+                      <span key={name}
+                        className="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                        {name}
+                      </span>
+                    ))}
+                    {entry.exercises.length > 4 && (
+                      <span className="text-[11px] text-gray-400 px-1 py-0.5">
+                        +{entry.exercises.length - 4}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {entry.set_count > 0 && (
+                  <div className="text-right">
+                    <p className="text-amber-500 font-bold text-lg leading-none">{entry.set_count}</p>
+                    <p className="text-gray-400 text-[10px] uppercase tracking-wide">sets</p>
+                  </div>
+                )}
+                {isOpen
+                  ? <ChevronUp size={16} className="text-gray-400" />
+                  : <ChevronDown size={16} className="text-gray-400" />
+                }
+              </div>
+            </button>
+
+            {/* Expanded detail */}
+            {isOpen && (
+              <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-4 space-y-4">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-8 gap-2 text-gray-400">
+                    <Loader2 size={18} className="animate-spin" />
+                    <span className="text-sm">Loading sets…</span>
+                  </div>
+                ) : !d || d.exercises.length === 0 ? (
+                  <div className="text-center py-8">
+                    <ClipboardList size={24} className="text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-400">No set data recorded for this session.</p>
+                  </div>
+                ) : (
+                  <>
+                    {d.exercises.map((ex, idx) => {
+                      const isWeighted = ex.metric_type === 'reps_weight'
+                      const isTimed    = ex.metric_type === 'time'
+                      const isDistance = ex.metric_type === 'distance'
+                      const setsWithData = ex.sets.filter(s =>
+                        s.reps_achieved != null || s.weight_used != null ||
+                        s.duration_seconds != null || s.distance_meters != null
+                      )
+                      if (setsWithData.length === 0) return null
+
+                      return (
+                        <div key={ex.exercise_id}
+                          className="rounded-xl bg-white border border-gray-100 overflow-hidden">
+                          {/* Exercise header */}
+                          <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+                            <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center text-[11px] font-bold text-amber-600 flex-shrink-0">
+                              {idx + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-900 text-sm leading-tight">{ex.name}</p>
+                              {ex.muscle_group && (
+                                <p className="text-xs text-gray-400 mt-0.5">{ex.muscle_group}</p>
+                              )}
+                            </div>
+                            <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                              {setsWithData.length} {setsWithData.length === 1 ? 'set' : 'sets'}
+                            </span>
+                          </div>
+
+                          {/* Column headers */}
+                          <div className={clsx(
+                            'grid px-4 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-bold uppercase tracking-wide text-gray-400',
+                            isWeighted ? 'grid-cols-[28px_1fr_1fr_52px]' : 'grid-cols-[28px_1fr_52px]',
+                          )}>
+                            <span>#</span>
+                            {isWeighted && <><span>Reps</span><span>Weight</span></>}
+                            {isTimed    && <span>Duration</span>}
+                            {isDistance && <span>Distance</span>}
+                            {ex.metric_type === 'reps' && <span>Reps</span>}
+                            <span className="text-right">RPE</span>
+                          </div>
+
+                          {/* Set rows */}
+                          <div className="divide-y divide-gray-50">
+                            {setsWithData.map(s => (
+                              <div key={s.set_number}
+                                className={clsx(
+                                  'grid items-center px-4 py-2.5 text-sm',
+                                  isWeighted ? 'grid-cols-[28px_1fr_1fr_52px]' : 'grid-cols-[28px_1fr_52px]',
+                                )}>
+                                {/* Set number */}
+                                <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[11px] font-bold text-gray-500">
+                                  {s.set_number}
+                                </div>
+
+                                {isWeighted && (
+                                  <>
+                                    <div>
+                                      <span className="font-bold text-gray-900">{s.reps_achieved ?? '—'}</span>
+                                      <span className="text-gray-400 text-xs ml-1">reps</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-bold text-gray-900">
+                                        {s.weight_used != null ? s.weight_used : '—'}
+                                      </span>
+                                      <span className="text-gray-400 text-xs ml-1">kg</span>
+                                    </div>
+                                  </>
+                                )}
+                                {isTimed && (
+                                  <div>
+                                    <span className="font-bold text-gray-900">
+                                      {s.duration_seconds != null ? `${s.duration_seconds}s` : '—'}
+                                    </span>
+                                  </div>
+                                )}
+                                {isDistance && (
+                                  <div>
+                                    <span className="font-bold text-gray-900">
+                                      {s.distance_meters != null ? `${s.distance_meters}m` : '—'}
+                                    </span>
+                                  </div>
+                                )}
+                                {ex.metric_type === 'reps' && (
+                                  <div>
+                                    <span className="font-bold text-gray-900">{s.reps_achieved ?? '—'}</span>
+                                    <span className="text-gray-400 text-xs ml-1">reps</span>
+                                  </div>
+                                )}
+
+                                {/* RPE */}
+                                <div className="text-right">
+                                  {s.rpe != null ? (
+                                    <span className={clsx(
+                                      'inline-block text-xs font-bold px-2 py-0.5 rounded-full',
+                                      s.rpe <= 6  ? 'bg-emerald-50 text-emerald-600' :
+                                      s.rpe <= 8  ? 'bg-amber-50 text-amber-600' :
+                                                    'bg-rose-50 text-rose-600',
+                                    )}>
+                                      {s.rpe}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-300 text-xs">—</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {d.notes && (
+                      <div className="rounded-xl bg-white border border-gray-100 px-4 py-3">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Session notes</p>
+                        <p className="text-sm text-gray-600 leading-relaxed italic">{d.notes}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── Placeholder tab ──────────────────────────────────────────
 function ComingSoon({ label }: { label: string }) {
   return (
@@ -1070,6 +1361,7 @@ export default function ClientDetail() {
   const tabs: { key: Tab; label: string }[] = [
     { key: 'overview',  label: 'Overview' },
     { key: 'workouts',  label: 'Workouts' },
+    { key: 'history',   label: 'History' },
     { key: 'nutrition', label: 'Nutrition' },
     { key: 'metrics',   label: 'Metrics' },
     { key: 'notes',     label: 'Notes' },
@@ -1301,6 +1593,7 @@ export default function ClientDetail() {
           )}
 
           {activeTab === 'workouts'  && <WorkoutsTab clientId={client.id} />}
+          {activeTab === 'history'   && <HistoryTab clientId={client.id} />}
           {activeTab === 'nutrition' && <ComingSoon label="Nutrition plans" />}
           {activeTab === 'metrics'   && <ComingSoon label="Client metrics" />}
           {activeTab === 'notes'     && <ComingSoon label="Coach notes" />}
