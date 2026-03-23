@@ -1179,36 +1179,30 @@ function MetricPill({ icon, label, value, color }: {
 
 // ─── Messages view (client portal) ────────────────────────────
 function MessagesView({ clientId }: { clientId: string }) {
-  const [messages, setMessages]     = useState<PortalMessage[]>([])
-  const [convId, setConvId]         = useState<string | null>(null)
-  const [loading, setLoading]       = useState(true)
-  const [draft, setDraft]           = useState('')
-  const [sending, setSending]       = useState(false)
-  const bottomRef                   = useRef<HTMLDivElement>(null)
+  const [messages, setMessages] = useState<PortalMessage[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [draft, setDraft]       = useState('')
+  const [sending, setSending]   = useState(false)
+  const bottomRef               = useRef<HTMLDivElement>(null)
 
-  // Get or create conversation + load messages
-  useEffect(() => {
-    async function init() {
-      const { data: cid } = await supabase.rpc('get_portal_conversation', { p_client_id: clientId })
-      if (cid) {
-        setConvId(cid as string)
-        const { data } = await supabase.rpc('get_portal_messages', { p_client_id: clientId })
-        setMessages((data as PortalMessage[]) ?? [])
-      }
-      setLoading(false)
-    }
-    init()
-  }, [clientId])
+  async function fetchMessages() {
+    // Ensure conversation exists, then load all messages
+    await supabase.rpc('get_portal_conversation', { p_client_id: clientId })
+    const { data } = await supabase.rpc('get_portal_messages', { p_client_id: clientId })
+    setMessages((data as PortalMessage[]) ?? [])
+    setLoading(false)
+  }
 
-  // Poll every 8s for new messages
+  // Initial load + poll every 4s (catches coach replies)
   useEffect(() => {
-    if (!convId) return
+    let alive = true
+    fetchMessages()
     const interval = setInterval(async () => {
       const { data } = await supabase.rpc('get_portal_messages', { p_client_id: clientId })
-      if (data) setMessages(data as PortalMessage[])
-    }, 8000)
-    return () => clearInterval(interval)
-  }, [convId, clientId])
+      if (alive && data) setMessages(data as PortalMessage[])
+    }, 4000)
+    return () => { alive = false; clearInterval(interval) }
+  }, [clientId])
 
   // Auto-scroll
   useEffect(() => {
@@ -1220,13 +1214,9 @@ function MessagesView({ clientId }: { clientId: string }) {
     if (!text || sending) return
     setSending(true)
     setDraft('')
-    const { data: msgId } = await supabase.rpc('send_portal_message', {
-      p_client_id: clientId, p_content: text,
-    })
-    if (msgId) {
-      const { data } = await supabase.rpc('get_portal_messages', { p_client_id: clientId })
-      if (data) setMessages(data as PortalMessage[])
-    }
+    await supabase.rpc('send_portal_message', { p_client_id: clientId, p_content: text })
+    const { data } = await supabase.rpc('get_portal_messages', { p_client_id: clientId })
+    if (data) setMessages(data as PortalMessage[])
     setSending(false)
   }
 
