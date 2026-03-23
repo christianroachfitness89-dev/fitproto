@@ -65,6 +65,74 @@ const DIFFICULTY_COLORS = {
 
 type SetEntry = { reps: string; weight: string; duration: string; distance: string; rpe: string }
 
+// ─── Rest timer overlay ───────────────────────────────────────
+function RestTimer({
+  restSeconds, label, onDone,
+}: {
+  restSeconds: number
+  label: string
+  onDone: () => void
+}) {
+  const [remaining, setRemaining] = useState(restSeconds)
+
+  useEffect(() => {
+    if (remaining <= 0) { onDone(); return }
+    const t = setTimeout(() => setRemaining(r => r - 1), 1000)
+    return () => clearTimeout(t)
+  }, [remaining])
+
+  const radius       = 64
+  const circumference = 2 * Math.PI * radius
+  const progress     = restSeconds > 0 ? remaining / restSeconds : 0
+  // offset goes from 0 (full ring) → circumference (empty ring)
+  const strokeOffset = circumference * (1 - progress)
+
+  const mins = Math.floor(remaining / 60)
+  const secs = remaining % 60
+  const display = mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : `${secs}`
+
+  return (
+    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#08081a]/96 backdrop-blur-sm">
+      <p className="text-white/30 text-xs uppercase tracking-[0.2em] mb-1">Rest Period</p>
+      <p className="text-white/60 text-sm font-medium mb-8 max-w-[220px] text-center">{label}</p>
+
+      {/* Countdown ring */}
+      <div className="relative w-48 h-48">
+        <svg viewBox="0 0 160 160" className="w-full h-full -rotate-90">
+          {/* Track */}
+          <circle cx="80" cy="80" r={radius}
+            stroke="rgba(255,255,255,0.06)" strokeWidth="10" fill="none" />
+          {/* Progress */}
+          <circle cx="80" cy="80" r={radius}
+            stroke="url(#timerGrad)" strokeWidth="10" fill="none"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeOffset}
+            style={{ transition: 'stroke-dashoffset 0.85s linear' }} />
+          <defs>
+            <linearGradient id="timerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#7c3aed" />
+              <stop offset="100%" stopColor="#a855f7" />
+            </linearGradient>
+          </defs>
+        </svg>
+        {/* Time */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-5xl font-bold text-white tabular-nums leading-none">{display}</span>
+          <span className="text-white/30 text-xs mt-1">seconds</span>
+        </div>
+      </div>
+
+      <button
+        onClick={onDone}
+        className="mt-10 px-8 py-3 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-sm font-semibold rounded-2xl transition-colors border border-white/10"
+      >
+        Skip Rest
+      </button>
+    </div>
+  )
+}
+
 // ─── Portal log session overlay ───────────────────────────────
 function PortalLogOverlay({
   cw, clientId, onClose, onDone,
@@ -85,6 +153,15 @@ function PortalLogOverlay({
   const [saving, setSaving] = useState(false)
   const [saved, setSaved]   = useState(false)
   const [error, setError]   = useState<string | null>(null)
+  const [doneSets, setDoneSets] = useState<Set<string>>(new Set())
+  const [restTimer, setRestTimer] = useState<{ restSeconds: number; label: string } | null>(null)
+
+  function handleSetDone(key: string, exerciseName: string, setNumber: number, restSeconds: number) {
+    setDoneSets(prev => new Set([...prev, key]))
+    if (restSeconds > 0) {
+      setRestTimer({ restSeconds, label: `${exerciseName} — Set ${setNumber} complete` })
+    }
+  }
 
   useEffect(() => {
     supabase.rpc('get_portal_workout_detail', {
@@ -153,7 +230,15 @@ function PortalLogOverlay({
   const inp = 'w-full px-2 py-2 text-sm text-center bg-white/10 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-brand-400 focus:bg-white/15'
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-br from-[#0a0a1a] via-[#161630] to-[#200f3a] flex flex-col">
+    <div className="fixed inset-0 z-50 bg-gradient-to-br from-[#0a0a1a] via-[#161630] to-[#200f3a] flex flex-col relative">
+      {/* Rest timer — overlays the form */}
+      {restTimer && (
+        <RestTimer
+          restSeconds={restTimer.restSeconds}
+          label={restTimer.label}
+          onDone={() => setRestTimer(null)}
+        />
+      )}
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-safe pt-6 pb-4 border-b border-white/10">
         <button onClick={onClose} className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors">
@@ -179,8 +264,8 @@ function PortalLogOverlay({
           const isTimed     = metric === 'time'
           const isDistance  = metric === 'distance'
           const colClass    = isWeighted
-            ? 'grid-cols-[24px_1fr_1fr_72px]'
-            : 'grid-cols-[24px_1fr_72px]'
+            ? 'grid-cols-[24px_1fr_1fr_56px_40px]'
+            : 'grid-cols-[24px_1fr_56px_40px]'
           return (
             <div key={ex.id}>
               <div className="flex items-center gap-2 mb-3">
@@ -199,43 +284,71 @@ function PortalLogOverlay({
                 {isDistance && <span>Distance (m)</span>}
                 {metric === 'reps' && <span>Reps</span>}
                 <span>RPE</span>
+                <span />
               </div>
               {/* Set rows */}
               <div className="space-y-2">
                 {(ex.sets ?? []).map(s => {
-                  const key = `${ex.id}-${s.set_number}`
-                  const e   = entries[key] ?? { reps: '', weight: '', duration: '', distance: '', rpe: '' }
+                  const key  = `${ex.id}-${s.set_number}`
+                  const e    = entries[key] ?? { reps: '', weight: '', duration: '', distance: '', rpe: '' }
+                  const done = doneSets.has(key)
                   return (
-                    <div key={s.set_number} className={clsx('grid gap-2 items-center', colClass)}>
-                      <span className="text-white/40 text-xs font-bold text-center">{s.set_number}</span>
+                    <div key={s.set_number}
+                      className={clsx('grid gap-2 items-center rounded-xl px-1 py-1 transition-colors',
+                        done ? 'bg-emerald-500/10' : '',
+                        colClass,
+                      )}>
+                      <span className={clsx('text-xs font-bold text-center',
+                        done ? 'text-emerald-400' : 'text-white/40')}>
+                        {s.set_number}
+                      </span>
                       {isWeighted && (
                         <>
                           <input type="number" inputMode="numeric" min={0} value={e.reps}
                             onChange={ev => setField(key, 'reps', ev.target.value)}
-                            placeholder={s.reps?.toString() ?? '—'} className={inp} />
+                            placeholder={s.reps?.toString() ?? '—'}
+                            className={clsx(inp, done && 'opacity-60')} />
                           <input type="number" inputMode="decimal" min={0} step={0.5} value={e.weight}
                             onChange={ev => setField(key, 'weight', ev.target.value)}
-                            placeholder={s.weight?.toString() ?? '—'} className={inp} />
+                            placeholder={s.weight?.toString() ?? '—'}
+                            className={clsx(inp, done && 'opacity-60')} />
                         </>
                       )}
                       {isTimed && (
                         <input type="number" inputMode="numeric" min={0} value={e.duration}
                           onChange={ev => setField(key, 'duration', ev.target.value)}
-                          placeholder={s.duration_seconds?.toString() ?? '—'} className={inp} />
+                          placeholder={s.duration_seconds?.toString() ?? '—'}
+                          className={clsx(inp, done && 'opacity-60')} />
                       )}
                       {isDistance && (
                         <input type="number" inputMode="decimal" min={0} step={0.1} value={e.distance}
                           onChange={ev => setField(key, 'distance', ev.target.value)}
-                          placeholder={s.distance_meters?.toString() ?? '—'} className={inp} />
+                          placeholder={s.distance_meters?.toString() ?? '—'}
+                          className={clsx(inp, done && 'opacity-60')} />
                       )}
                       {metric === 'reps' && (
                         <input type="number" inputMode="numeric" min={0} value={e.reps}
                           onChange={ev => setField(key, 'reps', ev.target.value)}
-                          placeholder={s.reps?.toString() ?? '—'} className={inp} />
+                          placeholder={s.reps?.toString() ?? '—'}
+                          className={clsx(inp, done && 'opacity-60')} />
                       )}
                       <input type="number" inputMode="numeric" min={1} max={10} value={e.rpe}
                         onChange={ev => setField(key, 'rpe', ev.target.value)}
-                        placeholder="RPE" className={inp} />
+                        placeholder="RPE"
+                        className={clsx(inp, done && 'opacity-60')} />
+                      {/* Done button */}
+                      <button
+                        type="button"
+                        onClick={() => handleSetDone(key, ex.name, s.set_number, s.rest_seconds ?? 0)}
+                        className={clsx(
+                          'w-9 h-9 rounded-xl flex items-center justify-center transition-all flex-shrink-0',
+                          done
+                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                            : 'bg-white/10 text-white/40 hover:bg-white/20 hover:text-white border border-white/10',
+                        )}
+                      >
+                        <CheckCircle2 size={16} />
+                      </button>
                     </div>
                   )
                 })}

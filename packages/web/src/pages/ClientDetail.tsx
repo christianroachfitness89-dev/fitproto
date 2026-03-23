@@ -338,6 +338,58 @@ const STATUS_STYLES: Record<DbClientWorkoutWithWorkout['status'], string> = {
   skipped:   'bg-gray-100 text-gray-500',
 }
 
+// ─── Rest timer (coach modal) ─────────────────────────────────
+function CoachRestTimer({ restSeconds, label, onDone }: { restSeconds: number; label: string; onDone: () => void }) {
+  const [remaining, setRemaining] = useState(restSeconds)
+
+  useEffect(() => {
+    if (remaining <= 0) { onDone(); return }
+    const t = setTimeout(() => setRemaining(r => r - 1), 1000)
+    return () => clearTimeout(t)
+  }, [remaining])
+
+  const radius       = 52
+  const circumference = 2 * Math.PI * radius
+  const strokeOffset = circumference * (1 - (restSeconds > 0 ? remaining / restSeconds : 0))
+  const mins = Math.floor(remaining / 60)
+  const secs = remaining % 60
+  const display = mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : `${secs}`
+
+  return (
+    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/95 backdrop-blur-sm rounded-2xl">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Rest Period</p>
+      <p className="text-sm text-gray-600 font-medium mb-6 text-center max-w-[200px]">{label}</p>
+      <div className="relative w-36 h-36">
+        <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+          <circle cx="60" cy="60" r={radius} stroke="#f3f4f6" strokeWidth="8" fill="none" />
+          <circle cx="60" cy="60" r={radius}
+            stroke="url(#coachTimerGrad)" strokeWidth="8" fill="none"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeOffset}
+            style={{ transition: 'stroke-dashoffset 0.85s linear' }} />
+          <defs>
+            <linearGradient id="coachTimerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#7c3aed" />
+              <stop offset="100%" stopColor="#a855f7" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-4xl font-bold text-gray-900 tabular-nums leading-none">{display}</span>
+          <span className="text-gray-400 text-xs mt-0.5">seconds</span>
+        </div>
+      </div>
+      <button
+        onClick={onDone}
+        className="mt-8 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold rounded-xl transition-colors"
+      >
+        Skip Rest
+      </button>
+    </div>
+  )
+}
+
 // ─── Log session modal ────────────────────────────────────────
 type SetEntry = { reps: string; weight: string; duration: string; distance: string; rpe: string }
 
@@ -357,6 +409,8 @@ function LogSessionModal({
   const [entries, setEntries] = useState<Record<string, SetEntry>>({})
   const [saved, setSaved]     = useState(false)
   const [error, setError]     = useState<string | null>(null)
+  const [doneSets, setDoneSets] = useState<Set<string>>(new Set())
+  const [restTimer, setRestTimer] = useState<{ restSeconds: number; label: string } | null>(null)
 
   useEffect(() => {
     if (!workout) return
@@ -377,6 +431,13 @@ function LogSessionModal({
 
   function setField(key: string, field: keyof SetEntry, value: string) {
     setEntries(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
+  }
+
+  function handleSetDone(key: string, exerciseName: string, setNumber: number, restSeconds: number) {
+    setDoneSets(prev => new Set([...prev, key]))
+    if (restSeconds > 0) {
+      setRestTimer({ restSeconds, label: `${exerciseName} — Set ${setNumber} complete` })
+    }
   }
 
   async function submit() {
@@ -409,7 +470,14 @@ function LogSessionModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] z-10">
-
+        {/* Rest timer overlay */}
+        {restTimer && (
+          <CoachRestTimer
+            restSeconds={restTimer.restSeconds}
+            label={restTimer.label}
+            onDone={() => setRestTimer(null)}
+          />
+        )}
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
           <div>
@@ -435,7 +503,9 @@ function LogSessionModal({
             const isWeighted  = metric === 'reps_weight'
             const isTimed     = metric === 'time'
             const isDistance  = metric === 'distance'
-            const colClass = isWeighted ? 'grid-cols-[28px_1fr_1fr_80px]' : 'grid-cols-[28px_1fr_80px]'
+            const colClass = isWeighted
+              ? 'grid-cols-[28px_1fr_1fr_64px_40px]'
+              : 'grid-cols-[28px_1fr_64px_40px]'
             return (
               <div key={ex.id}>
                 <div className="flex items-center gap-2 mb-2">
@@ -453,15 +523,26 @@ function LogSessionModal({
                   {isDistance && <span>Distance (m)</span>}
                   {metric === 'reps' && <span>Reps</span>}
                   <span>RPE</span>
+                  <span />
                 </div>
                 <div className="space-y-1.5">
                   {ex.workout_sets.map(s => {
-                    const key = `${ex.id}-${s.set_number}`
-                    const e   = entries[key] ?? { reps: '', weight: '', duration: '', distance: '', rpe: '' }
-                    const inp = 'px-2 py-1.5 text-sm text-center border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 bg-white w-full'
+                    const key  = `${ex.id}-${s.set_number}`
+                    const e    = entries[key] ?? { reps: '', weight: '', duration: '', distance: '', rpe: '' }
+                    const done = doneSets.has(key)
+                    const inp  = clsx(
+                      'px-2 py-1.5 text-sm text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 w-full',
+                      done ? 'border-emerald-200 bg-emerald-50 opacity-70' : 'border-gray-200 bg-white',
+                    )
                     return (
-                      <div key={s.set_number} className={clsx('grid gap-2 items-center bg-gray-50 rounded-xl px-2 py-2', colClass)}>
-                        <span className="text-xs font-bold text-gray-400 text-center">{s.set_number}</span>
+                      <div key={s.set_number}
+                        className={clsx('grid gap-2 items-center rounded-xl px-2 py-2 transition-colors',
+                          done ? 'bg-emerald-50' : 'bg-gray-50',
+                          colClass)}>
+                        <span className={clsx('text-xs font-bold text-center',
+                          done ? 'text-emerald-500' : 'text-gray-400')}>
+                          {s.set_number}
+                        </span>
                         {isWeighted && (
                           <>
                             <input type="number" min={0} value={e.reps}
@@ -490,6 +571,19 @@ function LogSessionModal({
                         <input type="number" min={1} max={10} value={e.rpe}
                           onChange={ev => setField(key, 'rpe', ev.target.value)}
                           placeholder="—" className={inp} />
+                        {/* Done button */}
+                        <button
+                          type="button"
+                          onClick={() => handleSetDone(key, ex.exercise_name, s.set_number, s.rest_seconds ?? 0)}
+                          className={clsx(
+                            'w-9 h-9 rounded-xl flex items-center justify-center transition-all flex-shrink-0',
+                            done
+                              ? 'bg-emerald-500 text-white shadow-sm'
+                              : 'bg-white border border-gray-200 text-gray-300 hover:border-emerald-300 hover:text-emerald-500',
+                          )}
+                        >
+                          <CheckCircle2 size={15} />
+                        </button>
                       </div>
                     )
                   })}
