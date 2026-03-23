@@ -23,9 +23,36 @@ const queryClient = new QueryClient({
 
 // ─── Guard: redirect to /login if not authenticated ──────────
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
+  const { user, loading, profile, profileLoading, profileError, retryProfile } = useAuth()
   if (loading) return <FullPageLoader />
   if (!user) return <Navigate to="/login" replace />
+
+  // User is authenticated but profile hasn't loaded yet
+  if (profileLoading || (!profile && !profileError)) return <FullPageLoader />
+
+  // Profile failed to load — show actionable error instead of broken UI
+  if (profileError || !profile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sidebar-bg via-[#1e1e35] to-[#2a1a4e] flex items-center justify-center p-6">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+          <div className="w-12 h-12 bg-rose-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">⚠️</span>
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 mb-2">Couldn't load your profile</h2>
+          <p className="text-gray-500 text-sm mb-6">
+            There was a problem fetching your account data. This is usually temporary.
+          </p>
+          <button
+            onClick={retryProfile}
+            className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-xl transition-colors"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return <>{children}</>
 }
 

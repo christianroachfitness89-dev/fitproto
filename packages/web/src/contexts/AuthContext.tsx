@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import type { DbProfile, DbOrganization } from '@/lib/database.types'
@@ -9,6 +9,9 @@ interface AuthContextValue {
   profile: DbProfile | null
   org: DbOrganization | null
   loading: boolean
+  profileLoading: boolean
+  profileError: boolean
+  retryProfile: () => void
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
@@ -17,43 +20,62 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser]       = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [profile, setProfile] = useState<DbProfile | null>(null)
-  const [org, setOrg]         = useState<DbOrganization | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser]                     = useState<User | null>(null)
+  const [session, setSession]               = useState<Session | null>(null)
+  const [profile, setProfile]               = useState<DbProfile | null>(null)
+  const [org, setOrg]                       = useState<DbOrganization | null>(null)
+  const [loading, setLoading]               = useState(true)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileError, setProfileError]     = useState(false)
+  const userRef = useRef<User | null>(null)
 
   async function loadProfileAndOrg(userId: string, attempt = 0) {
-    const { data: profileData } = await supabase
+    if (attempt === 0) {
+      setProfileLoading(true)
+      setProfileError(false)
+    }
+
+    const { data: profileData, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single() as { data: DbProfile | null; error: any }
+      .maybeSingle() as { data: DbProfile | null; error: any }
 
     if (!profileData) {
-      // The DB trigger that creates the profile row may not have run yet
-      // (common on first signup). Retry up to 5 times with backoff.
       if (attempt < 5) {
         await new Promise(r => setTimeout(r, 300 * (attempt + 1)))
         return loadProfileAndOrg(userId, attempt + 1)
       }
-      return // give up after retries
+      // All retries exhausted — surface the error so the user can retry
+      console.error('[Auth] Profile load failed after retries', error)
+      setProfileError(true)
+      setProfileLoading(false)
+      return
     }
 
     setProfile(profileData)
+    setProfileError(false)
+
     const { data: orgData } = await supabase
       .from('organizations')
       .select('*')
       .eq('id', profileData.org_id)
-      .single() as { data: DbOrganization | null; error: any }
+      .maybeSingle() as { data: DbOrganization | null; error: any }
     if (orgData) setOrg(orgData)
+
+    setProfileLoading(false)
   }
 
+  const retryProfile = useCallback(() => {
+    const uid = userRef.current?.id
+    if (uid) loadProfileAndOrg(uid)
+  }, [])
+
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
+      userRef.current = session?.user ?? null
       if (session?.user) {
         loadProfileAndOrg(session.user.id).finally(() => setLoading(false))
       } else {
@@ -61,15 +83,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
+      userRef.current = session?.user ?? null
       if (session?.user) {
         loadProfileAndOrg(session.user.id)
       } else {
         setProfile(null)
         setOrg(null)
+        setProfileError(false)
       }
     })
 
@@ -94,10 +117,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut()
     setProfile(null)
     setOrg(null)
+    setProfileError(false)
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, org, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{
+      user, session, profile, org,
+      loading, profileLoading, profileError, retryProfile,
+      signIn, signUp, signOut,
+    }}>
       {children}
     </AuthContext.Provider>
   )
