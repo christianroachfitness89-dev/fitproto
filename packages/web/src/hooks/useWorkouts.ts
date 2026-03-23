@@ -39,6 +39,19 @@ export function useCreateExercise() {
   })
 }
 
+export function useDeleteExercise() {
+  const { profile } = useAuth()
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('exercises').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises', profile!.org_id] }),
+  })
+}
+
 // ─── Workouts ─────────────────────────────────────────────────
 export function useWorkouts(search?: string) {
   const { profile } = useAuth()
@@ -74,6 +87,19 @@ export function useCreateWorkout() {
         .single()
       if (error) throw error
       return data as DbWorkout
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workouts', profile!.org_id] }),
+  })
+}
+
+export function useDeleteWorkout() {
+  const { profile } = useAuth()
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('workouts').delete().eq('id', id)
+      if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['workouts', profile!.org_id] }),
   })
