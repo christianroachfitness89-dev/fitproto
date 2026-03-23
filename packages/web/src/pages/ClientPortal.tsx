@@ -1483,37 +1483,26 @@ export default function ClientPortal() {
       {/* Bottom tab bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200">
         <div className="flex">
-          <button className="flex-1 flex flex-col items-center gap-1 py-3 pb-6">
-            <ClipboardList size={23} className="text-blue-600" />
-            <span className="text-[11px] font-semibold text-blue-600">Today</span>
-          </button>
-          <button
-            onClick={() => unlocked.includes('workouts') ? setActiveSection('workouts') : undefined}
-            className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
-          >
-            <Dumbbell size={23} className={unlocked.includes('workouts') ? 'text-gray-500' : 'text-gray-300'} />
-            <span className={clsx('text-[11px] font-semibold', unlocked.includes('workouts') ? 'text-gray-500' : 'text-gray-300')}>
-              Coaching
-            </span>
-          </button>
-          <button
-            onClick={() => unlocked.includes('history') ? setActiveSection('history') : undefined}
-            className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
-          >
-            <MessageCircle size={23} className={unlocked.includes('history') ? 'text-gray-500' : 'text-gray-300'} />
-            <span className={clsx('text-[11px] font-semibold', unlocked.includes('history') ? 'text-gray-500' : 'text-gray-300')}>
-              Inbox
-            </span>
-          </button>
-          <button
-            onClick={() => unlocked.includes('metrics') ? setActiveSection('metrics') : undefined}
-            className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
-          >
-            <UserCircle size={23} className={unlocked.includes('metrics') ? 'text-gray-500' : 'text-gray-300'} />
-            <span className={clsx('text-[11px] font-semibold', unlocked.includes('metrics') ? 'text-gray-500' : 'text-gray-300')}>
-              You
-            </span>
-          </button>
+          {([
+            { label: 'Today',    Icon: ClipboardList, section: null         as ActiveSection },
+            { label: 'Coaching', Icon: Dumbbell,      section: 'workouts'   as ActiveSection },
+            { label: 'Inbox',    Icon: MessageCircle, section: 'history'    as ActiveSection },
+            { label: 'You',      Icon: UserCircle,    section: 'metrics'    as ActiveSection },
+          ]).map(({ label, Icon, section }) => {
+            const isActive = section === null  // Today is always the active tab on the dashboard
+            return (
+              <button
+                key={label}
+                onClick={() => setActiveSection(section)}
+                className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
+              >
+                <Icon size={23} className={isActive ? 'text-blue-600' : 'text-gray-500'} />
+                <span className={clsx('text-[11px] font-semibold', isActive ? 'text-blue-600' : 'text-gray-500')}>
+                  {label}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>
