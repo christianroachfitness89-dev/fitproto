@@ -119,3 +119,11 @@ begin
     and read = false;
 end;
 $$;
+
+-- ── Grants ──────────────────────────────────────────────────────
+-- Client portal is unauthenticated (anon role) — must explicitly grant execute.
+grant execute on function public.get_portal_conversation(uuid)       to anon;
+grant execute on function public.get_portal_messages(uuid)           to anon;
+grant execute on function public.send_portal_message(uuid, text)     to anon;
+-- mark_conversation_read is called by the authenticated coach only.
+grant execute on function public.mark_conversation_read(uuid)        to authenticated;
