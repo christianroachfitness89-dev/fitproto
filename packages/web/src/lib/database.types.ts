@@ -51,9 +51,18 @@ export interface DbExercise {
   name: string
   category: string | null
   muscle_group: string | null
+  secondary_muscle: string | null
+  tertiary_muscle: string | null
   equipment: string | null
   instructions: string | null
   video_url: string | null
+  video_explanation_url: string | null
+  difficulty: string | null
+  body_region: string | null
+  mechanics: string | null
+  laterality: string | null
+  posture: string | null
+  movement_pattern: string | null
   /** How this exercise is tracked in a set */
   metric_type: ExerciseMetricType
   created_at: string

@@ -44,6 +44,28 @@ export function useCreateExercise() {
   })
 }
 
+export function useBulkImportExercises() {
+  const { profile } = useAuth()
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (rows: Omit<DbExercise, 'id' | 'created_at' | 'org_id'>[]) => {
+      const orgId = profile?.org_id
+      if (!orgId) throw new Error('Session not ready')
+      const payload = rows.map(r => ({ ...r, org_id: orgId }))
+      // Insert in batches of 200 to stay within Supabase limits
+      let inserted = 0
+      for (let i = 0; i < payload.length; i += 200) {
+        const { error } = await supabase.from('exercises').insert(payload.slice(i, i + 200) as any)
+        if (error) throw error
+        inserted += Math.min(200, payload.length - i)
+      }
+      return inserted
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises'] }),
+  })
+}
+
 export function useDeleteExercise() {
   const qc = useQueryClient()
 

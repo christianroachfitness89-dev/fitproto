@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Search, Plus, Dumbbell,
   Clock, BarChart3, X, Loader2, Trash2, ChevronRight, Send, CheckCircle2,
+  Upload, AlertCircle,
 } from 'lucide-react'
 import clsx from 'clsx'
 import {
-  useExercises, useCreateExercise, useDeleteExercise,
+  useExercises, useCreateExercise, useDeleteExercise, useBulkImportExercises,
   useWorkouts,  useCreateWorkout,  useDeleteWorkout,
   usePrograms,  useCreateProgram,
 } from '@/hooks/useWorkouts'
@@ -36,6 +37,229 @@ function DifficultyBadge({ level }: { level: Difficulty | null }) {
   )
 }
 
+// ─── CSV header → DB column map ──────────────────────────────
+const CSV_HEADER_MAP: Record<string, string> = {
+  'exercise':                          'name',
+  'short youtube demonstration':       'video_url',
+  'in-depth youtube explanation':      'video_explanation_url',
+  'difficulty level':                  'difficulty',
+  'target muscle group':               'category',
+  'prime mover muscle':                'muscle_group',
+  'secondary muscle':                  'secondary_muscle',
+  'tertiary muscle':                   'tertiary_muscle',
+  'primary equipment':                 'equipment',
+  'posture':                           'posture',
+  'body region':                       'body_region',
+  'mechanics':                         'mechanics',
+  'laterality':                        'laterality',
+  'movement pattern #1':               'movement_pattern',
+}
+
+function parseCSV(text: string): Record<string, string>[] {
+  const lines = text.split(/\r?\n/).filter(l => l.trim())
+  if (lines.length < 2) return []
+
+  // Detect delimiter (comma or tab)
+  const delimiter = lines[0].includes('\t') ? '\t' : ','
+
+  function splitLine(line: string): string[] {
+    if (delimiter === '\t') return line.split('\t').map(s => s.trim())
+    // Simple CSV split (handles quoted fields)
+    const result: string[] = []
+    let cur = '', inQuote = false
+    for (const ch of line) {
+      if (ch === '"') { inQuote = !inQuote }
+      else if (ch === ',' && !inQuote) { result.push(cur.trim()); cur = '' }
+      else { cur += ch }
+    }
+    result.push(cur.trim())
+    return result
+  }
+
+  const rawHeaders = splitLine(lines[0])
+  const headers = rawHeaders.map(h => h.replace(/^["']|["']$/g, '').toLowerCase().trim())
+
+  return lines.slice(1).map(line => {
+    const vals = splitLine(line)
+    const row: Record<string, string> = {}
+    headers.forEach((h, i) => {
+      const dbCol = CSV_HEADER_MAP[h]
+      if (dbCol) row[dbCol] = (vals[i] ?? '').replace(/^["']|["']$/g, '').trim()
+    })
+    return row
+  }).filter(r => r.name)
+}
+
+// ─── CSV import modal ─────────────────────────────────────────
+function CsvImportModal({ onClose }: { onClose: () => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const bulkImport = useBulkImportExercises()
+  const [preview, setPreview]   = useState<Record<string, string>[] | null>(null)
+  const [fileName, setFileName] = useState('')
+  const [result, setResult]     = useState<number | null>(null)
+  const [error, setError]       = useState<string | null>(null)
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setFileName(file.name)
+    setError(null)
+    setPreview(null)
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const text = ev.target?.result as string
+      const rows = parseCSV(text)
+      if (rows.length === 0) {
+        setError('No exercises found — check the file has the correct headers.')
+        return
+      }
+      setPreview(rows)
+    }
+    reader.readAsText(file)
+  }
+
+  async function handleImport() {
+    if (!preview) return
+    setError(null)
+    try {
+      const rows = preview.map(r => ({
+        name:                  r.name                  || '',
+        category:              r.category              || null,
+        muscle_group:          r.muscle_group          || null,
+        secondary_muscle:      r.secondary_muscle      || null,
+        tertiary_muscle:       r.tertiary_muscle       || null,
+        equipment:             r.equipment             || null,
+        instructions:          null,
+        video_url:             r.video_url             || null,
+        video_explanation_url: r.video_explanation_url || null,
+        difficulty:            r.difficulty            || null,
+        body_region:           r.body_region           || null,
+        mechanics:             r.mechanics             || null,
+        laterality:            r.laterality            || null,
+        posture:               r.posture               || null,
+        movement_pattern:      r.movement_pattern      || null,
+        metric_type:           'reps_weight' as const,
+      }))
+      const count = await bulkImport.mutateAsync(rows)
+      setResult(count)
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 z-10">
+
+        {result !== null ? (
+          <div className="text-center py-6">
+            <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 size={32} className="text-emerald-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{result} exercises imported!</h3>
+            <p className="text-sm text-gray-500 mb-6">Your exercise library has been updated.</p>
+            <button onClick={onClose}
+              className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl">
+              Done
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Import Exercises from CSV</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Upload your exercise database CSV file</p>
+              </div>
+              <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18} /></button>
+            </div>
+
+            {/* File drop zone */}
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="w-full border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center hover:border-brand-300 hover:bg-brand-50/30 transition-all group"
+            >
+              <Upload size={28} className="text-gray-300 group-hover:text-brand-400 mx-auto mb-2 transition-colors" />
+              {fileName ? (
+                <p className="text-sm font-semibold text-brand-600">{fileName}</p>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-gray-600">Click to select your CSV file</p>
+                  <p className="text-xs text-gray-400 mt-1">Supports comma or tab-separated files</p>
+                </>
+              )}
+            </button>
+            <input ref={fileRef} type="file" accept=".csv,.tsv,.txt" onChange={handleFile} className="hidden" />
+
+            {error && (
+              <div className="mt-3 flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">
+                <AlertCircle size={15} className="mt-0.5 flex-shrink-0" />{error}
+              </div>
+            )}
+
+            {/* Preview */}
+            {preview && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold text-gray-800">
+                    {preview.length} exercises ready to import
+                  </p>
+                  <span className="text-xs text-gray-400">Preview (first 5)</span>
+                </div>
+                <div className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="px-3 py-2 text-left font-semibold text-gray-500">Name</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-500">Muscle</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-500">Equipment</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-500">Difficulty</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {preview.slice(0, 5).map((row, i) => (
+                        <tr key={i}>
+                          <td className="px-3 py-2 font-medium text-gray-800 max-w-[160px] truncate">{row.name}</td>
+                          <td className="px-3 py-2 text-gray-600 max-w-[100px] truncate">{row.muscle_group || '—'}</td>
+                          <td className="px-3 py-2 text-gray-600">{row.equipment || '—'}</td>
+                          <td className="px-3 py-2 text-gray-600">{row.difficulty || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {preview.length > 5 && (
+                    <p className="px-3 py-2 text-xs text-gray-400 border-t border-gray-100">
+                      + {preview.length - 5} more…
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 mt-5">
+              <button type="button" onClick={onClose}
+                className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={!preview || bulkImport.isPending}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all"
+              >
+                {bulkImport.isPending
+                  ? <><Loader2 size={15} className="animate-spin" /> Importing…</>
+                  : <><Upload size={14} /> Import {preview?.length ?? ''} Exercises</>
+                }
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Exercise modal ───────────────────────────────────────────
 function ExerciseModal({ onClose }: { onClose: () => void }) {
   const create = useCreateExercise()
@@ -51,13 +275,22 @@ function ExerciseModal({ onClose }: { onClose: () => void }) {
     setError(null)
     try {
       await create.mutateAsync({
-        name:         form.name,
-        category:     form.category     || null,
-        muscle_group: form.muscle_group || null,
-        equipment:    form.equipment    || null,
-        instructions: form.instructions || null,
-        video_url:    null,
-        metric_type:  form.metric_type,
+        name:                  form.name,
+        category:              form.category     || null,
+        muscle_group:          form.muscle_group || null,
+        equipment:             form.equipment    || null,
+        instructions:          form.instructions || null,
+        video_url:             null,
+        metric_type:           form.metric_type,
+        secondary_muscle:      null,
+        tertiary_muscle:       null,
+        video_explanation_url: null,
+        difficulty:            null,
+        body_region:           null,
+        mechanics:             null,
+        laterality:            null,
+        posture:               null,
+        movement_pattern:      null,
       })
       onClose()
     } catch (err: any) {
@@ -240,6 +473,7 @@ function WorkoutModal({ onClose }: { onClose: () => void }) {
 function ExercisesList() {
   const [search, setSearch]       = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState('')
 
   const { data: exercises = [], isLoading } = useExercises(search.length >= 2 ? search : undefined)
@@ -253,7 +487,8 @@ function ExercisesList() {
 
   return (
     <div className="space-y-4">
-      {showModal && <ExerciseModal onClose={() => setShowModal(false)} />}
+      {showModal  && <ExerciseModal onClose={() => setShowModal(false)} />}
+      {showImport && <CsvImportModal onClose={() => setShowImport(false)} />}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
@@ -277,10 +512,16 @@ function ExercisesList() {
             ))}
           </div>
         )}
-        <button onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all">
-          <Plus size={15} />New Exercise
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowImport(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 shadow-sm transition-all">
+            <Upload size={15} />Import CSV
+          </button>
+          <button onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all">
+            <Plus size={15} />New Exercise
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
