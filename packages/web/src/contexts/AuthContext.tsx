@@ -10,7 +10,7 @@ interface AuthContextValue {
   org: DbOrganization | null
   loading: boolean
   profileLoading: boolean
-  profileError: boolean
+  profileError: string | null
   retryProfile: () => void
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>
@@ -26,41 +26,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [org, setOrg]                       = useState<DbOrganization | null>(null)
   const [loading, setLoading]               = useState(true)
   const [profileLoading, setProfileLoading] = useState(false)
-  const [profileError, setProfileError]     = useState(false)
+  const [profileError, setProfileError]     = useState<string | null>(null)
   const userRef = useRef<User | null>(null)
 
   async function loadProfileAndOrg(userId: string, attempt = 0) {
     if (attempt === 0) {
       setProfileLoading(true)
-      setProfileError(false)
+      setProfileError(null)
+    }
+
+    // Verify the session token is still valid before querying
+    const { data: { session: currentSession } } = await supabase.auth.getSession()
+    if (!currentSession) {
+      // Token expired / no session — sign out cleanly
+      await supabase.auth.signOut()
+      setProfileLoading(false)
+      return
     }
 
     const { data: profileData, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .maybeSingle() as { data: DbProfile | null; error: any }
+      .maybeSingle()
 
-    if (!profileData) {
+    if (error) {
+      console.error('[Auth] Profile query error', error)
+      // JWT / auth errors — don't retry, sign out
+      const msg = error.message ?? ''
+      if (
+        msg.includes('JWT') ||
+        msg.includes('token') ||
+        (error as any).code === 'PGRST301'
+      ) {
+        await supabase.auth.signOut()
+        setProfileLoading(false)
+        return
+      }
+      // Other errors (network, DB) — retry with backoff
       if (attempt < 5) {
         await new Promise(r => setTimeout(r, 300 * (attempt + 1)))
         return loadProfileAndOrg(userId, attempt + 1)
       }
-      // All retries exhausted — surface the error so the user can retry
-      console.error('[Auth] Profile load failed after retries', error)
-      setProfileError(true)
+      setProfileError(`Database error: ${msg || 'unknown'}`)
+      setProfileLoading(false)
+      return
+    }
+
+    if (!profileData) {
+      // Row missing — retry (handles DB trigger lag on new signups)
+      if (attempt < 5) {
+        await new Promise(r => setTimeout(r, 300 * (attempt + 1)))
+        return loadProfileAndOrg(userId, attempt + 1)
+      }
+      // After 5 retries, the profile row genuinely doesn't exist
+      setProfileError('Your account profile was not found. Please sign out and sign back in, or contact support.')
       setProfileLoading(false)
       return
     }
 
     setProfile(profileData)
-    setProfileError(false)
+    setProfileError(null)
 
     const { data: orgData } = await supabase
       .from('organizations')
       .select('*')
       .eq('id', profileData.org_id)
-      .maybeSingle() as { data: DbOrganization | null; error: any }
+      .maybeSingle()
     if (orgData) setOrg(orgData)
 
     setProfileLoading(false)
@@ -92,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setProfile(null)
         setOrg(null)
-        setProfileError(false)
+        setProfileError(null)
       }
     })
 
@@ -117,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut()
     setProfile(null)
     setOrg(null)
-    setProfileError(false)
+    setProfileError(null)
   }
 
   return (

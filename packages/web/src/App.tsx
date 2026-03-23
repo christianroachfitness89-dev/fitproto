@@ -23,7 +23,7 @@ const queryClient = new QueryClient({
 
 // ─── Guard: redirect to /login if not authenticated ──────────
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, profile, profileLoading, profileError, retryProfile } = useAuth()
+  const { user, loading, profile, profileLoading, profileError, retryProfile, signOut } = useAuth()
   if (loading) return <FullPageLoader />
   if (!user) return <Navigate to="/login" replace />
 
@@ -39,14 +39,25 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
             <span className="text-2xl">⚠️</span>
           </div>
           <h2 className="text-lg font-bold text-gray-900 mb-2">Couldn't load your profile</h2>
-          <p className="text-gray-500 text-sm mb-6">
-            There was a problem fetching your account data. This is usually temporary.
+          {profileError && (
+            <p className="text-xs font-mono bg-gray-100 text-gray-700 rounded-lg px-3 py-2 mb-3 text-left break-all">
+              {profileError}
+            </p>
+          )}
+          <p className="text-gray-500 text-sm mb-5">
+            Try refreshing, or sign out and back in. If this keeps happening, contact support.
           </p>
           <button
             onClick={retryProfile}
-            className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-xl transition-colors"
+            className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-xl transition-colors mb-3"
           >
             Try again
+          </button>
+          <button
+            onClick={signOut}
+            className="w-full text-gray-500 hover:text-gray-700 text-sm py-1 transition-colors"
+          >
+            Sign out
           </button>
         </div>
       </div>
