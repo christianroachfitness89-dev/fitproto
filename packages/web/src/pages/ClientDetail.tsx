@@ -16,6 +16,7 @@ import {
 } from '@/hooks/useClientWorkouts'
 import { useWorkouts, useWorkoutDetail } from '@/hooks/useWorkouts'
 import { useUnitSystem, weightLabel } from '@/lib/units'
+import { playRestEndChime } from '@/lib/sound'
 import type { DbClient, DbTask, DbClientWorkoutWithWorkout } from '@/lib/database.types'
 
 type Tab = 'overview' | 'workouts' | 'nutrition' | 'metrics' | 'notes'
@@ -343,7 +344,7 @@ function CoachRestTimer({ restSeconds, label, onDone }: { restSeconds: number; l
   const [remaining, setRemaining] = useState(restSeconds)
 
   useEffect(() => {
-    if (remaining <= 0) { onDone(); return }
+    if (remaining <= 0) { playRestEndChime(); onDone(); return }
     const t = setTimeout(() => setRemaining(r => r - 1), 1000)
     return () => clearTimeout(t)
   }, [remaining])

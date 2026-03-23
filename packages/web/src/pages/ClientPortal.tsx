@@ -5,6 +5,7 @@ import {
   Loader2, Target, ClipboardList, X, ArrowLeft,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { playRestEndChime } from '@/lib/sound'
 import clsx from 'clsx'
 
 // ─── RPC response types ────────────────────────────────────────
@@ -76,7 +77,7 @@ function RestTimer({
   const [remaining, setRemaining] = useState(restSeconds)
 
   useEffect(() => {
-    if (remaining <= 0) { onDone(); return }
+    if (remaining <= 0) { playRestEndChime(); onDone(); return }
     const t = setTimeout(() => setRemaining(r => r - 1), 1000)
     return () => clearTimeout(t)
   }, [remaining])
