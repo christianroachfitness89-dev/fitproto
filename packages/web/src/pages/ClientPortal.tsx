@@ -308,7 +308,7 @@ function PortalLogOverlay({ cw, clientId, onClose, onDone }: {
     setTimeout(() => { onDone(cw.id); onClose() }, 1000)
   }
 
-  const inp = 'w-full px-2 py-2 text-[13px] text-center bg-white/8 border border-white/12 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 transition-all'
+  const inp = 'w-full px-2 py-2 text-[13px] text-center bg-[#1e1e3a] border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 transition-all'
 
   // Count total and done sets for progress
   const totalSets = (detail?.exercises ?? []).reduce((n, ex) => n + (ex.sets?.length ?? 0), 0)
