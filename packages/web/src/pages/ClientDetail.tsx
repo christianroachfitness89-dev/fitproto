@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Mail, Phone, MessageSquare, Dumbbell,
   Calendar, Tag, MoreHorizontal, Plus, CheckCircle2,
@@ -16,6 +16,7 @@ import {
   useClientWorkouts, useAssignWorkout, useUpdateClientWorkoutStatus,
   useRemoveClientWorkout, useLogWorkoutSession,
 } from '@/hooks/useClientWorkouts'
+import { useGetOrCreateConversation } from '@/hooks/useConversations'
 import { useWorkouts, useWorkoutDetail } from '@/hooks/useWorkouts'
 import { useUnitSystem, weightLabel } from '@/lib/units'
 import { playRestEndChime } from '@/lib/sound'
@@ -1322,9 +1323,17 @@ export default function ClientDetail() {
   const { data: client, isLoading, error } = useClient(id!)
   const { data: tasks = [], isLoading: loadingTasks } = useTasks(id)
   const toggleTask = useToggleTask()
+  const navigate = useNavigate()
+  const getOrCreate = useGetOrCreateConversation()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [showEdit, setShowEdit]   = useState(false)
   const [copied, setCopied]       = useState(false)
+
+  async function openMessage() {
+    if (!id) return
+    const convo = await getOrCreate.mutateAsync(id)
+    navigate(`/inbox?c=${convo.id}`)
+  }
 
   function copyPortalLink() {
     const url = `${window.location.origin}${window.location.pathname}#/portal/${id}`
@@ -1446,8 +1455,15 @@ export default function ClientDetail() {
                 <ExternalLink size={13} />
               </button>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all shadow-sm">
-              <MessageSquare size={15} />
+            <button
+              onClick={openMessage}
+              disabled={getOrCreate.isPending}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all shadow-sm disabled:opacity-60"
+            >
+              {getOrCreate.isPending
+                ? <Loader2 size={15} className="animate-spin" />
+                : <MessageSquare size={15} />
+              }
               Message
             </button>
             <button

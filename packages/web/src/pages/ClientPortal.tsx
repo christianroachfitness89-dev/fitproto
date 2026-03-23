@@ -1,17 +1,26 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   Dumbbell, CheckCircle2, Clock, Calendar, ChevronDown, ChevronUp,
   Loader2, Target, ClipboardList, ArrowLeft, Lock,
   BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight,
-  X, Home, MoreHorizontal, MessageCircle, Settings,
+  X, Home, MoreHorizontal, MessageCircle, Settings, Send,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { playRestEndChime } from '@/lib/sound'
 import clsx from 'clsx'
 
 // ─── Types ─────────────────────────────────────────────────────
-type ActiveSection = 'workouts' | 'history' | 'metrics' | 'nutrition' | null
+type ActiveSection = 'workouts' | 'history' | 'metrics' | 'nutrition' | 'messages' | null
+
+interface PortalMessage {
+  id: string
+  conversation_id: string
+  sender_type: string
+  content: string
+  read: boolean
+  created_at: string
+}
 
 interface PortalWorkout {
   id: string
@@ -1168,6 +1177,143 @@ function MetricPill({ icon, label, value, color }: {
   )
 }
 
+// ─── Messages view (client portal) ────────────────────────────
+function MessagesView({ clientId }: { clientId: string }) {
+  const [messages, setMessages]     = useState<PortalMessage[]>([])
+  const [convId, setConvId]         = useState<string | null>(null)
+  const [loading, setLoading]       = useState(true)
+  const [draft, setDraft]           = useState('')
+  const [sending, setSending]       = useState(false)
+  const bottomRef                   = useRef<HTMLDivElement>(null)
+
+  // Get or create conversation + load messages
+  useEffect(() => {
+    async function init() {
+      const { data: cid } = await supabase.rpc('get_portal_conversation', { p_client_id: clientId })
+      if (cid) {
+        setConvId(cid as string)
+        const { data } = await supabase.rpc('get_portal_messages', { p_client_id: clientId })
+        setMessages((data as PortalMessage[]) ?? [])
+      }
+      setLoading(false)
+    }
+    init()
+  }, [clientId])
+
+  // Poll every 8s for new messages
+  useEffect(() => {
+    if (!convId) return
+    const interval = setInterval(async () => {
+      const { data } = await supabase.rpc('get_portal_messages', { p_client_id: clientId })
+      if (data) setMessages(data as PortalMessage[])
+    }, 8000)
+    return () => clearInterval(interval)
+  }, [convId, clientId])
+
+  // Auto-scroll
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  async function send() {
+    const text = draft.trim()
+    if (!text || sending) return
+    setSending(true)
+    setDraft('')
+    const { data: msgId } = await supabase.rpc('send_portal_message', {
+      p_client_id: clientId, p_content: text,
+    })
+    if (msgId) {
+      const { data } = await supabase.rpc('get_portal_messages', { p_client_id: clientId })
+      if (data) setMessages(data as PortalMessage[])
+    }
+    setSending(false)
+  }
+
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] flex flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 pt-14 pb-4 border-b border-white/8 flex-shrink-0">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-lg shadow-brand-500/30">
+          <MessageCircle size={18} className="text-white" />
+        </div>
+        <div>
+          <p className="text-white font-bold text-base">Messages</p>
+          <p className="text-white/35 text-xs">Chat with your coach</p>
+        </div>
+      </div>
+
+      {/* Messages thread */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 pb-4">
+        {loading ? (
+          <div className="flex items-center justify-center h-full gap-2">
+            <Loader2 size={20} className="text-brand-400 animate-spin" />
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-center pt-20">
+            <div className="w-16 h-16 rounded-2xl bg-white/8 border border-white/10 flex items-center justify-center">
+              <MessageCircle size={26} className="text-brand-400/50" />
+            </div>
+            <p className="text-white/60 font-semibold">No messages yet</p>
+            <p className="text-white/30 text-sm max-w-[240px] leading-relaxed">
+              Send your coach a message — they'll reply here.
+            </p>
+          </div>
+        ) : (
+          messages.map(msg => {
+            const isClient = msg.sender_type === 'client'
+            return (
+              <div key={msg.id} className={clsx('flex', isClient ? 'justify-end' : 'justify-start')}>
+                <div className={clsx(
+                  'max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
+                  isClient
+                    ? 'bg-brand-600 text-white rounded-br-sm'
+                    : 'bg-white/10 text-white rounded-bl-sm border border-white/10',
+                )}>
+                  <p>{msg.content}</p>
+                  <p className={clsx('text-[10px] mt-1', isClient ? 'text-brand-200/70' : 'text-white/30')}>
+                    {new Date(msg.created_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              </div>
+            )
+          })
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div className="px-4 pb-28 pt-3 border-t border-white/8 bg-[#0a0a1a]/60 backdrop-blur-md flex-shrink-0">
+        <div className="flex items-center gap-3 bg-white/8 border border-white/12 rounded-2xl px-4 py-3 focus-within:border-brand-400/50 transition-all">
+          <input
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Message your coach…"
+            className="flex-1 bg-transparent text-sm text-white placeholder-white/30 outline-none"
+          />
+          <button
+            onClick={send}
+            disabled={!draft.trim() || sending}
+            className={clsx(
+              'w-8 h-8 rounded-xl flex items-center justify-center transition-all flex-shrink-0',
+              draft.trim()
+                ? 'bg-brand-600 hover:bg-brand-700 text-white active:scale-95'
+                : 'bg-white/8 text-white/25 cursor-default',
+            )}
+          >
+            {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── More sheet (slide-up) ─────────────────────────────────────
 function MoreSheet({
   onClose, onNavigate, portalSections,
@@ -1178,6 +1324,17 @@ function MoreSheet({
 }) {
   const items = [
     {
+      section: 'history' as const,
+      label: 'History',
+      desc: 'Past sessions & logs',
+      icon: History,
+      gradient: 'from-amber-500 to-orange-500',
+      glow: 'shadow-amber-500/30',
+      bg: 'from-amber-500/15 to-orange-500/10',
+      border: 'border-amber-500/20',
+      alwaysUnlocked: true,
+    },
+    {
       section: 'nutrition' as const,
       label: 'Nutrition',
       desc: 'Meal plans & guidance',
@@ -1186,6 +1343,7 @@ function MoreSheet({
       glow: 'shadow-rose-500/30',
       bg: 'from-rose-500/15 to-pink-500/10',
       border: 'border-rose-500/20',
+      alwaysUnlocked: false,
     },
   ]
 
@@ -1216,7 +1374,7 @@ function MoreSheet({
         <div className="px-4 pt-2 space-y-2">
           {items.map(item => {
             const Icon = item.icon
-            const unlocked = portalSections.includes(item.section)
+            const unlocked = item.alwaysUnlocked || portalSections.includes(item.section)
             return (
               <button
                 key={item.section}
@@ -1281,14 +1439,14 @@ function BottomTabBar({
   onMoreToggle: () => void
 }) {
   const tabs = [
-    { label: 'Home',     Icon: Home,          section: null as ActiveSection },
-    { label: 'Workouts', Icon: Dumbbell,       section: 'workouts' as ActiveSection },
-    { label: 'History',  Icon: History,        section: 'history' as ActiveSection },
-    { label: 'Progress', Icon: TrendingUp,     section: 'metrics' as ActiveSection },
+    { label: 'Home',     Icon: Home,           section: null as ActiveSection },
+    { label: 'Workouts', Icon: Dumbbell,        section: 'workouts' as ActiveSection },
+    { label: 'Messages', Icon: MessageCircle,   section: 'messages' as ActiveSection },
+    { label: 'Progress', Icon: TrendingUp,      section: 'metrics' as ActiveSection },
   ]
 
-  // "More" is active when the sheet is open or the user is on a "more" page like nutrition
-  const moreActive = showMore || activeSection === 'nutrition'
+  // "More" is active when the sheet is open or on a sub-page (nutrition, history)
+  const moreActive = showMore || activeSection === 'nutrition' || activeSection === 'history'
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#09091a]/95 backdrop-blur-xl border-t border-white/10">
@@ -1504,6 +1662,9 @@ export default function ClientPortal() {
       )}
       {activeSection === 'nutrition' && (
         <NutritionView />
+      )}
+      {activeSection === 'messages' && (
+        <MessagesView clientId={clientId!} />
       )}
 
       {/* ── Dashboard (home) ── */}

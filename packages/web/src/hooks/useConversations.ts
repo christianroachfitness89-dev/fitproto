@@ -117,6 +117,20 @@ export function useSendMessage() {
   })
 }
 
+// ─── Mark all client messages in a conversation as read ───────
+export function useMarkAsRead() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (conversationId: string) => {
+      await supabase.rpc('mark_conversation_read', { p_conversation_id: conversationId })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['conversations'] })
+    },
+  })
+}
+
 // ─── Get or create a conversation for a client ───────────────
 export function useGetOrCreateConversation() {
   const { profile } = useAuth()
