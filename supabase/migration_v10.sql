@@ -38,22 +38,18 @@ end;
 $$;
 
 -- ── get_portal_messages ────────────────────────────────────────
--- Returns all messages for a client's conversation (ordered oldest→newest).
+-- Returns all messages for a client's conversation as jsonb array (oldest→newest).
+-- Uses jsonb (not RETURNS TABLE) to match the pattern of all other portal RPCs.
+drop function if exists public.get_portal_messages(uuid);
 create or replace function public.get_portal_messages(p_client_id uuid)
-returns table (
-  id              uuid,
-  conversation_id uuid,
-  sender_type     text,
-  content         text,
-  read            boolean,
-  created_at      timestamptz
-)
+returns jsonb
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
   v_conv_id uuid;
+  v_result  jsonb;
 begin
   select id into v_conv_id
   from public.conversations
@@ -61,14 +57,23 @@ begin
   limit 1;
 
   if v_conv_id is null then
-    return;
+    return '[]'::jsonb;
   end if;
 
-  return query
-  select m.id, m.conversation_id, m.sender_type, m.content, m.read, m.created_at
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'id',              m.id,
+      'conversation_id', m.conversation_id,
+      'sender_type',     m.sender_type,
+      'content',         m.content,
+      'read',            m.read,
+      'created_at',      m.created_at
+    ) order by m.created_at asc
+  ), '[]'::jsonb) into v_result
   from public.messages m
-  where m.conversation_id = v_conv_id
-  order by m.created_at asc;
+  where m.conversation_id = v_conv_id;
+
+  return v_result;
 end;
 $$;
 
