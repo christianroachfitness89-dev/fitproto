@@ -4,6 +4,7 @@ import {
   Dumbbell, CheckCircle2, Clock, Calendar, ChevronDown, ChevronUp,
   Loader2, Target, ClipboardList, ArrowLeft, Lock,
   BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight,
+  X, MessageCircle, UserCircle,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { playRestEndChime } from '@/lib/sound'
@@ -93,6 +94,13 @@ interface PortalSessionDetail {
   completed_at: string
   notes: string | null
   exercises: PortalSessionExercise[]
+}
+
+interface PortalTask {
+  id: string
+  title: string
+  type: string | null
+  due_date: string | null
 }
 
 interface PortalMetricEntry {
@@ -1253,6 +1261,9 @@ export default function ClientPortal() {
   const [loading, setLoading]     = useState(true)
   const [notFound, setNotFound]   = useState(false)
   const [activeSection, setActiveSection] = useState<ActiveSection>(null)
+  const [tasks, setTasks]         = useState<PortalTask[]>([])
+  const [loggingWorkout, setLoggingWorkout] = useState<PortalWorkout | null>(null)
+  const [missedBannerDismissed, setMissedBannerDismissed] = useState(false)
 
   useEffect(() => {
     if (!clientId) return
@@ -1260,6 +1271,9 @@ export default function ClientPortal() {
       if (error || !result) setNotFound(true)
       else setData(result as PortalData)
       setLoading(false)
+    })
+    supabase.rpc('get_portal_tasks', { p_client_id: clientId }).then(({ data: taskData }) => {
+      if (taskData) setTasks(taskData as PortalTask[])
     })
   }, [clientId])
 
@@ -1310,85 +1324,197 @@ export default function ClientPortal() {
   )
 
   // ── Dashboard ──
-  const totalWorkouts     = data.workouts.length
-  const completedWorkouts = data.workouts.filter(w => w.status === 'completed').length
-  const initials          = data.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
-  const completionRatio   = totalWorkouts > 0 ? completedWorkouts / totalWorkouts : 0
-  const circumference     = 2 * Math.PI * 44
-  const unlocked          = data.portal_sections ?? ['workouts']
+  const assigned   = data.workouts.filter(w => w.status === 'assigned')
+  const unlocked   = data.portal_sections ?? ['workouts']
+
+  const todayDate = new Date(); todayDate.setHours(0, 0, 0, 0)
+
+  // Prefer workout due today, fallback to first assigned
+  const todaysWorkout = assigned.find(w => {
+    if (!w.due_date) return false
+    const d = new Date(w.due_date + 'T00:00:00'); d.setHours(0, 0, 0, 0)
+    return d.getTime() === todayDate.getTime()
+  }) ?? (assigned[0] ?? null)
+
+  // Overdue assigned workouts
+  const missedWorkouts = assigned.filter(w => {
+    if (!w.due_date) return false
+    const d = new Date(w.due_date + 'T00:00:00'); d.setHours(0, 0, 0, 0)
+    return d < todayDate
+  })
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
+    <div className="min-h-screen bg-[#f1f5f9] flex flex-col">
+      {loggingWorkout && (
+        <PortalLogOverlay
+          cw={loggingWorkout}
+          clientId={clientId!}
+          onClose={() => setLoggingWorkout(null)}
+          onDone={(id) => { markComplete(id); setLoggingWorkout(null) }}
+        />
+      )}
 
-      {/* Hero header */}
-      <div className="relative overflow-hidden px-4 pt-14 pb-8 text-center">
-        {/* Glow blob */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-64 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto pb-28">
 
-        <div className="relative z-10 flex flex-col items-center">
-          {/* Avatar with progress ring */}
-          <div className="relative w-20 h-20 mb-5">
-            <svg className="absolute -inset-3 w-[104px] h-[104px] -rotate-90" viewBox="0 0 104 104">
-              <circle cx="52" cy="52" r="44" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
-              <circle cx="52" cy="52" r="44" fill="none" stroke="url(#progressGrad)" strokeWidth="5"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                strokeDashoffset={circumference * (1 - completionRatio)} />
-              <defs>
-                <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#7c3aed" />
-                  <stop offset="100%" stopColor="#10b981" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-2xl font-extrabold shadow-2xl shadow-brand-500/40">
-              {initials}
+        {/* Greeting */}
+        <div className="px-5 pt-14 pb-4">
+          <h1 className="text-[28px] font-extrabold text-gray-900 tracking-tight">Let's do this</h1>
+        </div>
+
+        {/* Today's Workout hero card */}
+        <div className="px-4 mb-3">
+          {todaysWorkout ? (
+            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#1e4ed8] via-[#2563eb] to-[#7c3aed] p-6 shadow-xl shadow-blue-900/25 min-h-[220px] flex flex-col">
+              {/* Decorative dumbbell */}
+              <div className="absolute -top-8 -right-8 pointer-events-none select-none opacity-[0.18]">
+                <Dumbbell size={190} className="text-white" style={{ transform: 'rotate(-25deg)' }} />
+              </div>
+              <p className="text-white/60 text-[11px] font-bold uppercase tracking-[0.2em] mb-3">
+                Today's Workout
+              </p>
+              <h2 className="text-white text-[22px] font-extrabold leading-tight max-w-[68%]">
+                {todaysWorkout.workout.name}
+              </h2>
+              <div className="flex-1" />
+              {todaysWorkout.workout.duration_minutes && (
+                <p className="text-white/60 text-sm flex items-center gap-1.5 mb-4">
+                  <Clock size={13} />{todaysWorkout.workout.duration_minutes} min
+                </p>
+              )}
+              <button
+                onClick={() => setLoggingWorkout(todaysWorkout)}
+                className="self-start bg-white text-[#1e4ed8] font-bold px-8 py-3.5 rounded-full text-[15px] shadow-lg hover:bg-white/95 active:scale-[0.97] transition-all"
+              >
+                Start workout
+              </button>
             </div>
-          </div>
-
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">{data.name}</h1>
-
-          {data.goal && (
-            <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-white/8 border border-white/10 text-white/50 text-xs font-medium backdrop-blur-sm">
-              <Target size={11} />{data.goal}
+          ) : (
+            <div className="rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 p-6 shadow-lg min-h-[180px] flex flex-col justify-center items-center text-center">
+              <CheckCircle2 size={40} className="text-white/80 mb-3" />
+              <p className="text-white font-bold text-xl">All caught up!</p>
+              <p className="text-white/70 text-sm mt-1">No workouts pending right now.</p>
             </div>
           )}
+        </div>
 
-          {/* Stats glass card */}
-          <div className="mt-6 w-full max-w-xs rounded-2xl bg-white/6 border border-white/10 backdrop-blur-sm divide-x divide-white/10 flex">
-            {[
-              { value: totalWorkouts - completedWorkouts, label: 'Pending' },
-              { value: completedWorkouts, label: 'Done' },
-              { value: totalWorkouts, label: 'Total' },
-            ].map(stat => (
-              <div key={stat.label} className="flex-1 py-4 text-center">
-                <p className="text-3xl font-bold tracking-tight text-white leading-none">{stat.value}</p>
-                <p className="text-[11px] uppercase tracking-widest text-white/35 mt-1 font-semibold">{stat.label}</p>
+        {/* Missed workouts banner */}
+        {missedWorkouts.length > 0 && !missedBannerDismissed && (
+          <div className="mx-4 mb-3">
+            <div className="bg-[#fff4eb] border border-orange-100 rounded-2xl px-4 py-3.5 flex items-center gap-3">
+              <span className="text-lg flex-shrink-0">👉</span>
+              <p className="flex-1 text-sm text-gray-700 leading-snug">
+                You missed{' '}
+                <button
+                  onClick={() => unlocked.includes('workouts') && setActiveSection('workouts')}
+                  className="text-orange-500 font-bold"
+                >
+                  {missedWorkouts.length} {missedWorkouts.length === 1 ? 'workout' : 'workouts'}
+                </button>
+                {missedWorkouts[0]?.due_date && (
+                  <> from {new Date(missedWorkouts[0].due_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}</>
+                )}
+              </p>
+              <button
+                onClick={() => setMissedBannerDismissed(true)}
+                className="text-gray-400 hover:text-gray-600 flex-shrink-0 p-1 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tasks */}
+        {tasks.length > 0 && (
+          <div className="mx-4 mb-3">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-4 pt-4 pb-2">
+                <h3 className="text-[16px] font-bold text-gray-900">Tasks (0/{tasks.length})</h3>
               </div>
-            ))}
+              <div>
+                {tasks.map((task, i) => {
+                  const isLast  = i === tasks.length - 1
+                  const dueObj  = task.due_date
+                    ? (() => { const d = new Date(task.due_date + 'T00:00:00'); d.setHours(0, 0, 0, 0); return d })()
+                    : null
+                  const overdue = dueObj ? dueObj < todayDate : false
+                  const dueFmt  = dueObj
+                    ? dueObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    : null
+                  return (
+                    <div
+                      key={task.id}
+                      className={clsx('flex items-center gap-3 px-4 py-3.5', !isLast && 'border-b border-gray-100')}
+                    >
+                      <div className="w-7 h-7 rounded-full border-2 border-gray-200 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle2 size={14} className="text-gray-200" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[15px] font-semibold text-gray-800 leading-tight">{task.title}</p>
+                        {dueFmt && (
+                          <p className={clsx('text-xs font-medium mt-0.5', overdue ? 'text-orange-500' : 'text-gray-400')}>
+                            {overdue ? `Past: ${dueFmt}` : `Due: ${dueFmt}`}
+                          </p>
+                        )}
+                      </div>
+                      <ChevronRight size={18} className="text-gray-300 flex-shrink-0" />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step tracker */}
+        <div className="mx-4 mb-3">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-5">
+            <h3 className="text-[16px] font-bold text-gray-900">Step tracker</h3>
+            <p className="text-sm text-gray-400 mt-1">Connect your device to track daily steps.</p>
           </div>
         </div>
-      </div>
 
-      {/* Section grid */}
-      <div className="max-w-lg mx-auto px-4 pb-12">
-        <SectionLabel>Your Portal</SectionLabel>
-        <div className="grid grid-cols-2 gap-3">
-          {SECTION_DEFS.map(def => (
-            <DashboardCard
-              key={def.id}
-              def={def}
-              unlocked={unlocked.includes(def.id)}
-              workoutCount={def.id === 'workouts' ? totalWorkouts : undefined}
-              completedCount={def.id === 'workouts' ? completedWorkouts : undefined}
-              onClick={() => setActiveSection(def.id)}
-            />
-          ))}
-        </div>
-
-        <p className="text-center text-[11px] text-white/15 pt-10 uppercase tracking-[0.2em] font-medium">
+        <p className="text-center text-[11px] text-gray-300 pt-4 pb-2 uppercase tracking-[0.2em] font-medium">
           Powered by FitProto
         </p>
+      </div>
+
+      {/* Bottom tab bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200">
+        <div className="flex">
+          <button className="flex-1 flex flex-col items-center gap-1 py-3 pb-6">
+            <ClipboardList size={23} className="text-blue-600" />
+            <span className="text-[11px] font-semibold text-blue-600">Today</span>
+          </button>
+          <button
+            onClick={() => unlocked.includes('workouts') ? setActiveSection('workouts') : undefined}
+            className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
+          >
+            <Dumbbell size={23} className={unlocked.includes('workouts') ? 'text-gray-500' : 'text-gray-300'} />
+            <span className={clsx('text-[11px] font-semibold', unlocked.includes('workouts') ? 'text-gray-500' : 'text-gray-300')}>
+              Coaching
+            </span>
+          </button>
+          <button
+            onClick={() => unlocked.includes('history') ? setActiveSection('history') : undefined}
+            className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
+          >
+            <MessageCircle size={23} className={unlocked.includes('history') ? 'text-gray-500' : 'text-gray-300'} />
+            <span className={clsx('text-[11px] font-semibold', unlocked.includes('history') ? 'text-gray-500' : 'text-gray-300')}>
+              Inbox
+            </span>
+          </button>
+          <button
+            onClick={() => unlocked.includes('metrics') ? setActiveSection('metrics') : undefined}
+            className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
+          >
+            <UserCircle size={23} className={unlocked.includes('metrics') ? 'text-gray-500' : 'text-gray-300'} />
+            <span className={clsx('text-[11px] font-semibold', unlocked.includes('metrics') ? 'text-gray-500' : 'text-gray-300')}>
+              You
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   )
