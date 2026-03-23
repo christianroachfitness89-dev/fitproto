@@ -5,7 +5,7 @@ import {
   Calendar, Tag, MoreHorizontal, Plus, CheckCircle2,
   Clock, Loader2, X, ChevronDown, Trash2, Send,
   ClipboardList, ChevronLeft, ChevronRight, ClipboardCheck,
-  SkipForward, ExternalLink, Copy,
+  SkipForward, ExternalLink, Copy, History, BarChart2, Utensils, Lock,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useClient, useUpdateClient } from '@/hooks/useClients'
@@ -17,9 +17,131 @@ import {
 import { useWorkouts, useWorkoutDetail } from '@/hooks/useWorkouts'
 import { useUnitSystem, weightLabel } from '@/lib/units'
 import { playRestEndChime } from '@/lib/sound'
-import type { DbClient, DbTask, DbClientWorkoutWithWorkout } from '@/lib/database.types'
+import type { DbClient, DbTask, DbClientWorkoutWithWorkout, PortalSection } from '@/lib/database.types'
 
 type Tab = 'overview' | 'workouts' | 'nutrition' | 'metrics' | 'notes'
+
+// ─── Portal section definitions ───────────────────────────────
+const PORTAL_SECTIONS: {
+  id: PortalSection
+  label: string
+  desc: string
+  icon: React.ElementType
+  gradient: string
+  activeRing: string
+}[] = [
+  {
+    id:          'workouts',
+    label:       'Workouts',
+    desc:        'Assigned sessions & logging',
+    icon:        Dumbbell,
+    gradient:    'from-violet-500 to-brand-500',
+    activeRing:  'ring-violet-400/40',
+  },
+  {
+    id:          'history',
+    label:       'History',
+    desc:        'Past session logs',
+    icon:        History,
+    gradient:    'from-amber-500 to-orange-500',
+    activeRing:  'ring-amber-400/40',
+  },
+  {
+    id:          'metrics',
+    label:       'Metrics',
+    desc:        'Progress & measurements',
+    icon:        BarChart2,
+    gradient:    'from-emerald-500 to-teal-500',
+    activeRing:  'ring-emerald-400/40',
+  },
+  {
+    id:          'nutrition',
+    label:       'Nutrition',
+    desc:        'Meal plans & guidance',
+    icon:        Utensils,
+    gradient:    'from-rose-500 to-pink-500',
+    activeRing:  'ring-rose-400/40',
+  },
+]
+
+// ─── Portal access card ────────────────────────────────────────
+function PortalAccessCard({ client }: { client: DbClient }) {
+  const update   = useUpdateClient()
+  const sections = client.portal_sections ?? []
+
+  async function toggle(id: PortalSection) {
+    const next = sections.includes(id)
+      ? sections.filter(s => s !== id)
+      : [...sections, id]
+    await update.mutateAsync({ id: client.id, portal_sections: next })
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-gray-800">Client Portal Access</h3>
+        <span className="text-xs text-gray-400">
+          {sections.length} / {PORTAL_SECTIONS.length} sections on
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {PORTAL_SECTIONS.map(({ id, label, desc, icon: Icon, gradient, activeRing }) => {
+          const on = sections.includes(id)
+          return (
+            <button
+              key={id}
+              onClick={() => toggle(id)}
+              disabled={update.isPending}
+              className={clsx(
+                'relative rounded-2xl border p-4 text-left transition-all group',
+                on
+                  ? `bg-gradient-to-br ${gradient} bg-opacity-10 border-transparent ring-2 ${activeRing} shadow-md`
+                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100',
+              )}
+            >
+              {/* Toggle pill */}
+              <div className={clsx(
+                'absolute top-3 right-3 w-8 h-4 rounded-full transition-colors flex items-center px-0.5',
+                on ? 'bg-white/30' : 'bg-gray-200',
+              )}>
+                <div className={clsx(
+                  'w-3 h-3 rounded-full transition-all',
+                  on ? 'translate-x-4 bg-white shadow' : 'translate-x-0 bg-white shadow',
+                )} />
+              </div>
+
+              {/* Icon */}
+              <div className={clsx(
+                'w-9 h-9 rounded-xl flex items-center justify-center mb-2.5',
+                on
+                  ? 'bg-white/25'
+                  : 'bg-gray-200',
+              )}>
+                {on
+                  ? <Icon size={18} className="text-white" />
+                  : <Icon size={18} className="text-gray-400" />}
+              </div>
+
+              <p className={clsx('text-sm font-semibold leading-tight', on ? 'text-white' : 'text-gray-700')}>
+                {label}
+              </p>
+              <p className={clsx('text-[11px] mt-0.5 leading-snug', on ? 'text-white/70' : 'text-gray-400')}>
+                {desc}
+              </p>
+
+              {!on && (
+                <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Lock size={10} className="text-gray-300" />
+                </div>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 // ─── Add task inline form ─────────────────────────────────────
 function AddTaskRow({ clientId }: { clientId: string }) {
@@ -1169,6 +1291,11 @@ export default function ClientDetail() {
                     <AddTaskRow clientId={client.id} />
                   </>
                 )}
+              </div>
+
+              {/* Portal Access — spans full width */}
+              <div className="lg:col-span-2 border-t border-gray-100 pt-6">
+                <PortalAccessCard client={client} />
               </div>
             </div>
           )}
