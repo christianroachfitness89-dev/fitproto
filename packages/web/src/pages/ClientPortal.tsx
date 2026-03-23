@@ -4,7 +4,7 @@ import {
   Dumbbell, CheckCircle2, Clock, Calendar, ChevronDown, ChevronUp,
   Loader2, Target, ClipboardList, ArrowLeft, Lock,
   BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight,
-  X, MessageCircle, UserCircle,
+  X, Home, MoreHorizontal, MessageCircle, Settings,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { playRestEndChime } from '@/lib/sound'
@@ -623,10 +623,9 @@ function WorkoutCard({ cw, clientId, onLog, onQuickComplete }: {
 }
 
 // ─── Workouts section view ─────────────────────────────────────
-function WorkoutsView({ data, clientId, onBack, onMarkComplete }: {
+function WorkoutsView({ data, clientId, onMarkComplete }: {
   data: PortalData
   clientId: string
-  onBack: () => void
   onMarkComplete: (id: string) => void
 }) {
   const [logging, setLogging] = useState<PortalWorkout | null>(null)
@@ -645,11 +644,7 @@ function WorkoutsView({ data, clientId, onBack, onMarkComplete }: {
       )}
 
       {/* Section header */}
-      <div className="flex items-center gap-3 px-4 pt-12 pb-5 border-b border-white/8">
-        <button onClick={onBack}
-          className="w-10 h-10 rounded-2xl bg-white/8 border border-white/10 hover:bg-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all">
-          <ArrowLeft size={18} />
-        </button>
+      <div className="flex items-center gap-3 px-4 pt-14 pb-5 border-b border-white/8">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-600 to-brand-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
           <Dumbbell size={18} className="text-white" />
         </div>
@@ -659,7 +654,7 @@ function WorkoutsView({ data, clientId, onBack, onMarkComplete }: {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-6 pb-12">
+      <div className="max-w-lg mx-auto px-4 py-5 space-y-6 pb-28">
         {assigned.length > 0 && (
           <div>
             <SectionLabel>Assigned</SectionLabel>
@@ -879,7 +874,7 @@ function SessionDetailView({ entry, clientId, onBack }: {
 }
 
 // ─── History section view ──────────────────────────────────────
-function HistoryView({ clientId, onBack }: { clientId: string; onBack: () => void }) {
+function HistoryView({ clientId }: { clientId: string }) {
   const [entries, setEntries]       = useState<PortalHistoryEntry[]>([])
   const [loading, setLoading]       = useState(true)
   const [selected, setSelected]     = useState<PortalHistoryEntry | null>(null)
@@ -899,11 +894,7 @@ function HistoryView({ clientId, onBack }: { clientId: string; onBack: () => voi
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
       {/* Section header */}
-      <div className="flex items-center gap-3 px-4 pt-12 pb-5 border-b border-white/8">
-        <button onClick={onBack}
-          className="w-10 h-10 rounded-2xl bg-white/8 border border-white/10 hover:bg-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all">
-          <ArrowLeft size={18} />
-        </button>
+      <div className="flex items-center gap-3 px-4 pt-14 pb-5 border-b border-white/8">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
           <History size={18} className="text-white" />
         </div>
@@ -913,7 +904,7 @@ function HistoryView({ clientId, onBack }: { clientId: string; onBack: () => voi
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-3 pb-12">
+      <div className="max-w-lg mx-auto px-4 py-5 space-y-3 pb-28">
         {loading ? (
           <LoadingCard label="Loading history" />
         ) : entries.length === 0 ? (
@@ -981,7 +972,7 @@ function HistoryView({ clientId, onBack }: { clientId: string; onBack: () => voi
 }
 
 // ─── Metrics section view ──────────────────────────────────────
-function MetricsView({ clientId, onBack }: { clientId: string; onBack: () => void }) {
+function MetricsView({ clientId }: { clientId: string }) {
   const [entries, setEntries] = useState<PortalMetricEntry[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -997,21 +988,17 @@ function MetricsView({ clientId, onBack }: { clientId: string; onBack: () => voi
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
       {/* Section header */}
-      <div className="flex items-center gap-3 px-4 pt-12 pb-5 border-b border-white/8">
-        <button onClick={onBack}
-          className="w-10 h-10 rounded-2xl bg-white/8 border border-white/10 hover:bg-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all">
-          <ArrowLeft size={18} />
-        </button>
+      <div className="flex items-center gap-3 px-4 pt-14 pb-5 border-b border-white/8">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
           <BarChart2 size={18} className="text-white" />
         </div>
         <div>
-          <p className="text-white font-bold text-base">Metrics</p>
+          <p className="text-white font-bold text-base">Progress</p>
           <p className="text-white/35 text-xs">{loading ? '…' : `${entries.length} check-ins recorded`}</p>
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-4 pb-12">
+      <div className="max-w-lg mx-auto px-4 py-5 space-y-4 pb-28">
         {loading ? (
           <LoadingCard label="Loading metrics" />
         ) : entries.length === 0 ? (
@@ -1102,14 +1089,10 @@ function MetricsView({ clientId, onBack }: { clientId: string; onBack: () => voi
 }
 
 // ─── Nutrition placeholder view ────────────────────────────────
-function NutritionView({ onBack }: { onBack: () => void }) {
+function NutritionView() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
-      <div className="flex items-center gap-3 px-4 pt-12 pb-5 border-b border-white/8">
-        <button onClick={onBack}
-          className="w-10 h-10 rounded-2xl bg-white/8 border border-white/10 hover:bg-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all">
-          <ArrowLeft size={18} />
-        </button>
+      <div className="flex items-center gap-3 px-4 pt-14 pb-5 border-b border-white/8">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center shadow-lg shadow-rose-500/30">
           <Utensils size={18} className="text-white" />
         </div>
@@ -1118,7 +1101,7 @@ function NutritionView({ onBack }: { onBack: () => void }) {
           <p className="text-white/35 text-xs">Meal plans & guidance</p>
         </div>
       </div>
-      <div className="flex items-center justify-center min-h-[60vh] px-6">
+      <div className="flex items-center justify-center min-h-[60vh] px-6 pb-28">
         <EmptyState
           icon={<Utensils size={28} className="text-rose-400/60" />}
           title="Coming soon"
@@ -1181,6 +1164,164 @@ function MetricPill({ icon, label, value, color }: {
         <span className="text-[10px] font-bold uppercase tracking-wide opacity-70">{label}</span>
       </div>
       <p className={clsx('text-lg font-bold leading-none', color)}>{value}</p>
+    </div>
+  )
+}
+
+// ─── More sheet (slide-up) ─────────────────────────────────────
+function MoreSheet({
+  onClose, onNavigate, portalSections,
+}: {
+  onClose: () => void
+  onNavigate: (section: ActiveSection) => void
+  portalSections: string[]
+}) {
+  const items = [
+    {
+      section: 'nutrition' as const,
+      label: 'Nutrition',
+      desc: 'Meal plans & guidance',
+      icon: Utensils,
+      gradient: 'from-rose-500 to-pink-500',
+      glow: 'shadow-rose-500/30',
+      bg: 'from-rose-500/15 to-pink-500/10',
+      border: 'border-rose-500/20',
+    },
+  ]
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      {/* Panel */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl bg-[#0d0d20] border-t border-white/10 pb-10">
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="w-10 h-1 rounded-full bg-white/20" />
+        </div>
+
+        <div className="px-5 pb-2 flex items-center justify-between">
+          <p className="text-white font-bold text-lg">More</p>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="px-4 pt-2 space-y-2">
+          {items.map(item => {
+            const Icon = item.icon
+            const unlocked = portalSections.includes(item.section)
+            return (
+              <button
+                key={item.section}
+                onClick={() => { onNavigate(item.section); onClose() }}
+                disabled={!unlocked}
+                className={clsx(
+                  'w-full flex items-center gap-4 rounded-2xl p-4 text-left transition-all active:scale-[0.98]',
+                  unlocked
+                    ? `bg-gradient-to-br ${item.bg} border ${item.border}`
+                    : 'bg-white/4 border border-white/8 opacity-60',
+                )}
+              >
+                <div className={clsx(
+                  'w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0',
+                  unlocked ? `bg-gradient-to-br ${item.gradient} shadow-${item.glow}` : 'bg-white/10',
+                )}>
+                  <Icon size={20} className="text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={clsx('font-bold text-[15px]', unlocked ? 'text-white' : 'text-white/30')}>
+                    {item.label}
+                  </p>
+                  <p className={clsx('text-xs mt-0.5', unlocked ? 'text-white/45' : 'text-white/20')}>
+                    {item.desc}
+                  </p>
+                </div>
+                {!unlocked && (
+                  <div className="flex items-center gap-1 text-white/25">
+                    <Lock size={14} />
+                  </div>
+                )}
+                {unlocked && <ChevronRight size={18} className="text-white/30 flex-shrink-0" />}
+              </button>
+            )
+          })}
+
+          {/* Settings row */}
+          <div className="border-t border-white/8 pt-2 mt-1">
+            <button className="w-full flex items-center gap-4 rounded-2xl p-4 text-left bg-white/4 border border-white/8 opacity-60 cursor-default">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center flex-shrink-0">
+                <Settings size={20} className="text-white/40" />
+              </div>
+              <div>
+                <p className="font-bold text-[15px] text-white/30">Settings</p>
+                <p className="text-xs text-white/20 mt-0.5">Coming soon</p>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ─── Universal bottom tab bar ──────────────────────────────────
+function BottomTabBar({
+  activeSection, showMore, onTab, onMoreToggle,
+}: {
+  activeSection: ActiveSection
+  showMore: boolean
+  onTab: (s: ActiveSection) => void
+  onMoreToggle: () => void
+}) {
+  const tabs = [
+    { label: 'Home',     Icon: Home,          section: null as ActiveSection },
+    { label: 'Workouts', Icon: Dumbbell,       section: 'workouts' as ActiveSection },
+    { label: 'History',  Icon: History,        section: 'history' as ActiveSection },
+    { label: 'Progress', Icon: TrendingUp,     section: 'metrics' as ActiveSection },
+  ]
+
+  // "More" is active when the sheet is open or the user is on a "more" page like nutrition
+  const moreActive = showMore || activeSection === 'nutrition'
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#09091a]/95 backdrop-blur-xl border-t border-white/10">
+      <div className="flex">
+        {tabs.map(({ label, Icon, section }) => {
+          const active = !moreActive && activeSection === section
+          return (
+            <button
+              key={label}
+              onClick={() => onTab(section)}
+              className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
+            >
+              <Icon size={22} className={active ? 'text-brand-400' : 'text-white/35'} />
+              <span className={clsx('text-[10px] font-semibold tracking-wide',
+                active ? 'text-brand-400' : 'text-white/35')}>
+                {label}
+              </span>
+            </button>
+          )
+        })}
+
+        {/* More tab */}
+        <button
+          onClick={onMoreToggle}
+          className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
+        >
+          <MoreHorizontal size={22} className={moreActive ? 'text-brand-400' : 'text-white/35'} />
+          <span className={clsx('text-[10px] font-semibold tracking-wide',
+            moreActive ? 'text-brand-400' : 'text-white/35')}>
+            More
+          </span>
+        </button>
+      </div>
     </div>
   )
 }
@@ -1257,11 +1398,12 @@ function DashboardCard({
 // ─── Main portal ───────────────────────────────────────────────
 export default function ClientPortal() {
   const { clientId } = useParams<{ clientId: string }>()
-  const [data, setData]           = useState<PortalData | null>(null)
-  const [loading, setLoading]     = useState(true)
-  const [notFound, setNotFound]   = useState(false)
-  const [activeSection, setActiveSection] = useState<ActiveSection>(null)
-  const [tasks, setTasks]         = useState<PortalTask[]>([])
+  const [data, setData]                     = useState<PortalData | null>(null)
+  const [loading, setLoading]               = useState(true)
+  const [notFound, setNotFound]             = useState(false)
+  const [activeSection, setActiveSection]   = useState<ActiveSection>(null)
+  const [showMore, setShowMore]             = useState(false)
+  const [tasks, setTasks]                   = useState<PortalTask[]>([])
   const [loggingWorkout, setLoggingWorkout] = useState<PortalWorkout | null>(null)
   const [missedBannerDismissed, setMissedBannerDismissed] = useState(false)
 
@@ -1282,6 +1424,11 @@ export default function ClientPortal() {
       ...prev,
       workouts: prev.workouts.map(w => w.id === clientWorkoutId ? { ...w, status: 'completed' } : w),
     } : prev)
+  }
+
+  function goTo(section: ActiveSection) {
+    setActiveSection(section)
+    setShowMore(false)
   }
 
   // ── Loading ──
@@ -1308,35 +1455,16 @@ export default function ClientPortal() {
     </div>
   )
 
-  // ── Section views ──
-  if (activeSection === 'workouts') return (
-    <WorkoutsView data={data} clientId={clientId!}
-      onBack={() => setActiveSection(null)} onMarkComplete={markComplete} />
-  )
-  if (activeSection === 'history') return (
-    <HistoryView clientId={clientId!} onBack={() => setActiveSection(null)} />
-  )
-  if (activeSection === 'metrics') return (
-    <MetricsView clientId={clientId!} onBack={() => setActiveSection(null)} />
-  )
-  if (activeSection === 'nutrition') return (
-    <NutritionView onBack={() => setActiveSection(null)} />
-  )
-
-  // ── Dashboard ──
-  const assigned   = data.workouts.filter(w => w.status === 'assigned')
   const unlocked   = data.portal_sections ?? ['workouts']
+  const assigned   = data.workouts.filter(w => w.status === 'assigned')
+  const todayDate  = new Date(); todayDate.setHours(0, 0, 0, 0)
 
-  const todayDate = new Date(); todayDate.setHours(0, 0, 0, 0)
-
-  // Prefer workout due today, fallback to first assigned
   const todaysWorkout = assigned.find(w => {
     if (!w.due_date) return false
     const d = new Date(w.due_date + 'T00:00:00'); d.setHours(0, 0, 0, 0)
     return d.getTime() === todayDate.getTime()
   }) ?? (assigned[0] ?? null)
 
-  // Overdue assigned workouts
   const missedWorkouts = assigned.filter(w => {
     if (!w.due_date) return false
     const d = new Date(w.due_date + 'T00:00:00'); d.setHours(0, 0, 0, 0)
@@ -1344,7 +1472,8 @@ export default function ClientPortal() {
   })
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] flex flex-col">
+    <div className="relative">
+      {/* ── Log workout overlay (highest z) ── */}
       {loggingWorkout && (
         <PortalLogOverlay
           cw={loggingWorkout}
@@ -1354,157 +1483,165 @@ export default function ClientPortal() {
         />
       )}
 
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto pb-28">
+      {/* ── More sheet ── */}
+      {showMore && (
+        <MoreSheet
+          onClose={() => setShowMore(false)}
+          onNavigate={goTo}
+          portalSections={unlocked}
+        />
+      )}
 
-        {/* Greeting */}
-        <div className="px-5 pt-14 pb-4">
-          <h1 className="text-[28px] font-extrabold text-gray-900 tracking-tight">Let's do this</h1>
-        </div>
+      {/* ── Section views ── */}
+      {activeSection === 'workouts' && (
+        <WorkoutsView data={data} clientId={clientId!} onMarkComplete={markComplete} />
+      )}
+      {activeSection === 'history' && (
+        <HistoryView clientId={clientId!} />
+      )}
+      {activeSection === 'metrics' && (
+        <MetricsView clientId={clientId!} />
+      )}
+      {activeSection === 'nutrition' && (
+        <NutritionView />
+      )}
 
-        {/* Today's Workout hero card */}
-        <div className="px-4 mb-3">
-          {todaysWorkout ? (
-            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#1e4ed8] via-[#2563eb] to-[#7c3aed] p-6 shadow-xl shadow-blue-900/25 min-h-[220px] flex flex-col">
-              {/* Decorative dumbbell */}
-              <div className="absolute -top-8 -right-8 pointer-events-none select-none opacity-[0.18]">
-                <Dumbbell size={190} className="text-white" style={{ transform: 'rotate(-25deg)' }} />
-              </div>
-              <p className="text-white/60 text-[11px] font-bold uppercase tracking-[0.2em] mb-3">
-                Today's Workout
-              </p>
-              <h2 className="text-white text-[22px] font-extrabold leading-tight max-w-[68%]">
-                {todaysWorkout.workout.name}
-              </h2>
-              <div className="flex-1" />
-              {todaysWorkout.workout.duration_minutes && (
-                <p className="text-white/60 text-sm flex items-center gap-1.5 mb-4">
-                  <Clock size={13} />{todaysWorkout.workout.duration_minutes} min
-                </p>
+      {/* ── Dashboard (home) ── */}
+      {activeSection === null && (
+        <div className="min-h-screen bg-[#f1f5f9]">
+          <div className="pb-28">
+
+            {/* Greeting */}
+            <div className="px-5 pt-14 pb-4">
+              <h1 className="text-[28px] font-extrabold text-gray-900 tracking-tight">Let's do this</h1>
+            </div>
+
+            {/* Today's Workout hero card */}
+            <div className="px-4 mb-3">
+              {todaysWorkout ? (
+                <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#1e4ed8] via-[#2563eb] to-[#7c3aed] p-6 shadow-xl shadow-blue-900/25 min-h-[220px] flex flex-col">
+                  <div className="absolute -top-8 -right-8 pointer-events-none select-none opacity-[0.18]">
+                    <Dumbbell size={190} className="text-white" style={{ transform: 'rotate(-25deg)' }} />
+                  </div>
+                  <p className="text-white/60 text-[11px] font-bold uppercase tracking-[0.2em] mb-3">
+                    Today's Workout
+                  </p>
+                  <h2 className="text-white text-[22px] font-extrabold leading-tight max-w-[68%]">
+                    {todaysWorkout.workout.name}
+                  </h2>
+                  <div className="flex-1" />
+                  {todaysWorkout.workout.duration_minutes && (
+                    <p className="text-white/60 text-sm flex items-center gap-1.5 mb-4">
+                      <Clock size={13} />{todaysWorkout.workout.duration_minutes} min
+                    </p>
+                  )}
+                  <button
+                    onClick={() => setLoggingWorkout(todaysWorkout)}
+                    className="self-start bg-white text-[#1e4ed8] font-bold px-8 py-3.5 rounded-full text-[15px] shadow-lg hover:bg-white/95 active:scale-[0.97] transition-all"
+                  >
+                    Start workout
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 p-6 shadow-lg min-h-[180px] flex flex-col justify-center items-center text-center">
+                  <CheckCircle2 size={40} className="text-white/80 mb-3" />
+                  <p className="text-white font-bold text-xl">All caught up!</p>
+                  <p className="text-white/70 text-sm mt-1">No workouts pending right now.</p>
+                </div>
               )}
-              <button
-                onClick={() => setLoggingWorkout(todaysWorkout)}
-                className="self-start bg-white text-[#1e4ed8] font-bold px-8 py-3.5 rounded-full text-[15px] shadow-lg hover:bg-white/95 active:scale-[0.97] transition-all"
-              >
-                Start workout
-              </button>
             </div>
-          ) : (
-            <div className="rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 p-6 shadow-lg min-h-[180px] flex flex-col justify-center items-center text-center">
-              <CheckCircle2 size={40} className="text-white/80 mb-3" />
-              <p className="text-white font-bold text-xl">All caught up!</p>
-              <p className="text-white/70 text-sm mt-1">No workouts pending right now.</p>
-            </div>
-          )}
-        </div>
 
-        {/* Missed workouts banner */}
-        {missedWorkouts.length > 0 && !missedBannerDismissed && (
-          <div className="mx-4 mb-3">
-            <div className="bg-[#fff4eb] border border-orange-100 rounded-2xl px-4 py-3.5 flex items-center gap-3">
-              <span className="text-lg flex-shrink-0">👉</span>
-              <p className="flex-1 text-sm text-gray-700 leading-snug">
-                You missed{' '}
-                <button
-                  onClick={() => unlocked.includes('workouts') && setActiveSection('workouts')}
-                  className="text-orange-500 font-bold"
-                >
-                  {missedWorkouts.length} {missedWorkouts.length === 1 ? 'workout' : 'workouts'}
-                </button>
-                {missedWorkouts[0]?.due_date && (
-                  <> from {new Date(missedWorkouts[0].due_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}</>
-                )}
-              </p>
-              <button
-                onClick={() => setMissedBannerDismissed(true)}
-                className="text-gray-400 hover:text-gray-600 flex-shrink-0 p-1 transition-colors"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Tasks */}
-        {tasks.length > 0 && (
-          <div className="mx-4 mb-3">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-4 pt-4 pb-2">
-                <h3 className="text-[16px] font-bold text-gray-900">Tasks (0/{tasks.length})</h3>
-              </div>
-              <div>
-                {tasks.map((task, i) => {
-                  const isLast  = i === tasks.length - 1
-                  const dueObj  = task.due_date
-                    ? (() => { const d = new Date(task.due_date + 'T00:00:00'); d.setHours(0, 0, 0, 0); return d })()
-                    : null
-                  const overdue = dueObj ? dueObj < todayDate : false
-                  const dueFmt  = dueObj
-                    ? dueObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                    : null
-                  return (
-                    <div
-                      key={task.id}
-                      className={clsx('flex items-center gap-3 px-4 py-3.5', !isLast && 'border-b border-gray-100')}
+            {/* Missed workouts banner */}
+            {missedWorkouts.length > 0 && !missedBannerDismissed && (
+              <div className="mx-4 mb-3">
+                <div className="bg-[#fff4eb] border border-orange-100 rounded-2xl px-4 py-3.5 flex items-center gap-3">
+                  <span className="text-lg flex-shrink-0">👉</span>
+                  <p className="flex-1 text-sm text-gray-700 leading-snug">
+                    You missed{' '}
+                    <button
+                      onClick={() => unlocked.includes('workouts') && goTo('workouts')}
+                      className="text-orange-500 font-bold"
                     >
-                      <div className="w-7 h-7 rounded-full border-2 border-gray-200 flex items-center justify-center flex-shrink-0">
-                        <CheckCircle2 size={14} className="text-gray-200" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[15px] font-semibold text-gray-800 leading-tight">{task.title}</p>
-                        {dueFmt && (
-                          <p className={clsx('text-xs font-medium mt-0.5', overdue ? 'text-orange-500' : 'text-gray-400')}>
-                            {overdue ? `Past: ${dueFmt}` : `Due: ${dueFmt}`}
-                          </p>
-                        )}
-                      </div>
-                      <ChevronRight size={18} className="text-gray-300 flex-shrink-0" />
-                    </div>
-                  )
-                })}
+                      {missedWorkouts.length} {missedWorkouts.length === 1 ? 'workout' : 'workouts'}
+                    </button>
+                    {missedWorkouts[0]?.due_date && (
+                      <> from {new Date(missedWorkouts[0].due_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}</>
+                    )}
+                  </p>
+                  <button
+                    onClick={() => setMissedBannerDismissed(true)}
+                    className="text-gray-400 hover:text-gray-600 flex-shrink-0 p-1 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Tasks */}
+            {tasks.length > 0 && (
+              <div className="mx-4 mb-3">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-4 pt-4 pb-2">
+                    <h3 className="text-[16px] font-bold text-gray-900">Tasks (0/{tasks.length})</h3>
+                  </div>
+                  <div>
+                    {tasks.map((task, i) => {
+                      const isLast  = i === tasks.length - 1
+                      const dueObj  = task.due_date
+                        ? (() => { const d = new Date(task.due_date + 'T00:00:00'); d.setHours(0, 0, 0, 0); return d })()
+                        : null
+                      const overdue = dueObj ? dueObj < todayDate : false
+                      const dueFmt  = dueObj
+                        ? dueObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        : null
+                      return (
+                        <div
+                          key={task.id}
+                          className={clsx('flex items-center gap-3 px-4 py-3.5', !isLast && 'border-b border-gray-100')}
+                        >
+                          <div className="w-7 h-7 rounded-full border-2 border-gray-200 flex items-center justify-center flex-shrink-0">
+                            <CheckCircle2 size={14} className="text-gray-200" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[15px] font-semibold text-gray-800 leading-tight">{task.title}</p>
+                            {dueFmt && (
+                              <p className={clsx('text-xs font-medium mt-0.5', overdue ? 'text-orange-500' : 'text-gray-400')}>
+                                {overdue ? `Past: ${dueFmt}` : `Due: ${dueFmt}`}
+                              </p>
+                            )}
+                          </div>
+                          <ChevronRight size={18} className="text-gray-300 flex-shrink-0" />
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step tracker */}
+            <div className="mx-4 mb-3">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-5">
+                <h3 className="text-[16px] font-bold text-gray-900">Step tracker</h3>
+                <p className="text-sm text-gray-400 mt-1">Connect your device to track daily steps.</p>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Step tracker */}
-        <div className="mx-4 mb-3">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-5">
-            <h3 className="text-[16px] font-bold text-gray-900">Step tracker</h3>
-            <p className="text-sm text-gray-400 mt-1">Connect your device to track daily steps.</p>
+            <p className="text-center text-[11px] text-gray-300 pt-4 pb-2 uppercase tracking-[0.2em] font-medium">
+              Powered by FitProto
+            </p>
           </div>
         </div>
+      )}
 
-        <p className="text-center text-[11px] text-gray-300 pt-4 pb-2 uppercase tracking-[0.2em] font-medium">
-          Powered by FitProto
-        </p>
-      </div>
-
-      {/* Bottom tab bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200">
-        <div className="flex">
-          {([
-            { label: 'Today',    Icon: ClipboardList, section: null         as ActiveSection },
-            { label: 'Coaching', Icon: Dumbbell,      section: 'workouts'   as ActiveSection },
-            { label: 'Inbox',    Icon: MessageCircle, section: 'history'    as ActiveSection },
-            { label: 'You',      Icon: UserCircle,    section: 'metrics'    as ActiveSection },
-          ]).map(({ label, Icon, section }) => {
-            const isActive = section === null  // Today is always the active tab on the dashboard
-            return (
-              <button
-                key={label}
-                onClick={() => setActiveSection(section)}
-                className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
-              >
-                <Icon size={23} className={isActive ? 'text-blue-600' : 'text-gray-500'} />
-                <span className={clsx('text-[11px] font-semibold', isActive ? 'text-blue-600' : 'text-gray-500')}>
-                  {label}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      {/* ── Universal bottom tab bar ── */}
+      <BottomTabBar
+        activeSection={activeSection}
+        showMore={showMore}
+        onTab={goTo}
+        onMoreToggle={() => setShowMore(v => !v)}
+      />
     </div>
   )
 }
