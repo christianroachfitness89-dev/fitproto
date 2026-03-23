@@ -1,15 +1,21 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft, Mail, Phone, MessageSquare, Dumbbell,
   Calendar, Tag, MoreHorizontal, Plus, CheckCircle2,
   Clock, Loader2, X, ChevronDown, Trash2, Send,
+  ClipboardList, ChevronLeft, ChevronRight, ClipboardCheck,
+  SkipForward,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useClient, useUpdateClient } from '@/hooks/useClients'
 import { useTasks, useCreateTask, useToggleTask } from '@/hooks/useTasks'
-import { useClientWorkouts, useAssignWorkout, useUpdateClientWorkoutStatus, useRemoveClientWorkout } from '@/hooks/useClientWorkouts'
-import { useWorkouts } from '@/hooks/useWorkouts'
+import {
+  useClientWorkouts, useAssignWorkout, useUpdateClientWorkoutStatus,
+  useRemoveClientWorkout, useLogWorkoutSession,
+} from '@/hooks/useClientWorkouts'
+import { useWorkouts, useWorkoutDetail } from '@/hooks/useWorkouts'
+import { useUnitSystem, weightLabel } from '@/lib/units'
 import type { DbClient, DbTask, DbClientWorkoutWithWorkout } from '@/lib/database.types'
 
 type Tab = 'overview' | 'workouts' | 'nutrition' | 'metrics' | 'notes'
@@ -183,12 +189,35 @@ function EditClientModal({ client, onClose }: { client: DbClient; onClose: () =>
   )
 }
 
+// ─── Date helpers ─────────────────────────────────────────────
+function todayStr(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+function dateToStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+function weekMonday(date: Date): Date {
+  const d = new Date(date)
+  const dow = d.getDay()
+  d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1))
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+function addDays(date: Date, n: number): Date {
+  const d = new Date(date)
+  d.setDate(d.getDate() + n)
+  return d
+}
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
 // ─── Assign workout modal ─────────────────────────────────────
-function AssignWorkoutModal({ clientId, onClose }: { clientId: string; onClose: () => void }) {
+function AssignWorkoutModal({ clientId, defaultDate, onClose }: { clientId: string; defaultDate?: string; onClose: () => void }) {
   const { data: workouts = [], isLoading } = useWorkouts()
   const assign = useAssignWorkout()
   const [search, setSearch]   = useState('')
-  const [dueDate, setDueDate] = useState('')
+  const [dueDate, setDueDate] = useState(defaultDate ?? '')
   const [notes, setNotes]     = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const [error, setError]       = useState<string | null>(null)
@@ -302,45 +331,433 @@ function AssignWorkoutModal({ clientId, onClose }: { clientId: string; onClose: 
   )
 }
 
-// ─── Workouts tab ─────────────────────────────────────────────
+// ─── Status helpers ───────────────────────────────────────────
 const STATUS_STYLES: Record<DbClientWorkoutWithWorkout['status'], string> = {
   assigned:  'bg-brand-50 text-brand-700',
   completed: 'bg-emerald-50 text-emerald-700',
   skipped:   'bg-gray-100 text-gray-500',
 }
 
+// ─── Log session modal ────────────────────────────────────────
+type SetEntry = { reps: string; weight: string; duration: string; distance: string; rpe: string }
+
+function LogSessionModal({
+  assignment, clientId, onClose,
+}: {
+  assignment: DbClientWorkoutWithWorkout
+  clientId: string
+  onClose: () => void
+}) {
+  const { data: workout, isLoading } = useWorkoutDetail(assignment.workout_id)
+  const logSession = useLogWorkoutSession()
+  const unit  = useUnitSystem()
+  const wLabel = weightLabel(unit)
+  const [completedAt, setCompletedAt] = useState(todayStr)
+  const [notes, setNotes]     = useState('')
+  const [entries, setEntries] = useState<Record<string, SetEntry>>({})
+  const [saved, setSaved]     = useState(false)
+  const [error, setError]     = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!workout) return
+    const init: Record<string, SetEntry> = {}
+    for (const ex of workout.workout_exercises) {
+      for (const s of ex.workout_sets) {
+        init[`${ex.id}-${s.set_number}`] = {
+          reps: s.reps?.toString() ?? '',
+          weight: s.weight?.toString() ?? '',
+          duration: s.duration_seconds?.toString() ?? '',
+          distance: s.distance_meters?.toString() ?? '',
+          rpe: '',
+        }
+      }
+    }
+    setEntries(init)
+  }, [workout?.id])
+
+  function setField(key: string, field: keyof SetEntry, value: string) {
+    setEntries(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
+  }
+
+  async function submit() {
+    if (!workout) return
+    setError(null)
+    try {
+      const setLogs = workout.workout_exercises.flatMap(ex =>
+        ex.workout_sets.map(s => {
+          const e = entries[`${ex.id}-${s.set_number}`] ?? {} as SetEntry
+          return {
+            workout_exercise_id: ex.id,
+            set_number:          s.set_number,
+            reps_achieved:       e.reps     ? parseInt(e.reps)      : null,
+            weight_used:         e.weight   ? parseFloat(e.weight)  : null,
+            duration_seconds:    e.duration ? parseInt(e.duration)  : null,
+            distance_meters:     e.distance ? parseFloat(e.distance): null,
+            rpe:                 e.rpe      ? parseInt(e.rpe)       : null,
+          }
+        })
+      )
+      await logSession.mutateAsync({ clientId, clientWorkoutId: assignment.id, workoutId: assignment.workout_id, completedAt, notes, setLogs })
+      setSaved(true)
+      setTimeout(onClose, 1200)
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] z-10">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Log Session</h2>
+            <p className="text-sm text-gray-500 mt-0.5">{assignment.workout.name}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"><X size={18} /></button>
+        </div>
+
+        {/* Date picker */}
+        <div className="px-6 py-3 border-b border-gray-50 flex items-center gap-4">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</label>
+          <input type="date" value={completedAt} onChange={e => setCompletedAt(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+        </div>
+
+        {/* Exercises */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+          {isLoading ? (
+            <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+          ) : (workout?.workout_exercises ?? []).map(ex => {
+            const metric = ex.exercise?.metric_type ?? 'reps_weight'
+            const isWeighted  = metric === 'reps_weight'
+            const isTimed     = metric === 'time'
+            const isDistance  = metric === 'distance'
+            const colClass = isWeighted ? 'grid-cols-[28px_1fr_1fr_80px]' : 'grid-cols-[28px_1fr_80px]'
+            return (
+              <div key={ex.id}>
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-sm font-semibold text-gray-800">{ex.exercise_name}</p>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                    {ex.workout_sets.length} sets
+                    {ex.exercise?.muscle_group ? ` · ${ex.exercise.muscle_group}` : ''}
+                  </span>
+                </div>
+                {/* Column headers */}
+                <div className={clsx('grid gap-2 text-xs font-semibold text-gray-400 uppercase tracking-wide px-2 mb-1.5', colClass)}>
+                  <span>#</span>
+                  {isWeighted && <><span>Reps</span><span>Weight ({wLabel})</span></>}
+                  {isTimed    && <span>Duration (s)</span>}
+                  {isDistance && <span>Distance (m)</span>}
+                  {metric === 'reps' && <span>Reps</span>}
+                  <span>RPE</span>
+                </div>
+                <div className="space-y-1.5">
+                  {ex.workout_sets.map(s => {
+                    const key = `${ex.id}-${s.set_number}`
+                    const e   = entries[key] ?? { reps: '', weight: '', duration: '', distance: '', rpe: '' }
+                    const inp = 'px-2 py-1.5 text-sm text-center border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 bg-white w-full'
+                    return (
+                      <div key={s.set_number} className={clsx('grid gap-2 items-center bg-gray-50 rounded-xl px-2 py-2', colClass)}>
+                        <span className="text-xs font-bold text-gray-400 text-center">{s.set_number}</span>
+                        {isWeighted && (
+                          <>
+                            <input type="number" min={0} value={e.reps}
+                              onChange={ev => setField(key, 'reps', ev.target.value)}
+                              placeholder={s.reps?.toString() ?? '—'} className={inp} />
+                            <input type="number" min={0} step={0.5} value={e.weight}
+                              onChange={ev => setField(key, 'weight', ev.target.value)}
+                              placeholder={s.weight?.toString() ?? '—'} className={inp} />
+                          </>
+                        )}
+                        {isTimed && (
+                          <input type="number" min={0} value={e.duration}
+                            onChange={ev => setField(key, 'duration', ev.target.value)}
+                            placeholder={s.duration_seconds?.toString() ?? '—'} className={inp} />
+                        )}
+                        {isDistance && (
+                          <input type="number" min={0} step={0.1} value={e.distance}
+                            onChange={ev => setField(key, 'distance', ev.target.value)}
+                            placeholder={s.distance_meters?.toString() ?? '—'} className={inp} />
+                        )}
+                        {metric === 'reps' && (
+                          <input type="number" min={0} value={e.reps}
+                            onChange={ev => setField(key, 'reps', ev.target.value)}
+                            placeholder={s.reps?.toString() ?? '—'} className={inp} />
+                        )}
+                        <input type="number" min={1} max={10} value={e.rpe}
+                          onChange={ev => setField(key, 'rpe', ev.target.value)}
+                          placeholder="—" className={inp} />
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Notes + submit */}
+        <div className="px-6 py-4 border-t border-gray-100 space-y-3">
+          {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-xl">{error}</p>}
+          <input value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="Session notes (optional)..."
+            className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+          <div className="flex gap-3">
+            <button onClick={onClose} className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
+            <button onClick={submit} disabled={logSession.isPending || saved || isLoading}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all">
+              {logSession.isPending
+                ? <><Loader2 size={15} className="animate-spin" />Saving…</>
+                : saved
+                  ? <><CheckCircle2 size={15} />Saved!</>
+                  : <><ClipboardCheck size={15} />Save Session</>}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Assignment card (shared by list + calendar) ──────────────
+function AssignmentCard({
+  a, clientId, compact = false,
+  onLog,
+}: {
+  a: DbClientWorkoutWithWorkout
+  clientId: string
+  compact?: boolean
+  onLog: (a: DbClientWorkoutWithWorkout) => void
+}) {
+  const updateStatus = useUpdateClientWorkoutStatus()
+  const remove = useRemoveClientWorkout()
+
+  return (
+    <div className={clsx(
+      'group relative flex flex-col bg-white rounded-xl border transition-all hover:shadow-sm',
+      a.status === 'completed' ? 'border-emerald-200' : a.status === 'skipped' ? 'border-gray-200 opacity-60' : 'border-gray-200',
+      compact ? 'p-2' : 'p-3.5',
+    )}>
+      <div className="flex items-start gap-2">
+        <div className={clsx('rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5',
+          compact ? 'w-6 h-6' : 'w-8 h-8',
+          a.status === 'completed' ? 'bg-emerald-100' : 'bg-brand-100')}>
+          {a.status === 'completed'
+            ? <CheckCircle2 size={compact ? 12 : 15} className="text-emerald-600" />
+            : <Dumbbell size={compact ? 12 : 15} className="text-brand-600" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={clsx('font-semibold truncate', compact ? 'text-xs' : 'text-sm',
+            a.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-800')}>
+            {a.workout.name}
+          </p>
+          {!compact && (
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <span className={clsx('text-xs px-1.5 py-0.5 rounded-full font-medium', STATUS_STYLES[a.status])}>
+                {a.status}
+              </span>
+              {a.workout.difficulty && <span className="text-xs text-gray-400">{a.workout.difficulty}</span>}
+              {a.notes && <span className="text-xs text-gray-400 italic truncate max-w-[160px]">{a.notes}</span>}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Action row */}
+      {a.status !== 'completed' && a.status !== 'skipped' && (
+        <div className={clsx('flex items-center gap-1 mt-2', compact ? 'justify-end' : '')}>
+          <button
+            onClick={() => onLog(a)}
+            className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg transition-colors"
+          >
+            <ClipboardList size={11} />Log
+          </button>
+          <button
+            onClick={() => updateStatus.mutate({ id: a.id, status: 'completed', clientId })}
+            disabled={updateStatus.isPending}
+            title="Mark complete"
+            className="p-1 rounded-lg hover:bg-emerald-50 text-gray-300 hover:text-emerald-500 transition-colors"
+          >
+            <CheckCircle2 size={13} />
+          </button>
+          <button
+            onClick={() => updateStatus.mutate({ id: a.id, status: 'skipped', clientId })}
+            disabled={updateStatus.isPending}
+            title="Skip"
+            className="p-1 rounded-lg hover:bg-gray-100 text-gray-300 hover:text-gray-500 transition-colors"
+          >
+            <SkipForward size={13} />
+          </button>
+          <button
+            onClick={() => remove.mutate({ id: a.id, clientId })}
+            disabled={remove.isPending}
+            className="p-1 rounded-lg hover:bg-rose-50 text-gray-200 hover:text-rose-400 transition-colors"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Weekly calendar ──────────────────────────────────────────
+function WorkoutCalendar({
+  clientId, assignments, onLog,
+}: {
+  clientId: string
+  assignments: DbClientWorkoutWithWorkout[]
+  onLog: (a: DbClientWorkoutWithWorkout) => void
+}) {
+  const [wkStart, setWkStart] = useState(() => weekMonday(new Date()))
+  const [assignDate, setAssignDate] = useState<string | null>(null)
+  const today = todayStr()
+
+  const days = Array.from({ length: 7 }, (_, i) => addDays(wkStart, i))
+
+  const byDate = useMemo(() => {
+    const map: Record<string, DbClientWorkoutWithWorkout[]> = {}
+    for (const a of assignments) {
+      if (a.due_date) (map[a.due_date] ??= []).push(a)
+    }
+    return map
+  }, [assignments])
+
+  const unscheduled = useMemo(
+    () => assignments.filter(a => !a.due_date && a.status !== 'completed'),
+    [assignments],
+  )
+
+  const wkEnd   = addDays(wkStart, 6)
+  const wkLabel = `${wkStart.getDate()} ${MONTH_NAMES[wkStart.getMonth()]} – ${wkEnd.getDate()} ${MONTH_NAMES[wkEnd.getMonth()]} ${wkEnd.getFullYear()}`
+
+  return (
+    <div>
+      {assignDate !== null && (
+        <AssignWorkoutModal clientId={clientId} defaultDate={assignDate} onClose={() => setAssignDate(null)} />
+      )}
+
+      {/* Week nav */}
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={() => setWkStart(d => addDays(d, -7))}
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+          <ChevronLeft size={16} />
+        </button>
+        <span className="text-sm font-semibold text-gray-700">{wkLabel}</span>
+        <button onClick={() => setWkStart(d => addDays(d, 7))}
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+          <ChevronRight size={16} />
+        </button>
+      </div>
+
+      {/* 7-column grid */}
+      <div className="grid grid-cols-7 gap-1.5">
+        {days.map((day, i) => {
+          const ds       = dateToStr(day)
+          const isToday  = ds === today
+          const dayItems = byDate[ds] ?? []
+          return (
+            <div key={ds} className="flex flex-col">
+              {/* Day header */}
+              <div className={clsx(
+                'text-center py-2 rounded-t-xl border-b mb-1',
+                isToday ? 'bg-brand-600 border-brand-600' : 'bg-gray-50 border-gray-200',
+              )}>
+                <p className={clsx('text-xs font-medium', isToday ? 'text-brand-100' : 'text-gray-400')}>
+                  {DAY_NAMES[i]}
+                </p>
+                <p className={clsx('text-sm font-bold', isToday ? 'text-white' : 'text-gray-700')}>
+                  {day.getDate()}
+                </p>
+              </div>
+              {/* Assignment cards */}
+              <div className="space-y-1.5 min-h-[80px]">
+                {dayItems.map(a => (
+                  <AssignmentCard key={a.id} a={a} clientId={clientId} compact onLog={onLog} />
+                ))}
+                <button
+                  onClick={() => setAssignDate(ds)}
+                  className="w-full py-1 text-gray-300 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors flex items-center justify-center"
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Unscheduled */}
+      {unscheduled.length > 0 && (
+        <div className="mt-6">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Unscheduled ({unscheduled.length})
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {unscheduled.map(a => (
+              <AssignmentCard key={a.id} a={a} clientId={clientId} onLog={onLog} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Workouts tab ─────────────────────────────────────────────
+type WorkoutsView = 'list' | 'schedule'
+
 function WorkoutsTab({ clientId }: { clientId: string }) {
   const { data: assignments = [], isLoading } = useClientWorkouts(clientId)
-  const updateStatus = useUpdateClientWorkoutStatus()
-  const remove       = useRemoveClientWorkout()
+  const [view, setView]           = useState<WorkoutsView>('list')
   const [showAssign, setShowAssign] = useState(false)
+  const [logTarget, setLogTarget] = useState<DbClientWorkoutWithWorkout | null>(null)
 
   if (isLoading) {
     return <div className="flex items-center justify-center py-16"><Loader2 size={22} className="animate-spin text-gray-300" /></div>
   }
 
+  const completed = assignments.filter(a => a.status === 'completed').length
+
   return (
     <div>
       {showAssign && <AssignWorkoutModal clientId={clientId} onClose={() => setShowAssign(false)} />}
+      {logTarget  && <LogSessionModal assignment={logTarget} clientId={clientId} onClose={() => setLogTarget(null)} />}
 
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <span className="text-sm font-semibold text-gray-800">{assignments.length} workout{assignments.length !== 1 ? 's' : ''} assigned</span>
-          {assignments.filter(a => a.status === 'completed').length > 0 && (
-            <span className="ml-2 text-xs text-emerald-600 font-medium">
-              · {assignments.filter(a => a.status === 'completed').length} completed
+      {/* Top bar */}
+      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+        <div className="flex items-center gap-2 bg-gray-100 p-0.5 rounded-xl">
+          <button onClick={() => setView('list')}
+            className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              view === 'list' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
+            <ClipboardList size={13} />List
+          </button>
+          <button onClick={() => setView('schedule')}
+            className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              view === 'schedule' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
+            <Calendar size={13} />Schedule
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          {completed > 0 && (
+            <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2.5 py-1 rounded-full">
+              {completed} completed
             </span>
           )}
+          <button onClick={() => setShowAssign(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-xs font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all shadow-sm">
+            <Plus size={13} /> Assign Workout
+          </button>
         </div>
-        <button
-          onClick={() => setShowAssign(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-xs font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all shadow-sm"
-        >
-          <Plus size={13} /> Assign Workout
-        </button>
       </div>
 
-      {assignments.length === 0 ? (
+      {/* Views */}
+      {view === 'schedule' ? (
+        <WorkoutCalendar clientId={clientId} assignments={assignments} onLog={setLogTarget} />
+      ) : assignments.length === 0 ? (
         <div className="text-center py-14">
           <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
             <Dumbbell size={28} className="text-gray-300" />
@@ -355,64 +772,7 @@ function WorkoutsTab({ clientId }: { clientId: string }) {
       ) : (
         <div className="space-y-2">
           {assignments.map(a => (
-            <div key={a.id} className="flex items-center gap-3 p-3.5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
-              <div className={clsx('w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
-                a.status === 'completed' ? 'bg-emerald-100' : 'bg-brand-100')}>
-                {a.status === 'completed'
-                  ? <CheckCircle2 size={16} className="text-emerald-600" />
-                  : <Dumbbell size={16} className="text-brand-600" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={clsx('text-sm font-semibold truncate',
-                  a.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-800')}>
-                  {a.workout.name}
-                </p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className={clsx('text-xs px-2 py-0.5 rounded-full font-medium', STATUS_STYLES[a.status])}>
-                    {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
-                  </span>
-                  {a.due_date && (
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <Clock size={10} /> Due {new Date(a.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
-                    </span>
-                  )}
-                  {a.workout.difficulty && (
-                    <span className="text-xs text-gray-400">{a.workout.difficulty}</span>
-                  )}
-                </div>
-                {a.notes && <p className="text-xs text-gray-400 italic mt-0.5">{a.notes}</p>}
-              </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                {a.status !== 'completed' && (
-                  <button
-                    onClick={() => updateStatus.mutate({ id: a.id, status: 'completed', clientId })}
-                    disabled={updateStatus.isPending}
-                    title="Mark complete"
-                    className="p-1.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors"
-                  >
-                    <CheckCircle2 size={14} />
-                  </button>
-                )}
-                {a.status !== 'skipped' && a.status !== 'completed' && (
-                  <button
-                    onClick={() => updateStatus.mutate({ id: a.id, status: 'skipped', clientId })}
-                    disabled={updateStatus.isPending}
-                    title="Mark skipped"
-                    className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-                <button
-                  onClick={() => remove.mutate({ id: a.id, clientId })}
-                  disabled={remove.isPending}
-                  title="Remove"
-                  className="p-1.5 rounded-lg hover:bg-rose-50 text-gray-300 hover:text-rose-500 transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
+            <AssignmentCard key={a.id} a={a} clientId={clientId} onLog={setLogTarget} />
           ))}
         </div>
       )}

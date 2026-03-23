@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { DbClientWorkout, DbClientWorkoutWithWorkout } from '@/lib/database.types'
+import type { DbClientWorkout, DbClientWorkoutWithWorkout, DbWorkoutLog } from '@/lib/database.types'
 
 export function useClientWorkouts(clientId: string) {
   return useQuery({
@@ -79,6 +79,86 @@ export function useRemoveClientWorkout() {
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['client_workouts', vars.clientId] })
+    },
+  })
+}
+
+export function useWorkoutLogs(clientId: string) {
+  return useQuery({
+    queryKey: ['workout_logs', clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('workout_logs')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('completed_at', { ascending: false })
+      if (error) throw error
+      return data as DbWorkoutLog[]
+    },
+    enabled: !!clientId,
+  })
+}
+
+interface SetLogInput {
+  workout_exercise_id: string
+  set_number: number
+  reps_achieved: number | null
+  weight_used: number | null
+  duration_seconds: number | null
+  distance_meters: number | null
+  rpe: number | null
+}
+
+export function useLogWorkoutSession() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: {
+      clientId: string
+      clientWorkoutId: string
+      workoutId: string
+      completedAt: string
+      notes: string
+      setLogs: SetLogInput[]
+    }) => {
+      // 1. Insert workout_log
+      const { data: log, error: logErr } = await supabase
+        .from('workout_logs')
+        .insert({
+          client_id:         input.clientId,
+          workout_id:        input.workoutId,
+          client_workout_id: input.clientWorkoutId,
+          completed_at:      input.completedAt,
+          notes:             input.notes || null,
+        } as any)
+        .select()
+        .single()
+      if (logErr) throw logErr
+
+      // 2. Insert set logs (only rows where something was entered)
+      const loggable = input.setLogs.filter(s =>
+        s.reps_achieved != null || s.weight_used != null ||
+        s.duration_seconds != null || s.distance_meters != null
+      )
+      if (loggable.length > 0) {
+        const { error: setsErr } = await supabase
+          .from('workout_set_logs')
+          .insert(loggable.map(s => ({ ...s, workout_log_id: (log as any).id })) as any)
+        if (setsErr) throw setsErr
+      }
+
+      // 3. Mark assignment completed
+      const { error: statusErr } = await supabase
+        .from('client_workouts')
+        .update({ status: 'completed' } as any)
+        .eq('id', input.clientWorkoutId)
+      if (statusErr) throw statusErr
+
+      return log as DbWorkoutLog
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['client_workouts', vars.clientId] })
+      qc.invalidateQueries({ queryKey: ['workout_logs', vars.clientId] })
     },
   })
 }

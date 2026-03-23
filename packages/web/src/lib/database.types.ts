@@ -165,6 +165,7 @@ export interface DbWorkoutLog {
   id: string
   client_id: string
   workout_id: string | null
+  client_workout_id: string | null
   completed_at: string
   notes: string | null
   created_at: string
