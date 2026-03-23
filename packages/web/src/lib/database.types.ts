@@ -32,6 +32,8 @@ export interface DbProfile {
   created_at: string
 }
 
+export type PortalSection = 'workouts' | 'history' | 'metrics' | 'nutrition'
+
 export interface DbClient {
   id: string
   org_id: string
@@ -44,6 +46,8 @@ export interface DbClient {
   category: string | null
   group_name: string | null
   tags: string[]
+  /** Which portal sections the coach has unlocked for this client */
+  portal_sections: PortalSection[]
   joined_at: string
   created_at: string
 }
