@@ -123,12 +123,27 @@ function RestTimer({
         </div>
       </div>
 
-      <button
-        onClick={onDone}
-        className="mt-10 px-8 py-3 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-sm font-semibold rounded-2xl transition-colors border border-white/10"
-      >
-        Skip Rest
-      </button>
+      {/* ±15 s controls */}
+      <div className="mt-8 flex items-center gap-3">
+        <button
+          onClick={() => setRemaining(r => Math.max(0, r - 15))}
+          className="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-lg font-bold transition-colors border border-white/10 flex items-center justify-center"
+        >
+          −15
+        </button>
+        <button
+          onClick={onDone}
+          className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm font-semibold rounded-2xl transition-colors border border-white/10"
+        >
+          Skip
+        </button>
+        <button
+          onClick={() => setRemaining(r => r + 15)}
+          className="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-lg font-bold transition-colors border border-white/10 flex items-center justify-center"
+        >
+          +15
+        </button>
+      </div>
     </div>
   )
 }

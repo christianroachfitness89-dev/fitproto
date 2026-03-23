@@ -380,12 +380,27 @@ function CoachRestTimer({ restSeconds, label, onDone }: { restSeconds: number; l
           <span className="text-gray-400 text-xs mt-0.5">seconds</span>
         </div>
       </div>
-      <button
-        onClick={onDone}
-        className="mt-8 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold rounded-xl transition-colors"
-      >
-        Skip Rest
-      </button>
+      {/* ±15 s controls */}
+      <div className="mt-8 flex items-center gap-3">
+        <button
+          onClick={() => setRemaining(r => Math.max(0, r - 15))}
+          className="w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold transition-colors flex items-center justify-center"
+        >
+          −15
+        </button>
+        <button
+          onClick={onDone}
+          className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold rounded-xl transition-colors"
+        >
+          Skip
+        </button>
+        <button
+          onClick={() => setRemaining(r => r + 15)}
+          className="w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold transition-colors flex items-center justify-center"
+        >
+          +15
+        </button>
+      </div>
     </div>
   )
 }
