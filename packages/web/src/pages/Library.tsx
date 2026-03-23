@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Search, Plus, Filter, Dumbbell, MoreHorizontal,
-  Clock, BarChart3, Users, X, Loader2, Trash2,
+  Search, Plus, Dumbbell,
+  Clock, BarChart3, X, Loader2, Trash2, ChevronRight,
 } from 'lucide-react'
 import clsx from 'clsx'
 import {
@@ -10,7 +10,14 @@ import {
   useWorkouts,  useCreateWorkout,  useDeleteWorkout,
   usePrograms,  useCreateProgram,
 } from '@/hooks/useWorkouts'
-import type { DbExercise, DbWorkout, DbProgram, Difficulty } from '@/lib/database.types'
+import type { DbExercise, DbWorkout, DbProgram, Difficulty, ExerciseMetricType } from '@/lib/database.types'
+
+const METRIC_OPTIONS: { value: ExerciseMetricType; label: string; desc: string; icon: string }[] = [
+  { value: 'reps_weight', label: 'Reps + Weight', desc: 'e.g. Bench Press, Squat',  icon: '🏋️' },
+  { value: 'reps',        label: 'Reps only',     desc: 'e.g. Push-ups, Pull-ups', icon: '🔄' },
+  { value: 'time',        label: 'Timed',          desc: 'e.g. Plank, Wall sit',    icon: '⏱️' },
+  { value: 'distance',    label: 'Distance',       desc: 'e.g. Run 400m, Row 500m', icon: '📏' },
+]
 
 // ─── Shared ───────────────────────────────────────────────────
 function DifficultyBadge({ level }: { level: Difficulty | null }) {
@@ -31,7 +38,8 @@ function DifficultyBadge({ level }: { level: Difficulty | null }) {
 function ExerciseModal({ onClose }: { onClose: () => void }) {
   const create = useCreateExercise()
   const [form, setForm] = useState({
-    name: '', category: '', muscle_group: '', equipment: '', instructions: '', video_url: '',
+    name: '', category: '', muscle_group: '', equipment: '', instructions: '',
+    metric_type: 'reps_weight' as ExerciseMetricType,
   })
   const [error, setError] = useState<string | null>(null)
 
@@ -46,7 +54,8 @@ function ExerciseModal({ onClose }: { onClose: () => void }) {
         muscle_group: form.muscle_group || null,
         equipment:    form.equipment    || null,
         instructions: form.instructions || null,
-        video_url:    form.video_url    || null,
+        video_url:    null,
+        metric_type:  form.metric_type,
       })
       onClose()
     } catch (err: any) {
@@ -57,13 +66,39 @@ function ExerciseModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 z-10">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold text-gray-900">New Exercise</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18} /></button>
         </div>
         {error && <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">{error}</div>}
-        <form onSubmit={submit} className="space-y-3">
+        <form onSubmit={submit} className="space-y-4">
+          {/* Metric type picker — most important field, set it first */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">How is this exercise measured? *</label>
+            <div className="grid grid-cols-2 gap-2">
+              {METRIC_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, metric_type: opt.value }))}
+                  className={clsx(
+                    'flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all',
+                    form.metric_type === opt.value
+                      ? 'border-brand-500 bg-brand-50'
+                      : 'border-gray-100 hover:border-gray-200 bg-white',
+                  )}
+                >
+                  <span className="text-xl">{opt.icon}</span>
+                  <div>
+                    <p className={clsx('text-xs font-semibold', form.metric_type === opt.value ? 'text-brand-700' : 'text-gray-700')}>{opt.label}</p>
+                    <p className="text-xs text-gray-400">{opt.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Exercise Name *</label>
             <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required
@@ -93,10 +128,10 @@ function ExerciseModal({ onClose }: { onClose: () => void }) {
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Instructions</label>
             <textarea value={form.instructions} onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))}
-              rows={3} placeholder="Step-by-step instructions..."
+              rows={2} placeholder="Step-by-step instructions..."
               className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 resize-none" />
           </div>
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose}
               className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
             <button type="submit" disabled={create.isPending}
@@ -112,6 +147,7 @@ function ExerciseModal({ onClose }: { onClose: () => void }) {
 
 // ─── Workout modal ────────────────────────────────────────────
 function WorkoutModal({ onClose }: { onClose: () => void }) {
+  const navigate = useNavigate()
   const create = useCreateWorkout()
   const [form, setForm] = useState({
     name: '', description: '', category: '',
@@ -125,14 +161,14 @@ function WorkoutModal({ onClose }: { onClose: () => void }) {
     if (!form.name.trim()) { setError('Name is required'); return }
     setError(null)
     try {
-      await create.mutateAsync({
+      const workout = await create.mutateAsync({
         name:             form.name,
         description:      form.description      || null,
         category:         form.category         || null,
         difficulty:       (form.difficulty as Difficulty) || null,
         duration_minutes: form.duration_minutes ? parseInt(form.duration_minutes) : null,
       })
-      onClose()
+      navigate(`/library/workouts/${workout.id}`)
     } catch (err: any) {
       setError(err.message)
     }
@@ -275,18 +311,18 @@ function ExercisesList() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {filtered.map(ex => (
+                {filtered.map(ex => {
+                  const metricOpt = METRIC_OPTIONS.find(m => m.value === ex.metric_type)
+                  return (
                   <tr key={ex.id} className="hover:bg-gray-50/70 transition-colors group">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-brand-50 flex items-center justify-center flex-shrink-0">
-                          <Dumbbell size={16} className="text-brand-600" />
+                        <div className="w-9 h-9 rounded-lg bg-brand-50 flex items-center justify-center flex-shrink-0 text-base">
+                          {metricOpt?.icon ?? '🏋️'}
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-gray-800">{ex.name}</p>
-                          {ex.instructions && (
-                            <p className="text-xs text-gray-400 truncate max-w-xs">{ex.instructions}</p>
-                          )}
+                          <p className="text-xs text-gray-400">{metricOpt?.label ?? 'Reps + Weight'}</p>
                         </div>
                       </div>
                     </td>
@@ -303,7 +339,7 @@ function ExercisesList() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
@@ -318,6 +354,7 @@ function ExercisesList() {
 
 // ─── Workouts list ────────────────────────────────────────────
 function WorkoutsList() {
+  const navigate = useNavigate()
   const [search, setSearch]       = useState('')
   const [showModal, setShowModal] = useState(false)
 
@@ -359,9 +396,13 @@ function WorkoutsList() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {workouts.map(workout => (
-            <div key={workout.id} className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-card-hover hover:border-brand-200 transition-all group relative">
+            <div
+              key={workout.id}
+              onClick={() => navigate(`/library/workouts/${workout.id}`)}
+              className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-card-hover hover:border-brand-200 transition-all group relative cursor-pointer"
+            >
               <button
-                onClick={() => deleteWorkout.mutate(workout.id)}
+                onClick={e => { e.stopPropagation(); deleteWorkout.mutate(workout.id) }}
                 disabled={deleteWorkout.isPending}
                 className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-50 text-gray-300 hover:text-rose-500 transition-all disabled:opacity-50"
               >
@@ -388,7 +429,7 @@ function WorkoutsList() {
               </div>
               <div className="flex items-center justify-between">
                 <DifficultyBadge level={workout.difficulty} />
-                {workout.category && <span className="text-xs text-gray-400">{workout.category}</span>}
+                <ChevronRight size={14} className="text-gray-300 group-hover:text-brand-400 transition-colors" />
               </div>
             </div>
           ))}

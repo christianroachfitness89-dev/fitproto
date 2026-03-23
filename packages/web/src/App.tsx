@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard'
 import Clients from './pages/Clients'
 import ClientDetail from './pages/ClientDetail'
 import Library from './pages/Library'
+import WorkoutBuilder from './pages/WorkoutBuilder'
 import Inbox from './pages/Inbox'
 import Placeholder from './pages/Placeholder'
 
@@ -83,6 +84,7 @@ export default function App() {
               <Route path="clients" element={<Clients />} />
               <Route path="clients/:id" element={<ClientDetail />} />
               <Route path="library/:section" element={<Library />} />
+              <Route path="library/workouts/:id" element={<WorkoutBuilder />} />
               <Route path="library" element={<Navigate to="/library/exercises" replace />} />
               <Route path="inbox" element={<Inbox />} />
               <Route path="automation" element={<Placeholder title="Automation" description="Set up automated workflows, reminders, and check-ins for your clients." />} />

@@ -6,6 +6,12 @@ export type SenderType = 'coach' | 'client'
 export type TaskType = 'check_in' | 'workout' | 'nutrition' | 'general'
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced'
 
+/** How sets are measured for an exercise */
+export type ExerciseMetricType = 'reps_weight' | 'reps' | 'time' | 'distance'
+
+/** Progressive overload strategy for a workout exercise */
+export type ProgressionType = 'none' | 'linear' | 'percentage' | 'double_progression'
+
 export interface DbOrganization {
   id: string
   name: string
@@ -48,6 +54,8 @@ export interface DbExercise {
   equipment: string | null
   instructions: string | null
   video_url: string | null
+  /** How this exercise is tracked in a set */
+  metric_type: ExerciseMetricType
   created_at: string
 }
 
@@ -69,6 +77,10 @@ export interface DbWorkoutExercise {
   exercise_name: string
   order_index: number
   notes: string | null
+  /** How to progress this exercise each session */
+  progression_type: ProgressionType
+  /** Amount to progress (lbs, %, seconds, or meters) */
+  progression_value: number | null
 }
 
 export interface DbWorkoutSet {
@@ -79,6 +91,20 @@ export interface DbWorkoutSet {
   weight: number | null
   duration_seconds: number | null
   rest_seconds: number | null
+  distance_meters: number | null
+}
+
+export interface DbWorkoutSetLog {
+  id: string
+  workout_log_id: string
+  workout_exercise_id: string
+  set_number: number
+  reps_achieved: number | null
+  weight_used: number | null
+  duration_seconds: number | null
+  distance_meters: number | null
+  rpe: number | null
+  created_at: string
 }
 
 export interface DbProgram {
@@ -147,19 +173,20 @@ export interface DbNotification {
 export interface Database {
   public: {
     Tables: {
-      organizations: { Row: DbOrganization; Insert: Omit<DbOrganization, 'id' | 'created_at'>; Update: Partial<DbOrganization> }
-      profiles: { Row: DbProfile; Insert: Omit<DbProfile, 'created_at'>; Update: Partial<DbProfile> }
-      clients: { Row: DbClient; Insert: Omit<DbClient, 'id' | 'created_at' | 'joined_at'>; Update: Partial<DbClient> }
-      exercises: { Row: DbExercise; Insert: Omit<DbExercise, 'id' | 'created_at'>; Update: Partial<DbExercise> }
-      workouts: { Row: DbWorkout; Insert: Omit<DbWorkout, 'id' | 'created_at'>; Update: Partial<DbWorkout> }
-      workout_exercises: { Row: DbWorkoutExercise; Insert: Omit<DbWorkoutExercise, 'id'>; Update: Partial<DbWorkoutExercise> }
-      workout_sets: { Row: DbWorkoutSet; Insert: Omit<DbWorkoutSet, 'id'>; Update: Partial<DbWorkoutSet> }
-      programs: { Row: DbProgram; Insert: Omit<DbProgram, 'id' | 'created_at'>; Update: Partial<DbProgram> }
-      conversations: { Row: DbConversation; Insert: Omit<DbConversation, 'id' | 'created_at'>; Update: Partial<DbConversation> }
-      messages: { Row: DbMessage; Insert: Omit<DbMessage, 'id' | 'created_at'>; Update: Partial<DbMessage> }
-      tasks: { Row: DbTask; Insert: Omit<DbTask, 'id' | 'created_at'>; Update: Partial<DbTask> }
-      workout_logs: { Row: DbWorkoutLog; Insert: Omit<DbWorkoutLog, 'id' | 'created_at'>; Update: Partial<DbWorkoutLog> }
-      notifications: { Row: DbNotification; Insert: Omit<DbNotification, 'id' | 'created_at'>; Update: Partial<DbNotification> }
+      organizations:      { Row: DbOrganization;    Insert: Omit<DbOrganization, 'id' | 'created_at'>;    Update: Partial<DbOrganization> }
+      profiles:           { Row: DbProfile;         Insert: Omit<DbProfile, 'created_at'>;                Update: Partial<DbProfile> }
+      clients:            { Row: DbClient;          Insert: Omit<DbClient, 'id' | 'created_at' | 'joined_at'>; Update: Partial<DbClient> }
+      exercises:          { Row: DbExercise;        Insert: Omit<DbExercise, 'id' | 'created_at'>;        Update: Partial<DbExercise> }
+      workouts:           { Row: DbWorkout;         Insert: Omit<DbWorkout, 'id' | 'created_at'>;         Update: Partial<DbWorkout> }
+      workout_exercises:  { Row: DbWorkoutExercise; Insert: Omit<DbWorkoutExercise, 'id'>;                Update: Partial<DbWorkoutExercise> }
+      workout_sets:       { Row: DbWorkoutSet;      Insert: Omit<DbWorkoutSet, 'id'>;                     Update: Partial<DbWorkoutSet> }
+      workout_set_logs:   { Row: DbWorkoutSetLog;   Insert: Omit<DbWorkoutSetLog, 'id' | 'created_at'>;   Update: Partial<DbWorkoutSetLog> }
+      programs:           { Row: DbProgram;         Insert: Omit<DbProgram, 'id' | 'created_at'>;         Update: Partial<DbProgram> }
+      conversations:      { Row: DbConversation;    Insert: Omit<DbConversation, 'id' | 'created_at'>;    Update: Partial<DbConversation> }
+      messages:           { Row: DbMessage;         Insert: Omit<DbMessage, 'id' | 'created_at'>;         Update: Partial<DbMessage> }
+      tasks:              { Row: DbTask;            Insert: Omit<DbTask, 'id' | 'created_at'>;            Update: Partial<DbTask> }
+      workout_logs:       { Row: DbWorkoutLog;      Insert: Omit<DbWorkoutLog, 'id' | 'created_at'>;      Update: Partial<DbWorkoutLog> }
+      notifications:      { Row: DbNotification;    Insert: Omit<DbNotification, 'id' | 'created_at'>;    Update: Partial<DbNotification> }
     }
   }
 }

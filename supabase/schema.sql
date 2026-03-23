@@ -354,3 +354,54 @@ create or replace trigger on_auth_user_created
 
 alter publication supabase_realtime add table public.messages;
 alter publication supabase_realtime add table public.notifications;
+
+-- ============================================================
+-- MIGRATION: Exercise metric types + workout progression
+-- Run these in Supabase SQL Editor if upgrading an existing db
+-- ============================================================
+
+-- Exercise metric type: how a set is measured
+alter table public.exercises
+  add column if not exists metric_type text not null default 'reps_weight'
+    check (metric_type in ('reps_weight', 'reps', 'time', 'distance'));
+
+-- Workout exercise: progression config
+alter table public.workout_exercises
+  add column if not exists progression_type text not null default 'none'
+    check (progression_type in ('none', 'linear', 'percentage', 'double_progression')),
+  add column if not exists progression_value decimal;
+
+-- Workout sets: add distance support
+alter table public.workout_sets
+  add column if not exists distance_meters decimal;
+
+-- Workout set logs: track actual client performance per set
+create table if not exists public.workout_set_logs (
+  id                   uuid primary key default gen_random_uuid(),
+  workout_log_id       uuid not null references public.workout_logs(id) on delete cascade,
+  workout_exercise_id  uuid not null references public.workout_exercises(id),
+  set_number           int  not null,
+  reps_achieved        int,
+  weight_used          decimal,
+  duration_seconds     int,
+  distance_meters      decimal,
+  rpe                  int check (rpe between 1 and 10),
+  created_at           timestamptz default now() not null
+);
+
+alter table public.workout_set_logs enable row level security;
+
+create policy "View workout set logs" on public.workout_set_logs for select using (
+  workout_log_id in (
+    select wl.id from public.workout_logs wl
+    join public.clients c on c.id = wl.client_id
+    where c.org_id = get_user_org_id()
+  )
+);
+create policy "Manage workout set logs" on public.workout_set_logs for all using (
+  workout_log_id in (
+    select wl.id from public.workout_logs wl
+    join public.clients c on c.id = wl.client_id
+    where c.org_id = get_user_org_id()
+  )
+);
