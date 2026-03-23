@@ -1600,6 +1600,24 @@ export default function ClientPortal() {
     setShowMore(false)
   }
 
+  // Background poll — checks for new coach messages regardless of active tab
+  useEffect(() => {
+    if (!clientId) return
+    let alive = true
+    async function checkUnread() {
+      const { data } = await supabase.rpc('get_portal_messages', { p_client_id: clientId })
+      if (!alive || !data) return
+      const lastSeen = Number(localStorage.getItem(`portal_msgs_seen_${clientId}`) ?? 0)
+      const hasNew = (data as PortalMessage[]).some(
+        m => m.sender_type === 'coach' && new Date(m.created_at).getTime() > lastSeen
+      )
+      setHasUnreadMessages(hasNew)
+    }
+    checkUnread()
+    const id = setInterval(checkUnread, 8000)
+    return () => { alive = false; clearInterval(id) }
+  }, [clientId])
+
   // ── Loading ──
   if (loading) return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] flex items-center justify-center">
