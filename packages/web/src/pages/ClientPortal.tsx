@@ -1178,17 +1178,28 @@ function MetricPill({ icon, label, value, color }: {
 }
 
 // ─── Messages view (client portal) ────────────────────────────
-function MessagesView({ clientId }: { clientId: string }) {
+function MessagesView({ clientId, onUnreadChange }: {
+  clientId: string
+  onUnreadChange: (hasUnread: boolean) => void
+}) {
   const [messages, setMessages] = useState<PortalMessage[]>([])
   const [loading, setLoading]   = useState(true)
   const [draft, setDraft]       = useState('')
   const [sending, setSending]   = useState(false)
   const bottomRef               = useRef<HTMLDivElement>(null)
 
+  function applyMessages(msgs: PortalMessage[]) {
+    setMessages(msgs)
+    // Notify parent if any coach messages are newer than last seen
+    const lastSeen = Number(localStorage.getItem(`portal_msgs_seen_${clientId}`) ?? 0)
+    const hasNew = msgs.some(m => m.sender_type === 'coach' && new Date(m.created_at).getTime() > lastSeen)
+    onUnreadChange(hasNew)
+  }
+
   async function fetchMessages() {
     await supabase.rpc('get_portal_conversation', { p_client_id: clientId })
     const { data } = await supabase.rpc('get_portal_messages', { p_client_id: clientId })
-    setMessages((data as PortalMessage[]) ?? [])
+    applyMessages((data as PortalMessage[]) ?? [])
     setLoading(false)
   }
 
@@ -1198,7 +1209,7 @@ function MessagesView({ clientId }: { clientId: string }) {
     fetchMessages()
     const interval = setInterval(async () => {
       const { data } = await supabase.rpc('get_portal_messages', { p_client_id: clientId })
-      if (alive && data) setMessages(data as PortalMessage[])
+      if (alive && data) applyMessages(data as PortalMessage[])
     }, 4000)
     return () => { alive = false; clearInterval(interval) }
   }, [clientId])
@@ -1420,18 +1431,19 @@ function MoreSheet({
 
 // ─── Universal bottom tab bar ──────────────────────────────────
 function BottomTabBar({
-  activeSection, showMore, onTab, onMoreToggle,
+  activeSection, showMore, hasUnreadMessages, onTab, onMoreToggle,
 }: {
   activeSection: ActiveSection
   showMore: boolean
+  hasUnreadMessages: boolean
   onTab: (s: ActiveSection) => void
   onMoreToggle: () => void
 }) {
   const tabs = [
-    { label: 'Home',     Icon: Home,           section: null as ActiveSection },
-    { label: 'Workouts', Icon: Dumbbell,        section: 'workouts' as ActiveSection },
-    { label: 'Messages', Icon: MessageCircle,   section: 'messages' as ActiveSection },
-    { label: 'Progress', Icon: TrendingUp,      section: 'metrics' as ActiveSection },
+    { label: 'Home',     Icon: Home,           section: null as ActiveSection,        unread: false },
+    { label: 'Workouts', Icon: Dumbbell,        section: 'workouts' as ActiveSection,  unread: false },
+    { label: 'Messages', Icon: MessageCircle,   section: 'messages' as ActiveSection,  unread: hasUnreadMessages },
+    { label: 'Progress', Icon: TrendingUp,      section: 'metrics' as ActiveSection,   unread: false },
   ]
 
   // "More" is active when the sheet is open or on a sub-page (nutrition, history)
@@ -1440,7 +1452,7 @@ function BottomTabBar({
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#09091a]/95 backdrop-blur-xl border-t border-white/10">
       <div className="flex">
-        {tabs.map(({ label, Icon, section }) => {
+        {tabs.map(({ label, Icon, section, unread }) => {
           const active = !moreActive && activeSection === section
           return (
             <button
@@ -1448,7 +1460,12 @@ function BottomTabBar({
               onClick={() => onTab(section)}
               className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
             >
-              <Icon size={22} className={active ? 'text-brand-400' : 'text-white/35'} />
+              <div className="relative">
+                <Icon size={22} className={active ? 'text-brand-400' : 'text-white/35'} />
+                {unread && !active && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500 border border-[#09091a]" />
+                )}
+              </div>
               <span className={clsx('text-[10px] font-semibold tracking-wide',
                 active ? 'text-brand-400' : 'text-white/35')}>
                 {label}
@@ -1553,6 +1570,7 @@ export default function ClientPortal() {
   const [tasks, setTasks]                   = useState<PortalTask[]>([])
   const [loggingWorkout, setLoggingWorkout] = useState<PortalWorkout | null>(null)
   const [missedBannerDismissed, setMissedBannerDismissed] = useState(false)
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false)
 
   useEffect(() => {
     if (!clientId) return
@@ -1574,6 +1592,10 @@ export default function ClientPortal() {
   }
 
   function goTo(section: ActiveSection) {
+    if (section === 'messages') {
+      localStorage.setItem(`portal_msgs_seen_${clientId}`, String(Date.now()))
+      setHasUnreadMessages(false)
+    }
     setActiveSection(section)
     setShowMore(false)
   }
@@ -1653,7 +1675,7 @@ export default function ClientPortal() {
         <NutritionView />
       )}
       {activeSection === 'messages' && (
-        <MessagesView clientId={clientId!} />
+        <MessagesView clientId={clientId!} onUnreadChange={setHasUnreadMessages} />
       )}
 
       {/* ── Dashboard (home) ── */}
@@ -1789,6 +1811,7 @@ export default function ClientPortal() {
       <BottomTabBar
         activeSection={activeSection}
         showMore={showMore}
+        hasUnreadMessages={hasUnreadMessages}
         onTab={goTo}
         onMoreToggle={() => setShowMore(v => !v)}
       />

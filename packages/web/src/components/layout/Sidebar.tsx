@@ -29,6 +29,7 @@ import {
 import clsx from 'clsx'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
+import { useConversations } from '@/hooks/useConversations'
 import type { UnitSystem } from '@/lib/database.types'
 
 // ─── Settings modal ───────────────────────────────────────────
@@ -143,6 +144,8 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
   const location = useLocation()
   const isLibraryActive = location.pathname.startsWith('/library')
   const { profile, signOut } = useAuth()
+  const { data: conversations } = useConversations()
+  const totalUnread = (conversations ?? []).reduce((sum, c) => sum + c.unread_count, 0)
 
   const navItemClass = ({ isActive }: { isActive: boolean }) =>
     clsx(
@@ -242,7 +245,12 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
           {({ isActive }) => (
             <>
               <MessageSquare size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
-              Inbox
+              <span className="flex-1">Inbox</span>
+              {totalUnread > 0 && (
+                <span className="ml-auto min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none">
+                  {totalUnread > 99 ? '99+' : totalUnread}
+                </span>
+              )}
               {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
             </>
           )}
