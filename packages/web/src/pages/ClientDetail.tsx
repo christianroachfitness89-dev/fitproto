@@ -5,7 +5,7 @@ import {
   Calendar, Tag, MoreHorizontal, Plus, CheckCircle2,
   Clock, Loader2, X, ChevronDown, Trash2, Send,
   ClipboardList, ChevronLeft, ChevronRight, ClipboardCheck,
-  SkipForward,
+  SkipForward, ExternalLink, Copy,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useClient, useUpdateClient } from '@/hooks/useClients'
@@ -800,7 +800,20 @@ export default function ClientDetail() {
   const { data: tasks = [], isLoading: loadingTasks } = useTasks(id)
   const toggleTask = useToggleTask()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
-  const [showEdit, setShowEdit] = useState(false)
+  const [showEdit, setShowEdit]   = useState(false)
+  const [copied, setCopied]       = useState(false)
+
+  function copyPortalLink() {
+    const url = `${window.location.origin}${window.location.pathname}#/portal/${id}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  function openPortal() {
+    window.open(`${window.location.origin}${window.location.pathname}#/portal/${id}`, '_blank')
+  }
 
   if (isLoading) {
     return (
@@ -890,6 +903,25 @@ export default function ClientDetail() {
             )}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Share portal link */}
+            <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
+              <button
+                onClick={copyPortalLink}
+                title="Copy client portal link"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                {copied ? <CheckCircle2 size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                {copied ? 'Copied!' : 'Copy Link'}
+              </button>
+              <div className="w-px h-5 bg-gray-200" />
+              <button
+                onClick={openPortal}
+                title="Open client portal"
+                className="px-2.5 py-2 text-gray-500 hover:bg-gray-100 transition-colors"
+              >
+                <ExternalLink size={13} />
+              </button>
+            </div>
             <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all shadow-sm">
               <MessageSquare size={15} />
               Message

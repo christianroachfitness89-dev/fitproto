@@ -11,6 +11,7 @@ import Library from './pages/Library'
 import WorkoutBuilder from './pages/WorkoutBuilder'
 import Inbox from './pages/Inbox'
 import Placeholder from './pages/Placeholder'
+import ClientPortal from './pages/ClientPortal'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -134,7 +135,9 @@ export default function App() {
               <Route path="teammates" element={<Placeholder title="Teammates" description="Invite and manage team members who help you coach clients." />} />
               <Route path="quick-start" element={<Placeholder title="Quick Start Guide" description="Everything you need to get started with FitProto." />} />
             </Route>
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            {/* Client portal — public, no login required */}
+          <Route path="/portal/:clientId" element={<ClientPortal />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </HashRouter>
       </AuthProvider>
