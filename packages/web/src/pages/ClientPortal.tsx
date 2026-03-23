@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import {
   Dumbbell, CheckCircle2, Clock, Calendar, ChevronDown, ChevronUp,
   Loader2, Target, ClipboardList, ArrowLeft, Lock,
-  BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon,
+  BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { playRestEndChime } from '@/lib/sound'
@@ -68,6 +68,31 @@ interface PortalHistoryEntry {
   workout_name: string
   set_count: number
   exercises: string[]
+}
+
+interface PortalSessionSet {
+  set_number: number
+  reps_achieved: number | null
+  weight_used: number | null
+  duration_seconds: number | null
+  distance_meters: number | null
+  rpe: number | null
+}
+
+interface PortalSessionExercise {
+  exercise_id: string
+  name: string
+  muscle_group: string | null
+  metric_type: string
+  order_index: number
+  sets: PortalSessionSet[]
+}
+
+interface PortalSessionDetail {
+  workout_name: string
+  completed_at: string
+  notes: string | null
+  exercises: PortalSessionExercise[]
 }
 
 interface PortalMetricEntry {
@@ -664,10 +689,192 @@ function WorkoutsView({ data, clientId, onBack, onMarkComplete }: {
   )
 }
 
+// ─── Session detail overlay ────────────────────────────────────
+function SessionDetailView({ entry, clientId, onBack }: {
+  entry: PortalHistoryEntry
+  clientId: string
+  onBack: () => void
+}) {
+  const [detail, setDetail] = useState<PortalSessionDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.rpc('get_portal_session_detail', {
+      p_client_id: clientId, p_workout_log_id: entry.id,
+    }).then(({ data }) => {
+      setDetail(data as PortalSessionDetail ?? null)
+      setLoading(false)
+    })
+  }, [entry.id, clientId])
+
+  const dateStr = new Date(entry.completed_at).toLocaleDateString('en-AU', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+
+  return (
+    <div className="fixed inset-0 z-30 bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] flex flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 pt-12 pb-5 border-b border-white/8 flex-shrink-0">
+        <button onClick={onBack}
+          className="w-10 h-10 rounded-2xl bg-white/8 border border-white/10 hover:bg-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all">
+          <ArrowLeft size={18} />
+        </button>
+        <div>
+          <p className="text-white font-bold text-base leading-tight">{entry.workout_name}</p>
+          <p className="text-white/35 text-xs mt-0.5 flex items-center gap-1.5">
+            <Calendar size={11} />{dateStr}
+          </p>
+        </div>
+        {entry.set_count > 0 && (
+          <div className="ml-auto text-right flex-shrink-0">
+            <p className="text-amber-400 font-bold text-xl leading-none">{entry.set_count}</p>
+            <p className="text-white/30 text-[10px] uppercase tracking-wide">sets</p>
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 pb-10">
+        {loading ? (
+          <LoadingCard label="Loading session" />
+        ) : !detail || detail.exercises.length === 0 ? (
+          <EmptyState
+            icon={<ClipboardList size={28} className="text-amber-400/60" />}
+            title="No set data recorded"
+            subtitle="This session was marked complete without logging individual sets."
+            gradient="from-amber-500/10 to-orange-500/10"
+          />
+        ) : detail.exercises.map((ex, idx) => {
+          const isWeighted = ex.metric_type === 'reps_weight'
+          const isTimed    = ex.metric_type === 'time'
+          const isDistance = ex.metric_type === 'distance'
+
+          // Filter to sets that actually have data
+          const setsWithData = ex.sets.filter(s =>
+            s.reps_achieved != null || s.weight_used != null ||
+            s.duration_seconds != null || s.distance_meters != null
+          )
+          if (setsWithData.length === 0) return null
+
+          return (
+            <div key={ex.exercise_id} className="rounded-2xl bg-white/5 border border-white/8 overflow-hidden">
+              {/* Exercise header */}
+              <div className="flex items-center gap-3 p-4 border-b border-white/6">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center text-[11px] font-bold text-amber-400 flex-shrink-0">
+                  {idx + 1}
+                </div>
+                <div>
+                  <p className="text-white font-bold text-[15px] leading-tight">{ex.name}</p>
+                  {ex.muscle_group && (
+                    <p className="text-white/35 text-[11px] mt-0.5">{ex.muscle_group}</p>
+                  )}
+                </div>
+                <div className="ml-auto flex-shrink-0">
+                  <span className="text-[11px] font-semibold text-amber-400/70 bg-amber-500/15 px-2 py-0.5 rounded-full">
+                    {setsWithData.length} {setsWithData.length === 1 ? 'set' : 'sets'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Column headers */}
+              <div className="grid px-4 py-2 border-b border-white/6 text-[10px] font-bold uppercase tracking-wide text-white/25"
+                style={{ gridTemplateColumns: isWeighted ? '32px 1fr 1fr 60px' : '32px 1fr 60px' }}>
+                <span>Set</span>
+                {isWeighted && <><span>Reps</span><span>Weight</span></>}
+                {isTimed    && <span>Duration</span>}
+                {isDistance && <span>Distance</span>}
+                {ex.metric_type === 'reps' && <span>Reps</span>}
+                <span className="text-right">RPE</span>
+              </div>
+
+              {/* Set rows */}
+              <div className="divide-y divide-white/4">
+                {setsWithData.map((s, si) => (
+                  <div key={s.set_number}
+                    className="grid items-center px-4 py-3 gap-2"
+                    style={{ gridTemplateColumns: isWeighted ? '32px 1fr 1fr 60px' : '32px 1fr 60px' }}>
+                    {/* Set number */}
+                    <div className="w-6 h-6 rounded-full bg-white/8 flex items-center justify-center text-[11px] font-bold text-white/40 flex-shrink-0">
+                      {s.set_number}
+                    </div>
+
+                    {isWeighted && (
+                      <>
+                        <div>
+                          <p className="text-white font-bold text-base leading-none">
+                            {s.reps_achieved ?? '—'}
+                          </p>
+                          <p className="text-white/30 text-[10px]">reps</p>
+                        </div>
+                        <div>
+                          <p className="text-white font-bold text-base leading-none">
+                            {s.weight_used != null ? s.weight_used : '—'}
+                          </p>
+                          <p className="text-white/30 text-[10px]">kg</p>
+                        </div>
+                      </>
+                    )}
+                    {isTimed && (
+                      <div>
+                        <p className="text-white font-bold text-base leading-none">
+                          {s.duration_seconds != null ? `${s.duration_seconds}s` : '—'}
+                        </p>
+                      </div>
+                    )}
+                    {isDistance && (
+                      <div>
+                        <p className="text-white font-bold text-base leading-none">
+                          {s.distance_meters != null ? `${s.distance_meters}m` : '—'}
+                        </p>
+                      </div>
+                    )}
+                    {ex.metric_type === 'reps' && (
+                      <div>
+                        <p className="text-white font-bold text-base leading-none">
+                          {s.reps_achieved ?? '—'}
+                        </p>
+                        <p className="text-white/30 text-[10px]">reps</p>
+                      </div>
+                    )}
+
+                    {/* RPE */}
+                    <div className="text-right">
+                      {s.rpe != null ? (
+                        <span className={clsx(
+                          'inline-block text-xs font-bold px-2 py-0.5 rounded-full',
+                          s.rpe <= 6  ? 'bg-emerald-500/20 text-emerald-400' :
+                          s.rpe <= 8  ? 'bg-amber-500/20 text-amber-400' :
+                                        'bg-rose-500/20 text-rose-400',
+                        )}>
+                          {s.rpe}
+                        </span>
+                      ) : (
+                        <span className="text-white/15 text-xs">—</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+
+        {detail?.notes && (
+          <div className="rounded-2xl bg-white/5 border border-white/8 p-4">
+            <p className="text-white/40 text-[10px] font-bold uppercase tracking-wide mb-2">Session notes</p>
+            <p className="text-white/60 text-sm leading-relaxed italic">{detail.notes}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── History section view ──────────────────────────────────────
 function HistoryView({ clientId, onBack }: { clientId: string; onBack: () => void }) {
-  const [entries, setEntries] = useState<PortalHistoryEntry[]>([])
-  const [loading, setLoading] = useState(true)
+  const [entries, setEntries]       = useState<PortalHistoryEntry[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [selected, setSelected]     = useState<PortalHistoryEntry | null>(null)
 
   useEffect(() => {
     supabase.rpc('get_portal_history', { p_client_id: clientId }).then(({ data }) => {
@@ -675,6 +882,11 @@ function HistoryView({ clientId, onBack }: { clientId: string; onBack: () => voi
       setLoading(false)
     })
   }, [clientId])
+
+  // Show session detail overlay
+  if (selected) return (
+    <SessionDetailView entry={selected} clientId={clientId} onBack={() => setSelected(null)} />
+  )
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
@@ -704,8 +916,11 @@ function HistoryView({ clientId, onBack }: { clientId: string; onBack: () => voi
             gradient="from-amber-500/10 to-orange-500/10"
           />
         ) : entries.map(entry => (
-          <div key={entry.id}
-            className="rounded-2xl bg-gradient-to-br from-white/8 to-white/4 border border-white/10 p-4">
+          <button
+            key={entry.id}
+            onClick={() => setSelected(entry)}
+            className="w-full text-left rounded-2xl bg-gradient-to-br from-white/8 to-white/4 border border-white/10 p-4 hover:from-white/12 hover:to-white/6 transition-all active:scale-[0.98] group"
+          >
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <p className="text-white font-bold text-[15px] leading-tight truncate">
@@ -718,12 +933,15 @@ function HistoryView({ clientId, onBack }: { clientId: string; onBack: () => voi
                   })}
                 </p>
               </div>
-              {entry.set_count > 0 && (
-                <div className="text-right flex-shrink-0">
-                  <p className="text-amber-400 font-bold text-lg leading-none">{entry.set_count}</p>
-                  <p className="text-white/30 text-[10px] uppercase tracking-wide">sets</p>
-                </div>
-              )}
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {entry.set_count > 0 && (
+                  <div className="text-right">
+                    <p className="text-amber-400 font-bold text-lg leading-none">{entry.set_count}</p>
+                    <p className="text-white/30 text-[10px] uppercase tracking-wide">sets</p>
+                  </div>
+                )}
+                <ChevronRight size={16} className="text-white/20 group-hover:text-white/50 transition-colors" />
+              </div>
             </div>
 
             {entry.exercises?.length > 0 && (
@@ -747,7 +965,7 @@ function HistoryView({ clientId, onBack }: { clientId: string; onBack: () => voi
                 {entry.notes}
               </p>
             )}
-          </div>
+          </button>
         ))}
       </div>
     </div>
