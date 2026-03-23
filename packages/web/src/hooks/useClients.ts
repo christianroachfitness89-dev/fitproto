@@ -3,6 +3,11 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import type { DbClient } from '@/lib/database.types'
 
+function requireProfile(profile: { id: string; org_id: string } | null) {
+  if (!profile) throw new Error('Profile not loaded — please refresh and try again.')
+  return profile
+}
+
 // ─── Query keys ──────────────────────────────────────────────
 export const clientKeys = {
   all:    (orgId: string) => ['clients', orgId] as const,
@@ -70,11 +75,12 @@ export function useCreateClient() {
       goal?: string
       category?: string
     }) => {
+      const p = requireProfile(profile)
       const { data, error } = await supabase
         .from('clients')
         .insert({
-          org_id:            profile!.org_id,
-          assigned_coach_id: profile!.id,
+          org_id:            p.org_id,
+          assigned_coach_id: p.id,
           name:              input.name,
           email:             input.email ?? null,
           phone:             input.phone ?? null,
@@ -88,7 +94,7 @@ export function useCreateClient() {
       return data as DbClient
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: clientKeys.all(profile!.org_id) })
+      qc.invalidateQueries({ queryKey: clientKeys.all(requireProfile(profile).org_id) })
     },
   })
 }
@@ -110,7 +116,7 @@ export function useUpdateClient() {
       return data as DbClient
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: clientKeys.all(profile!.org_id) })
+      qc.invalidateQueries({ queryKey: clientKeys.all(requireProfile(profile).org_id) })
       qc.invalidateQueries({ queryKey: clientKeys.detail(data.id) })
     },
   })
@@ -127,7 +133,7 @@ export function useDeleteClient() {
       if (error) throw error
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: clientKeys.all(profile!.org_id) })
+      qc.invalidateQueries({ queryKey: clientKeys.all(requireProfile(profile).org_id) })
     },
   })
 }

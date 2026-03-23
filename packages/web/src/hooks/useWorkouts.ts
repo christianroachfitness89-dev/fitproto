@@ -6,6 +6,11 @@ import type {
   DbProgram, ProgressionType,
 } from '@/lib/database.types'
 
+function requireOrgId(orgId: string | undefined): string {
+  if (!orgId) throw new Error('Profile not loaded — please refresh and try again.')
+  return orgId
+}
+
 // ─── Exercises ────────────────────────────────────────────────
 export function useExercises(search?: string) {
   const { profile } = useAuth()
@@ -32,13 +37,13 @@ export function useCreateExercise() {
     mutationFn: async (input: Omit<DbExercise, 'id' | 'created_at' | 'org_id'>) => {
       const { data, error } = await supabase
         .from('exercises')
-        .insert({ ...input, org_id: profile!.org_id } as any)
+        .insert({ ...input, org_id: requireOrgId(profile?.org_id) } as any)
         .select()
         .single()
       if (error) throw error
       return data as DbExercise
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises', profile!.org_id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises', requireOrgId(profile?.org_id)] }),
   })
 }
 
@@ -51,7 +56,7 @@ export function useDeleteExercise() {
       const { error } = await supabase.from('exercises').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises', profile!.org_id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises', requireOrgId(profile?.org_id)] }),
   })
 }
 
@@ -85,13 +90,13 @@ export function useCreateWorkout() {
     mutationFn: async (input: Omit<DbWorkout, 'id' | 'created_at' | 'org_id'>) => {
       const { data, error } = await supabase
         .from('workouts')
-        .insert({ ...input, org_id: profile!.org_id } as any)
+        .insert({ ...input, org_id: requireOrgId(profile?.org_id) } as any)
         .select()
         .single()
       if (error) throw error
       return data as DbWorkout
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workouts', profile!.org_id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workouts', requireOrgId(profile?.org_id)] }),
   })
 }
 
@@ -104,7 +109,7 @@ export function useDeleteWorkout() {
       const { error } = await supabase.from('workouts').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workouts', profile!.org_id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workouts', requireOrgId(profile?.org_id)] }),
   })
 }
 
@@ -322,12 +327,12 @@ export function useCreateProgram() {
     mutationFn: async (input: Omit<DbProgram, 'id' | 'created_at' | 'org_id'>) => {
       const { data, error } = await supabase
         .from('programs')
-        .insert({ ...input, org_id: profile!.org_id } as any)
+        .insert({ ...input, org_id: requireOrgId(profile?.org_id) } as any)
         .select()
         .single()
       if (error) throw error
       return data as DbProgram
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['programs', profile!.org_id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['programs', requireOrgId(profile?.org_id)] }),
   })
 }

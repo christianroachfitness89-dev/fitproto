@@ -23,22 +23,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [org, setOrg]         = useState<DbOrganization | null>(null)
   const [loading, setLoading] = useState(true)
 
-  async function loadProfileAndOrg(userId: string) {
+  async function loadProfileAndOrg(userId: string, attempt = 0) {
     const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single() as { data: DbProfile | null; error: any }
 
-    if (profileData) {
-      setProfile(profileData)
-      const { data: orgData } = await supabase
-        .from('organizations')
-        .select('*')
-        .eq('id', profileData.org_id)
-        .single() as { data: DbOrganization | null; error: any }
-      if (orgData) setOrg(orgData)
+    if (!profileData) {
+      // The DB trigger that creates the profile row may not have run yet
+      // (common on first signup). Retry up to 5 times with backoff.
+      if (attempt < 5) {
+        await new Promise(r => setTimeout(r, 300 * (attempt + 1)))
+        return loadProfileAndOrg(userId, attempt + 1)
+      }
+      return // give up after retries
     }
+
+    setProfile(profileData)
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('*')
+      .eq('id', profileData.org_id)
+      .single() as { data: DbOrganization | null; error: any }
+    if (orgData) setOrg(orgData)
   }
 
   useEffect(() => {
