@@ -8,7 +8,7 @@ import clsx from 'clsx'
 import {
   useProgramDetail, useUpdateProgram, useDeleteProgram,
   useAddProgramWorkout, useRemoveProgramWorkout, useMoveProgramWorkout,
-  useWorkouts,
+  useWorkouts, useCreateWorkout,
 } from '@/hooks/useWorkouts'
 
 // ─── Constants ────────────────────────────────────────────────
@@ -25,21 +25,49 @@ function WorkoutPicker({
   onAdd: (workoutId: string) => void
   onClose: () => void
 }) {
-  const [search, setSearch] = useState('')
+  const [search, setSearch]       = useState('')
+  const [creating, setCreating]   = useState(false)
+  const [newName, setNewName]     = useState('')
   const { data: workouts = [], isLoading } = useWorkouts(search.length >= 2 ? search : undefined)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const createWorkout = useCreateWorkout()
+  const inputRef  = useRef<HTMLInputElement>(null)
+  const newNameRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { inputRef.current?.focus() }, [])
+  useEffect(() => { if (creating) newNameRef.current?.focus() }, [creating])
+
+  async function handleCreate() {
+    const name = newName.trim()
+    if (!name) return
+    const w = await createWorkout.mutateAsync({
+      name,
+      description: null,
+      difficulty: null,
+      category: null,
+      duration_minutes: null,
+    })
+    onAdd(w.id)
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col z-10">
+
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Add Workout</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Week {week} · {DAY_NAMES[day - 1]}</p>
+            {creating ? (
+              <button onClick={() => setCreating(false)}
+                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 font-medium mb-0.5">
+                <ArrowLeft size={14} /> Back
+              </button>
+            ) : (
+              <>
+                <h2 className="text-base font-bold text-gray-900">Add Workout</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Week {week} · {DAY_NAMES[day - 1]}</p>
+              </>
+            )}
           </div>
           <button onClick={onClose}
             className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100">
@@ -47,51 +75,94 @@ function WorkoutPicker({
           </button>
         </div>
 
-        {/* Search */}
-        <div className="px-4 py-3 border-b border-gray-100">
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input ref={inputRef} value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search workouts..."
-              className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
-          </div>
-        </div>
-
-        {/* List */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-1 min-h-0">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 size={20} className="animate-spin text-gray-300" />
+        {creating ? (
+          /* ── Create new workout form ── */
+          <div className="p-5 space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Workout name
+              </label>
+              <input
+                ref={newNameRef}
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}
+                placeholder="e.g. Upper Body Push"
+                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
+              />
+              <p className="text-xs text-gray-400 mt-1.5">
+                A blank workout will be created and added to this slot. You can build out the exercises in the workout builder.
+              </p>
             </div>
-          ) : workouts.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-10">
-              {search.length >= 2 ? 'No workouts match your search' : 'No workouts in your library yet'}
-            </p>
-          ) : (
-            workouts.map(w => (
-              <button key={w.id} type="button"
-                onClick={() => onAdd(w.id)}
-                disabled={isPending}
-                className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors group disabled:opacity-50">
-                <div className="w-9 h-9 rounded-xl bg-brand-100 flex items-center justify-center flex-shrink-0">
-                  <Dumbbell size={15} className="text-brand-600" />
+            <button
+              onClick={handleCreate}
+              disabled={!newName.trim() || createWorkout.isPending || isPending}
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors disabled:opacity-50">
+              {(createWorkout.isPending || isPending)
+                ? <Loader2 size={15} className="animate-spin" />
+                : <Plus size={15} />}
+              Create &amp; Add
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Search */}
+            <div className="px-4 py-3 border-b border-gray-100">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input ref={inputRef} value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="Search workouts..."
+                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-1 min-h-0">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 size={20} className="animate-spin text-gray-300" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{w.name}</p>
-                  <p className="text-xs text-gray-400">
-                    {(w as any).workout_exercises?.length ?? 0} exercises
-                    {w.difficulty ? ` · ${w.difficulty}` : ''}
-                    {w.duration_minutes ? ` · ${w.duration_minutes}min` : ''}
-                  </p>
-                </div>
-                {isPending
-                  ? <Loader2 size={14} className="animate-spin text-gray-300 flex-shrink-0" />
-                  : <Plus size={14} className="text-gray-300 group-hover:text-brand-500 transition-colors flex-shrink-0" />
-                }
+              ) : workouts.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-10">
+                  {search.length >= 2 ? 'No workouts match your search' : 'No workouts in your library yet'}
+                </p>
+              ) : (
+                workouts.map(w => (
+                  <button key={w.id} type="button"
+                    onClick={() => onAdd(w.id)}
+                    disabled={isPending}
+                    className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors group disabled:opacity-50">
+                    <div className="w-9 h-9 rounded-xl bg-brand-100 flex items-center justify-center flex-shrink-0">
+                      <Dumbbell size={15} className="text-brand-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{w.name}</p>
+                      <p className="text-xs text-gray-400">
+                        {(w as any).workout_exercises?.length ?? 0} exercises
+                        {w.difficulty ? ` · ${w.difficulty}` : ''}
+                        {w.duration_minutes ? ` · ${w.duration_minutes}min` : ''}
+                      </p>
+                    </div>
+                    {isPending
+                      ? <Loader2 size={14} className="animate-spin text-gray-300 flex-shrink-0" />
+                      : <Plus size={14} className="text-gray-300 group-hover:text-brand-500 transition-colors flex-shrink-0" />
+                    }
+                  </button>
+                ))
+              )}
+            </div>
+
+            {/* Create new footer */}
+            <div className="px-4 py-3 border-t border-gray-100">
+              <button
+                onClick={() => { setCreating(true); setNewName(search) }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 border-dashed border-gray-200 text-gray-500 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50/50 transition-all text-sm font-medium">
+                <Plus size={15} className="flex-shrink-0" />
+                Create new workout{search.length >= 2 ? ` "${search}"` : ''}
               </button>
-            ))
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
