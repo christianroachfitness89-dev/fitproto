@@ -631,6 +631,152 @@ function WorkoutCard({ cw, clientId, onLog, onQuickComplete }: {
   )
 }
 
+// ─── Check-in submission form ──────────────────────────────────
+function CheckInForm({ clientId, onClose, onSaved }: {
+  clientId: string
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [weight, setWeight]       = useState('')
+  const [bodyFat, setBodyFat]     = useState('')
+  const [energy, setEnergy]       = useState<number | null>(null)
+  const [sleep, setSleep]         = useState('')
+  const [notes, setNotes]         = useState('')
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState<string | null>(null)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    setError(null)
+    const { data, error: rpcErr } = await supabase.rpc('submit_portal_check_in', {
+      p_client_id:    clientId,
+      p_weight_kg:    weight    ? parseFloat(weight)    : null,
+      p_body_fat_pct: bodyFat   ? parseFloat(bodyFat)   : null,
+      p_energy_level: energy,
+      p_sleep_hours:  sleep     ? parseFloat(sleep)     : null,
+      p_notes:        notes     || null,
+    })
+    setSaving(false)
+    if (rpcErr || (data as any)?.error) {
+      setError(rpcErr?.message ?? (data as any).error)
+      return
+    }
+    onSaved()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 pt-12 pb-5 border-b border-white/8 flex-shrink-0">
+        <button onClick={onClose}
+          className="w-10 h-10 rounded-2xl bg-white/8 border border-white/10 hover:bg-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all">
+          <ArrowLeft size={18} />
+        </button>
+        <div>
+          <p className="text-white font-bold text-base">Log Check-in</p>
+          <p className="text-white/35 text-xs">Fill in what you have — all fields optional</p>
+        </div>
+      </div>
+
+      <form onSubmit={submit} className="flex-1 overflow-y-auto px-4 py-5 space-y-4 pb-10 max-w-lg mx-auto w-full">
+        {error && (
+          <div className="p-3 bg-rose-500/15 border border-rose-500/25 rounded-2xl text-rose-300 text-sm">{error}</div>
+        )}
+
+        {/* Weight + Body Fat */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-white/5 border border-white/8 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Scale size={14} className="text-emerald-400" />
+              <p className="text-white/60 text-xs font-semibold uppercase tracking-wide">Weight</p>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <input
+                type="number" inputMode="decimal" step="0.1" min="0" max="500"
+                value={weight} onChange={e => setWeight(e.target.value)}
+                placeholder="0.0"
+                className="w-full bg-transparent text-white text-2xl font-bold placeholder-white/15 outline-none"
+              />
+              <span className="text-white/30 text-sm">kg</span>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-white/5 border border-white/8 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp size={14} className="text-teal-400" />
+              <p className="text-white/60 text-xs font-semibold uppercase tracking-wide">Body Fat</p>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <input
+                type="number" inputMode="decimal" step="0.1" min="0" max="100"
+                value={bodyFat} onChange={e => setBodyFat(e.target.value)}
+                placeholder="0.0"
+                className="w-full bg-transparent text-white text-2xl font-bold placeholder-white/15 outline-none"
+              />
+              <span className="text-white/30 text-sm">%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Sleep */}
+        <div className="rounded-2xl bg-white/5 border border-white/8 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Moon size={14} className="text-violet-400" />
+            <p className="text-white/60 text-xs font-semibold uppercase tracking-wide">Sleep last night</p>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <input
+              type="number" inputMode="decimal" step="0.5" min="0" max="24"
+              value={sleep} onChange={e => setSleep(e.target.value)}
+              placeholder="0"
+              className="w-24 bg-transparent text-white text-2xl font-bold placeholder-white/15 outline-none"
+            />
+            <span className="text-white/30 text-sm">hours</span>
+          </div>
+        </div>
+
+        {/* Energy level */}
+        <div className="rounded-2xl bg-white/5 border border-white/8 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap size={14} className="text-amber-400" />
+            <p className="text-white/60 text-xs font-semibold uppercase tracking-wide">Energy level</p>
+            {energy !== null && <span className="ml-auto text-amber-300 font-bold text-sm">{energy}/10</span>}
+          </div>
+          <div className="flex gap-1.5 flex-wrap">
+            {[1,2,3,4,5,6,7,8,9,10].map(n => (
+              <button key={n} type="button" onClick={() => setEnergy(energy === n ? null : n)}
+                className={clsx(
+                  'w-9 h-9 rounded-xl text-sm font-bold transition-all',
+                  energy === n
+                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30'
+                    : 'bg-white/8 text-white/40 hover:bg-white/15 hover:text-white/70',
+                )}>
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div className="rounded-2xl bg-white/5 border border-white/8 p-4">
+          <p className="text-white/60 text-xs font-semibold uppercase tracking-wide mb-3">Notes</p>
+          <textarea
+            value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="How are you feeling? Any wins or struggles this week?"
+            rows={3}
+            className="w-full bg-transparent text-white/80 text-sm placeholder-white/20 outline-none resize-none leading-relaxed"
+          />
+        </div>
+
+        <button type="submit" disabled={saving || (!weight && !bodyFat && !energy && !sleep && !notes)}
+          className="w-full py-3.5 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-2xl hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 transition-all shadow-lg shadow-emerald-500/20">
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <><TrendingUp size={15} /> Save Check-in</>}
+        </button>
+      </form>
+    </div>
+  )
+}
+
 // ─── Workouts section view ─────────────────────────────────────
 function WorkoutsView({ data, clientId, onMarkComplete }: {
   data: PortalData
@@ -984,27 +1130,40 @@ function HistoryView({ clientId }: { clientId: string }) {
 function MetricsView({ clientId }: { clientId: string }) {
   const [entries, setEntries] = useState<PortalMetricEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
 
-  useEffect(() => {
+  function loadEntries() {
     supabase.rpc('get_portal_metrics', { p_client_id: clientId }).then(({ data }) => {
       setEntries((data as PortalMetricEntry[]) ?? [])
       setLoading(false)
     })
-  }, [clientId])
+  }
+
+  useEffect(() => { loadEntries() }, [clientId])
 
   const latest = entries[0]
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
+      {showForm && (
+        <CheckInForm clientId={clientId} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); loadEntries() }} />
+      )}
+
       {/* Section header */}
       <div className="flex items-center gap-3 px-4 pt-14 pb-5 border-b border-white/8">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
           <BarChart2 size={18} className="text-white" />
         </div>
-        <div>
+        <div className="flex-1">
           <p className="text-white font-bold text-base">Progress</p>
           <p className="text-white/35 text-xs">{loading ? '…' : `${entries.length} check-ins recorded`}</p>
         </div>
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-semibold rounded-xl hover:from-emerald-500 hover:to-teal-500 transition-all shadow-md shadow-emerald-500/20"
+        >
+          <TrendingUp size={13} /> Log Check-in
+        </button>
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-5 space-y-4 pb-28">
