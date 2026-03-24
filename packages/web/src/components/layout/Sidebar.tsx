@@ -258,11 +258,20 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
           )}
         </NavLink>
 
+        <NavLink to="/community" className={navItemClass}>
+          {({ isActive }) => (
+            <>
+              <Users2 size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
+              <span className="flex-1">Community</span>
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            </>
+          )}
+        </NavLink>
+
         {/* ── Coming soon ─────────────────────────────── */}
         {([
           { icon: <Zap     size={17} />, label: 'Automation'         },
           { icon: <PlayCircle size={17} />, label: 'On-demand'       },
-          { icon: <Users2  size={17} />, label: 'Community Forums'   },
           { icon: <CreditCard size={17} />, label: 'Payment & Packages' },
           { icon: <UserCog size={17} />, label: 'Teammates'          },
           { icon: <ShoppingBag size={17} />, label: 'Marketplace'    },

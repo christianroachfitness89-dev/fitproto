@@ -11,6 +11,7 @@ import Library from './pages/Library'
 import WorkoutBuilder from './pages/WorkoutBuilder'
 import ProgramBuilder from './pages/ProgramBuilder'
 import Inbox from './pages/Inbox'
+import Community from './pages/Community'
 import Placeholder from './pages/Placeholder'
 import ClientPortal from './pages/ClientPortal'
 
@@ -130,7 +131,7 @@ export default function App() {
               <Route path="inbox" element={<Inbox />} />
               <Route path="automation" element={<Placeholder title="Automation" description="Set up automated workflows, reminders, and check-ins for your clients." />} />
               <Route path="on-demand" element={<Placeholder title="On-demand Content" description="Create and manage on-demand video content and resources for your clients." />} />
-              <Route path="community" element={<Placeholder title="Community Forums" description="Build an engaged community with group discussions and challenges." />} />
+              <Route path="community" element={<Community />} />
               <Route path="payments" element={<Placeholder title="Payment & Packages" description="Manage subscriptions, packages, and payment processing." />} />
               <Route path="marketplace" element={<Placeholder title="Marketplace" description="Discover and share programs and content with other coaches." />} />
               <Route path="referral" element={<Placeholder title="Referral Program" description="Earn rewards by referring other coaches to FitProto." />} />

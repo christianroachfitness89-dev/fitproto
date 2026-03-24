@@ -5,13 +5,14 @@ import {
   Loader2, Target, ClipboardList, ArrowLeft, Lock,
   BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight, ChevronLeft,
   X, Home, MoreHorizontal, MessageCircle, Settings, Send, GripVertical,
+  Users2, Heart, BookOpen, Video, Headphones, FileText, AlignLeft,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { playRestEndChime } from '@/lib/sound'
 import clsx from 'clsx'
 
 // ─── Types ─────────────────────────────────────────────────────
-type ActiveSection = 'workouts' | 'history' | 'metrics' | 'nutrition' | 'messages' | 'plan' | null
+type ActiveSection = 'workouts' | 'history' | 'metrics' | 'nutrition' | 'messages' | 'plan' | 'community' | null
 
 interface PortalMessage {
   id: string
@@ -945,6 +946,452 @@ function ProgramScheduleCard({
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// ─── Community View ────────────────────────────────────────────
+
+interface CommunityPost {
+  id: string
+  content: string
+  media_url: string | null
+  media_type: 'image' | 'video' | 'audio' | null
+  pinned: boolean
+  created_at: string
+  author_type: string
+  author_name: string | null
+  reaction_count: number
+  client_reacted: boolean
+  comment_count: number
+}
+
+interface CommunityComment {
+  id: string
+  content: string
+  author_type: string
+  author_name: string | null
+  created_at: string
+}
+
+interface CommunityLesson {
+  id: string
+  title: string
+  description: string | null
+  content_type: 'video' | 'audio' | 'document' | 'text'
+  content_url: string | null
+  body: string | null
+  duration_minutes: number | null
+  drip_days: number
+  locked: boolean
+  completed: boolean
+}
+
+interface CommunityModule {
+  id: string
+  title: string
+  description: string | null
+  cover_url: string | null
+  position: number
+  lessons: CommunityLesson[]
+}
+
+function communityTimeAgo(iso: string) {
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000
+  if (diff < 60)    return 'just now'
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
+}
+
+function CommunityView({ clientId }: { clientId: string }) {
+  const [subTab, setSubTab] = useState<'feed' | 'courses'>('feed')
+  // Feed state
+  const [posts, setPosts]         = useState<CommunityPost[]>([])
+  const [feedLoading, setFeedLoading] = useState(true)
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
+  const [comments, setComments]   = useState<Record<string, CommunityComment[]>>({})
+  const [commentInput, setCommentInput] = useState<Record<string, string>>({})
+  const [sendingComment, setSendingComment] = useState<string | null>(null)
+  // Courses state
+  const [modules, setModules]     = useState<CommunityModule[]>([])
+  const [coursesLoading, setCoursesLoading] = useState(false)
+  const [openLesson, setOpenLesson] = useState<CommunityLesson | null>(null)
+  const [completingLesson, setCompletingLesson] = useState<string | null>(null)
+
+  useEffect(() => { loadFeed() }, [clientId])
+
+  async function loadFeed() {
+    setFeedLoading(true)
+    const { data } = await supabase.rpc('get_community_feed', { p_client_id: clientId })
+    setPosts((data as CommunityPost[]) ?? [])
+    setFeedLoading(false)
+  }
+
+  async function loadCourses() {
+    if (modules.length > 0) return
+    setCoursesLoading(true)
+    const { data } = await supabase.rpc('get_community_modules', { p_client_id: clientId })
+    setModules((data as CommunityModule[]) ?? [])
+    setCoursesLoading(false)
+  }
+
+  function handleSubTab(t: 'feed' | 'courses') {
+    setSubTab(t)
+    if (t === 'courses') loadCourses()
+  }
+
+  async function toggleReaction(postId: string) {
+    const { data } = await supabase.rpc('toggle_community_reaction', { p_client_id: clientId, p_post_id: postId })
+    const reacted = (data as { reacted: boolean })?.reacted ?? false
+    setPosts(prev => prev.map(p => p.id === postId
+      ? { ...p, client_reacted: reacted, reaction_count: p.reaction_count + (reacted ? 1 : -1) }
+      : p))
+  }
+
+  async function toggleComments(postId: string) {
+    setExpandedComments(prev => {
+      const next = new Set(prev)
+      if (next.has(postId)) { next.delete(postId); return next }
+      next.add(postId)
+      if (!comments[postId]) loadComments(postId)
+      return next
+    })
+  }
+
+  async function loadComments(postId: string) {
+    const { data } = await supabase.rpc('get_community_comments', { p_client_id: clientId, p_post_id: postId })
+    setComments(prev => ({ ...prev, [postId]: (data as CommunityComment[]) ?? [] }))
+  }
+
+  async function sendComment(postId: string) {
+    const text = (commentInput[postId] ?? '').trim()
+    if (!text) return
+    setSendingComment(postId)
+    const { data } = await supabase.rpc('add_community_comment', { p_client_id: clientId, p_post_id: postId, p_content: text })
+    if (data) {
+      setComments(prev => ({ ...prev, [postId]: [...(prev[postId] ?? []), data as CommunityComment] }))
+      setCommentInput(prev => ({ ...prev, [postId]: '' }))
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, comment_count: p.comment_count + 1 } : p))
+    }
+    setSendingComment(null)
+  }
+
+  async function toggleLessonComplete(lesson: CommunityLesson) {
+    setCompletingLesson(lesson.id)
+    await supabase.rpc('complete_community_lesson', { p_client_id: clientId, p_lesson_id: lesson.id })
+    setModules(prev => prev.map(m => ({
+      ...m,
+      lessons: m.lessons.map(l => l.id === lesson.id ? { ...l, completed: !l.completed } : l),
+    })))
+    if (openLesson?.id === lesson.id) setOpenLesson(prev => prev ? { ...prev, completed: !prev.completed } : prev)
+    setCompletingLesson(null)
+  }
+
+  const lessonTypeIcon: Record<CommunityLesson['content_type'], React.ReactNode> = {
+    video:    <Video     size={14} />,
+    audio:    <Headphones size={14} />,
+    document: <FileText  size={14} />,
+    text:     <AlignLeft size={14} />,
+  }
+  const lessonTypeBg: Record<CommunityLesson['content_type'], string> = {
+    video:    'bg-violet-500/20 text-violet-300',
+    audio:    'bg-pink-500/20 text-pink-300',
+    document: 'bg-blue-500/20 text-blue-300',
+    text:     'bg-white/10 text-white/50',
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] pb-28">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 pt-14 pb-4 border-b border-white/8">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-lg shadow-brand-500/30 flex-shrink-0">
+          <Users2 size={18} className="text-white" />
+        </div>
+        <div>
+          <p className="text-white font-bold text-base">Community</p>
+          <p className="text-white/35 text-xs">Feed &amp; education hub</p>
+        </div>
+      </div>
+
+      {/* Sub-tab bar */}
+      <div className="flex gap-1 mx-4 mt-4 bg-white/6 rounded-xl p-1">
+        {[
+          { id: 'feed' as const,    label: 'Feed',    Icon: MessageCircle },
+          { id: 'courses' as const, label: 'Courses', Icon: BookOpen },
+        ].map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            onClick={() => handleSubTab(id)}
+            className={clsx(
+              'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all',
+              subTab === id ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/60',
+            )}>
+            <Icon size={15} /> {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── FEED ── */}
+      {subTab === 'feed' && (
+        <div className="px-4 mt-4 space-y-4">
+          {feedLoading ? (
+            <div className="flex justify-center py-16">
+              <Loader2 size={24} className="animate-spin text-brand-400" />
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="w-12 h-12 rounded-2xl bg-brand-500/15 flex items-center justify-center mx-auto mb-3">
+                <MessageCircle size={22} className="text-brand-400" />
+              </div>
+              <p className="text-white/40 font-semibold">No posts yet</p>
+              <p className="text-white/20 text-xs mt-1">Your coach will post updates here.</p>
+            </div>
+          ) : posts.map(post => (
+            <div key={post.id} className={clsx(
+              'rounded-2xl border overflow-hidden',
+              post.pinned
+                ? 'bg-brand-500/10 border-brand-500/25'
+                : 'bg-white/6 border-white/10',
+            )}>
+              {post.pinned && (
+                <div className="flex items-center gap-1.5 px-4 py-2 bg-brand-500/20 border-b border-brand-500/20">
+                  <span className="text-[10px] font-bold text-brand-300 uppercase tracking-widest">Pinned</span>
+                </div>
+              )}
+              <div className="p-4">
+                {/* Author row */}
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    {(post.author_name ?? 'C').charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-white/85 text-sm font-semibold leading-tight">{post.author_name ?? 'Coach'}</p>
+                    <p className="text-white/30 text-[10px]">{communityTimeAgo(post.created_at)}</p>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <p className="text-white/75 text-sm leading-relaxed whitespace-pre-wrap">{post.content}</p>
+
+                {/* Media */}
+                {post.media_url && post.media_type === 'image' && (
+                  <img src={post.media_url} alt="" className="mt-3 rounded-xl w-full max-h-64 object-cover" />
+                )}
+                {post.media_url && post.media_type === 'video' && (
+                  <div className="mt-3 rounded-xl overflow-hidden aspect-video bg-black">
+                    <iframe src={post.media_url} className="w-full h-full" allowFullScreen />
+                  </div>
+                )}
+                {post.media_url && post.media_type === 'audio' && (
+                  <audio src={post.media_url} controls className="mt-3 w-full" />
+                )}
+
+                {/* Reactions / comment toggle */}
+                <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/8">
+                  <button
+                    onClick={() => toggleReaction(post.id)}
+                    className={clsx(
+                      'flex items-center gap-1.5 text-xs font-semibold transition-all active:scale-90',
+                      post.client_reacted ? 'text-rose-400' : 'text-white/30 hover:text-white/60',
+                    )}>
+                    <Heart size={15} className={post.client_reacted ? 'fill-rose-400' : ''} />
+                    {post.reaction_count > 0 && post.reaction_count}
+                  </button>
+                  <button
+                    onClick={() => toggleComments(post.id)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-white/30 hover:text-white/60 transition-colors">
+                    <MessageCircle size={15} />
+                    {post.comment_count > 0 ? post.comment_count : 'Comment'}
+                  </button>
+                </div>
+
+                {/* Comments panel */}
+                {expandedComments.has(post.id) && (
+                  <div className="mt-3 pt-3 border-t border-white/8 space-y-3">
+                    {(comments[post.id] ?? []).length === 0 && (
+                      <p className="text-white/25 text-xs text-center py-2">No comments yet.</p>
+                    )}
+                    {(comments[post.id] ?? []).map(c => (
+                      <div key={c.id} className="flex gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/60 text-xs font-bold flex-shrink-0">
+                          {(c.author_name ?? '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0 bg-white/5 rounded-xl px-3 py-2">
+                          <p className="text-white/60 text-[11px] font-semibold mb-0.5">{c.author_name ?? 'Unknown'}</p>
+                          <p className="text-white/75 text-sm leading-snug">{c.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Comment input */}
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        value={commentInput[post.id] ?? ''}
+                        onChange={e => setCommentInput(prev => ({ ...prev, [post.id]: e.target.value }))}
+                        onKeyDown={e => e.key === 'Enter' && sendComment(post.id)}
+                        placeholder="Add a comment…"
+                        className="flex-1 bg-white/8 border border-white/10 rounded-xl px-3 py-2 text-sm text-white/80 placeholder-white/25 focus:outline-none focus:ring-1 focus:ring-brand-400/40"
+                      />
+                      <button
+                        onClick={() => sendComment(post.id)}
+                        disabled={!commentInput[post.id]?.trim() || sendingComment === post.id}
+                        className="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center disabled:opacity-40 transition-all active:scale-90 flex-shrink-0">
+                        {sendingComment === post.id
+                          ? <Loader2 size={14} className="animate-spin" />
+                          : <Send size={14} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── COURSES ── */}
+      {subTab === 'courses' && (
+        <div className="px-4 mt-4 space-y-4">
+          {coursesLoading ? (
+            <div className="flex justify-center py-16">
+              <Loader2 size={24} className="animate-spin text-brand-400" />
+            </div>
+          ) : modules.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="w-12 h-12 rounded-2xl bg-violet-500/15 flex items-center justify-center mx-auto mb-3">
+                <BookOpen size={22} className="text-violet-400" />
+              </div>
+              <p className="text-white/40 font-semibold">No courses yet</p>
+              <p className="text-white/20 text-xs mt-1">Your coach will add lessons here.</p>
+            </div>
+          ) : modules.map(mod => {
+            const total     = mod.lessons.length
+            const done      = mod.lessons.filter(l => l.completed).length
+            const pct       = total > 0 ? Math.round((done / total) * 100) : 0
+            return (
+              <div key={mod.id} className="rounded-2xl bg-white/6 border border-white/10 overflow-hidden">
+                {/* Module header */}
+                <div className="px-4 py-4 border-b border-white/8">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+                      <BookOpen size={16} className="text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white/85 font-bold text-sm">{mod.title}</p>
+                      {mod.description && <p className="text-white/35 text-xs mt-0.5">{mod.description}</p>}
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-brand-500 to-violet-500 rounded-full transition-all"
+                            style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-[10px] text-white/35 font-semibold flex-shrink-0">{done}/{total}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lessons */}
+                <div className="divide-y divide-white/6">
+                  {mod.lessons.map((lesson, i) => (
+                    <button
+                      key={lesson.id}
+                      onClick={() => !lesson.locked && setOpenLesson(lesson)}
+                      disabled={lesson.locked}
+                      className={clsx(
+                        'w-full flex items-center gap-3 px-4 py-3 text-left transition-all',
+                        lesson.locked ? 'opacity-40 cursor-default' : 'hover:bg-white/4 active:bg-white/8',
+                      )}>
+                      <span className="text-xs text-white/25 w-5 text-center font-bold flex-shrink-0">{i + 1}</span>
+                      <span className={clsx('flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0', lessonTypeBg[lesson.content_type])}>
+                        {lessonTypeIcon[lesson.content_type]}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className={clsx('text-sm font-semibold truncate', lesson.completed ? 'text-white/35 line-through' : 'text-white/80')}>
+                          {lesson.title}
+                        </p>
+                        {lesson.duration_minutes && (
+                          <p className="text-[10px] text-white/25 mt-0.5">{lesson.duration_minutes} min</p>
+                        )}
+                      </div>
+                      {lesson.locked
+                        ? <Lock size={13} className="text-white/20 flex-shrink-0" />
+                        : lesson.completed
+                          ? <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />
+                          : <ChevronRight size={15} className="text-white/20 flex-shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── Lesson Detail Overlay ── */}
+      {openLesson && (
+        <div className="fixed inset-0 z-50 bg-[#0d0d20] overflow-y-auto">
+          <div className="sticky top-0 z-10 flex items-center gap-3 px-4 pt-12 pb-4 bg-[#0d0d20]/95 backdrop-blur border-b border-white/8">
+            <button onClick={() => setOpenLesson(null)}
+              className="w-9 h-9 rounded-xl bg-white/8 border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors flex-shrink-0">
+              <ArrowLeft size={16} />
+            </button>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-bold truncate">{openLesson.title}</p>
+              <p className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full w-fit mt-0.5', lessonTypeBg[openLesson.content_type])}>
+                {openLesson.content_type}
+              </p>
+            </div>
+          </div>
+
+          <div className="px-4 py-5 pb-28 max-w-2xl mx-auto">
+            {/* Video embed */}
+            {openLesson.content_type === 'video' && openLesson.content_url && (
+              <div className="rounded-2xl overflow-hidden aspect-video bg-black mb-5">
+                <iframe src={openLesson.content_url} className="w-full h-full" allowFullScreen />
+              </div>
+            )}
+
+            {/* Audio player */}
+            {openLesson.content_type === 'audio' && openLesson.content_url && (
+              <div className="bg-white/6 border border-white/10 rounded-2xl p-5 mb-5 flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
+                  <Headphones size={28} className="text-white" />
+                </div>
+                <audio src={openLesson.content_url} controls className="w-full" />
+              </div>
+            )}
+
+            {/* Description */}
+            {openLesson.description && (
+              <p className="text-white/55 text-sm leading-relaxed mb-4">{openLesson.description}</p>
+            )}
+
+            {/* Body / document content */}
+            {openLesson.body && (
+              <div className="bg-white/6 border border-white/10 rounded-2xl p-5 mb-5">
+                <p className="text-white/75 text-sm leading-relaxed whitespace-pre-wrap">{openLesson.body}</p>
+              </div>
+            )}
+
+            {/* Complete button */}
+            <button
+              onClick={() => toggleLessonComplete(openLesson)}
+              disabled={completingLesson === openLesson.id}
+              className={clsx(
+                'w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2',
+                openLesson.completed
+                  ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
+                  : 'bg-brand-600 text-white shadow-lg shadow-brand-900/40',
+              )}>
+              {completingLesson === openLesson.id
+                ? <Loader2 size={16} className="animate-spin" />
+                : openLesson.completed
+                  ? <><CheckCircle2 size={16} /> Completed — tap to undo</>
+                  : 'Mark as Complete'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -2187,13 +2634,26 @@ function MessagesView({ clientId, onUnreadChange }: {
 
 // ─── More sheet (slide-up) ─────────────────────────────────────
 function MoreSheet({
-  onClose, onNavigate, portalSections,
+  onClose, onNavigate, portalSections, hasUnreadMessages,
 }: {
   onClose: () => void
   onNavigate: (section: ActiveSection) => void
   portalSections: string[]
+  hasUnreadMessages: boolean
 }) {
   const items = [
+    {
+      section: 'messages' as const,
+      label: 'Messages',
+      desc: 'Chat with your coach',
+      icon: MessageCircle,
+      gradient: 'from-sky-500 to-blue-600',
+      glow: 'shadow-sky-500/30',
+      bg: 'from-sky-500/15 to-blue-600/10',
+      border: 'border-sky-500/20',
+      alwaysUnlocked: true,
+      unread: hasUnreadMessages,
+    },
     {
       section: 'history' as const,
       label: 'History',
@@ -2204,6 +2664,7 @@ function MoreSheet({
       bg: 'from-amber-500/15 to-orange-500/10',
       border: 'border-amber-500/20',
       alwaysUnlocked: true,
+      unread: false,
     },
     {
       section: 'nutrition' as const,
@@ -2215,6 +2676,7 @@ function MoreSheet({
       bg: 'from-rose-500/15 to-pink-500/10',
       border: 'border-rose-500/20',
       alwaysUnlocked: false,
+      unread: false,
     },
   ]
 
@@ -2277,6 +2739,9 @@ function MoreSheet({
                     <Lock size={14} />
                   </div>
                 )}
+                {'unread' in item && item.unread && unlocked && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0" />
+                )}
                 {unlocked && <ChevronRight size={18} className="text-white/30 flex-shrink-0" />}
               </button>
             )
@@ -2311,14 +2776,16 @@ function BottomTabBar({
   onMoreToggle: () => void
 }) {
   const tabs = [
-    { label: 'Home',     Icon: Home,           section: null as ActiveSection,       unread: false },
-    { label: 'Workouts', Icon: Dumbbell,        section: 'workouts' as ActiveSection, unread: false },
-    { label: 'Plan',     Icon: Calendar,        section: 'plan' as ActiveSection,     unread: false },
-    { label: 'Messages', Icon: MessageCircle,   section: 'messages' as ActiveSection, unread: hasUnreadMessages },
+    { label: 'Home',      Icon: Home,      section: null as ActiveSection,          unread: false },
+    { label: 'Workouts',  Icon: Dumbbell,  section: 'workouts' as ActiveSection,    unread: false },
+    { label: 'Plan',      Icon: Calendar,  section: 'plan' as ActiveSection,        unread: false },
+    { label: 'Community', Icon: Users2,    section: 'community' as ActiveSection,   unread: false },
   ]
 
-  // "More" is active when the sheet is open or on a sub-page
-  const moreActive = showMore || activeSection === 'nutrition' || activeSection === 'history' || activeSection === 'metrics'
+  // "More" is active when the sheet is open or on a non-main-tab section
+  const moreActive = showMore || activeSection === 'nutrition' || activeSection === 'history' || activeSection === 'metrics' || activeSection === 'messages'
+  // Show unread badge on the More button when messages have unreads
+  const moreUnread = hasUnreadMessages && activeSection !== 'messages'
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#09091a]/95 backdrop-blur-xl border-t border-white/10">
@@ -2350,7 +2817,12 @@ function BottomTabBar({
           onClick={onMoreToggle}
           className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
         >
-          <MoreHorizontal size={22} className={moreActive ? 'text-brand-400' : 'text-white/35'} />
+          <div className="relative">
+            <MoreHorizontal size={22} className={moreActive ? 'text-brand-400' : 'text-white/35'} />
+            {moreUnread && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500 border border-[#09091a]" />
+            )}
+          </div>
           <span className={clsx('text-[10px] font-semibold tracking-wide',
             moreActive ? 'text-brand-400' : 'text-white/35')}>
             More
@@ -2594,6 +3066,7 @@ export default function ClientPortal() {
           onClose={() => setShowMore(false)}
           onNavigate={goTo}
           portalSections={unlocked}
+          hasUnreadMessages={hasUnreadMessages}
         />
       )}
 
@@ -2632,6 +3105,9 @@ export default function ClientPortal() {
       )}
       {activeSection === 'messages' && (
         <MessagesView clientId={clientId!} onUnreadChange={setHasUnreadMessages} />
+      )}
+      {activeSection === 'community' && (
+        <CommunityView clientId={clientId!} />
       )}
 
       {/* ── Dashboard (home) ── */}
