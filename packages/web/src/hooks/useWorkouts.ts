@@ -422,6 +422,20 @@ export function useAddProgramWorkout(programId: string) {
   })
 }
 
+export function useMoveProgramWorkout(programId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, week_number, day_number }: { id: string; week_number: number; day_number: number }) => {
+      const { error } = await supabase
+        .from('program_workouts')
+        .update({ week_number, day_number } as any)
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['program-detail', programId] }),
+  })
+}
+
 export function useRemoveProgramWorkout(programId: string) {
   const qc = useQueryClient()
   return useMutation({

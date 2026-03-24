@@ -2,12 +2,12 @@ import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Plus, X, Loader2, Trash2, Search,
-  Dumbbell, Clock, ChevronLeft, ChevronRight, Minus,
+  Dumbbell, Clock, ChevronLeft, ChevronRight, Minus, GripVertical,
 } from 'lucide-react'
 import clsx from 'clsx'
 import {
   useProgramDetail, useUpdateProgram, useDeleteProgram,
-  useAddProgramWorkout, useRemoveProgramWorkout,
+  useAddProgramWorkout, useRemoveProgramWorkout, useMoveProgramWorkout,
   useWorkouts,
 } from '@/hooks/useWorkouts'
 
@@ -107,11 +107,14 @@ export default function ProgramBuilder() {
   const deleteProgram  = useDeleteProgram()
   const addWorkout     = useAddProgramWorkout(id!)
   const removeWorkout  = useRemoveProgramWorkout(id!)
+  const moveWorkout    = useMoveProgramWorkout(id!)
 
-  const [currentWeek, setCurrentWeek] = useState(1)
-  const [addingSlot, setAddingSlot]   = useState<{ week: number; day: number } | null>(null)
-  const [name, setName]               = useState('')
-  const [savingName, setSavingName]   = useState(false)
+  const [currentWeek, setCurrentWeek]       = useState(1)
+  const [addingSlot, setAddingSlot]         = useState<{ week: number; day: number } | null>(null)
+  const [name, setName]                     = useState('')
+  const [savingName, setSavingName]         = useState(false)
+  const [draggedSlotId, setDraggedSlotId]   = useState<string | null>(null)
+  const [dragTargetDay, setDragTargetDay]   = useState<number | null>(null)
   const nameTimer = useRef<ReturnType<typeof setTimeout>>()
 
   // Sync name field when program loads
@@ -302,12 +305,31 @@ export default function ProgramBuilder() {
       <div className="flex-1 p-6 overflow-x-auto">
         <div className="grid grid-cols-7 gap-3 min-w-[700px]">
           {DAY_NAMES.map((dayName, idx) => {
-            const dayNum   = idx + 1
-            const slots    = slotMap[currentWeek]?.[dayNum] ?? []
+            const dayNum    = idx + 1
+            const slots     = slotMap[currentWeek]?.[dayNum] ?? []
             const isWeekend = dayNum >= 6
+            const isTarget  = dragTargetDay === dayNum && draggedSlotId !== null
 
             return (
-              <div key={dayNum} className="flex flex-col gap-2">
+              <div
+                key={dayNum}
+                className={clsx(
+                  'flex flex-col gap-2 rounded-xl transition-all',
+                  isTarget && 'ring-2 ring-brand-400 ring-offset-1 bg-brand-50/40',
+                )}
+                onDragOver={e => { e.preventDefault(); setDragTargetDay(dayNum) }}
+                onDragLeave={e => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragTargetDay(null)
+                }}
+                onDrop={e => {
+                  e.preventDefault()
+                  if (draggedSlotId) {
+                    moveWorkout.mutate({ id: draggedSlotId, week_number: currentWeek, day_number: dayNum })
+                  }
+                  setDraggedSlotId(null)
+                  setDragTargetDay(null)
+                }}
+              >
                 {/* Day header */}
                 <div className={clsx(
                   'text-center py-2.5 rounded-xl',
@@ -321,9 +343,17 @@ export default function ProgramBuilder() {
 
                 {/* Workout slots */}
                 {slots.map(slot => (
-                  <div key={slot.id}
-                    className="group bg-white border border-gray-200 rounded-xl p-3 hover:border-brand-300 hover:shadow-sm transition-all">
+                  <div
+                    key={slot.id}
+                    draggable
+                    onDragStart={() => setDraggedSlotId(slot.id)}
+                    onDragEnd={() => { setDraggedSlotId(null); setDragTargetDay(null) }}
+                    className={clsx(
+                      'group bg-white border border-gray-200 rounded-xl p-3 hover:border-brand-300 hover:shadow-sm transition-all cursor-grab active:cursor-grabbing',
+                      draggedSlotId === slot.id && 'opacity-40',
+                    )}>
                     <div className="flex items-start justify-between gap-1 mb-1.5">
+                      <GripVertical size={11} className="text-gray-200 group-hover:text-gray-400 mt-0.5 flex-shrink-0 transition-colors" />
                       <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-2 flex-1">
                         {slot.workout?.name ?? 'Unnamed'}
                       </p>

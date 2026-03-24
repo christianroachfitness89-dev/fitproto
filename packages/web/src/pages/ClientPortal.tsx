@@ -808,10 +808,19 @@ function calcProgramWeek(startDate: string | null): number {
   return Math.max(1, Math.floor(days / 7) + 1)
 }
 
-function ProgramScheduleCard({ program }: { program: PortalProgram }) {
+function ProgramScheduleCard({
+  program, clientId, completedWorkoutIds, onLog,
+}: {
+  program: PortalProgram
+  clientId: string
+  completedWorkoutIds: Set<string>
+  onLog: (cw: PortalWorkout) => void
+}) {
   const totalWeeks = program.duration_weeks ?? 1
   const defaultWeek = Math.min(calcProgramWeek(program.start_date), totalWeeks)
-  const [week, setWeek] = useState(defaultWeek)
+  const [week, setWeek]           = useState(defaultWeek)
+  const [startingId, setStartingId] = useState<string | null>(null)
+  const [localDone, setLocalDone]   = useState<Set<string>>(new Set())
 
   const byDay = Object.fromEntries(
     program.schedule
@@ -820,6 +829,24 @@ function ProgramScheduleCard({ program }: { program: PortalProgram }) {
   ) as Record<number, PortalProgramSlot['workout']>
 
   const workoutDays = Object.keys(byDay).length
+
+  async function handleTap(workoutId: string) {
+    if (startingId) return
+    setStartingId(workoutId)
+    try {
+      const { data, error } = await supabase.rpc('get_or_create_portal_program_workout', {
+        p_client_id: clientId,
+        p_workout_id: workoutId,
+      })
+      if (error || !data || (data as any).error) throw new Error(error?.message ?? (data as any)?.error ?? 'Failed')
+      setLocalDone(prev => new Set(prev).add(workoutId))
+      onLog(data as PortalWorkout)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setStartingId(null)
+    }
+  }
 
   return (
     <div className="rounded-2xl bg-gradient-to-br from-violet-500/12 to-brand-500/8 border border-violet-500/20 overflow-hidden">
@@ -861,6 +888,8 @@ function ProgramScheduleCard({ program }: { program: PortalProgram }) {
           const dayNum = idx + 1
           const workout = byDay[dayNum]
           const isWeekend = dayNum >= 6
+          const isDone = workout && (localDone.has(workout.id) || completedWorkoutIds.has(workout.id))
+          const isStarting = workout && startingId === workout.id
           return (
             <div key={dayNum} className="flex flex-col items-center gap-1">
               <p className={clsx(
@@ -868,11 +897,33 @@ function ProgramScheduleCard({ program }: { program: PortalProgram }) {
                 isWeekend ? 'text-white/25' : 'text-white/40',
               )}>{dayName}</p>
               {workout ? (
-                <div className="w-full rounded-xl bg-white/10 border border-violet-400/20 px-1.5 py-2 flex flex-col items-center gap-1 min-h-[52px]">
-                  <div className="w-4 h-4 rounded-md bg-gradient-to-br from-violet-500 to-brand-500 flex items-center justify-center flex-shrink-0">
-                    <Dumbbell size={9} className="text-white" />
+                <button
+                  onClick={() => handleTap(workout.id)}
+                  disabled={!!startingId}
+                  className={clsx(
+                    'w-full rounded-xl border px-1.5 py-2 flex flex-col items-center gap-1 min-h-[52px] transition-all active:scale-95 disabled:pointer-events-none',
+                    isDone
+                      ? 'bg-emerald-500/20 border-emerald-400/30'
+                      : 'bg-white/10 border-violet-400/20 hover:bg-white/15',
+                  )}>
+                  <div className={clsx(
+                    'w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0',
+                    isDone
+                      ? 'bg-emerald-500/40'
+                      : 'bg-gradient-to-br from-violet-500 to-brand-500',
+                  )}>
+                    {isStarting ? (
+                      <Loader2 size={9} className="text-white animate-spin" />
+                    ) : isDone ? (
+                      <CheckCircle2 size={9} className="text-emerald-300" />
+                    ) : (
+                      <Dumbbell size={9} className="text-white" />
+                    )}
                   </div>
-                  <p className="text-white/80 text-[9px] font-semibold text-center leading-tight line-clamp-2 w-full">
+                  <p className={clsx(
+                    'text-[9px] font-semibold text-center leading-tight line-clamp-2 w-full',
+                    isDone ? 'text-emerald-200/80' : 'text-white/80',
+                  )}>
                     {workout.name}
                   </p>
                   {workout.duration_minutes && (
@@ -880,7 +931,7 @@ function ProgramScheduleCard({ program }: { program: PortalProgram }) {
                       <Clock size={8} />{workout.duration_minutes}m
                     </p>
                   )}
-                </div>
+                </button>
               ) : (
                 <div className={clsx(
                   'w-full rounded-xl border min-h-[52px] flex items-center justify-center',
@@ -906,6 +957,7 @@ function WorkoutsView({ data, clientId, onMarkComplete }: {
   const [logging, setLogging] = useState<PortalWorkout | null>(null)
   const assigned  = data.workouts.filter(w => w.status === 'assigned')
   const completed = data.workouts.filter(w => w.status === 'completed')
+  const completedWorkoutIds = new Set(completed.map(cw => cw.workout.id))
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
@@ -932,7 +984,12 @@ function WorkoutsView({ data, clientId, onMarkComplete }: {
       <div className="max-w-lg mx-auto px-4 py-5 space-y-6 pb-28">
         {/* Active program schedule */}
         {data.program && (
-          <ProgramScheduleCard program={data.program} />
+          <ProgramScheduleCard
+            program={data.program}
+            clientId={clientId}
+            completedWorkoutIds={completedWorkoutIds}
+            onLog={setLogging}
+          />
         )}
 
         {assigned.length > 0 && (
