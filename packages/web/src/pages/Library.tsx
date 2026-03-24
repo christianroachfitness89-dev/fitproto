@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, type MouseEvent } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Search, Plus, Dumbbell,
@@ -9,7 +9,7 @@ import clsx from 'clsx'
 import {
   useExercises, useCreateExercise, useDeleteExercise, useBulkImportExercises,
   useWorkouts,  useCreateWorkout,  useDeleteWorkout,
-  usePrograms,  useCreateProgram,
+  usePrograms,  useCreateProgram, useDeleteProgram,
 } from '@/hooks/useWorkouts'
 import { useClients } from '@/hooks/useClients'
 import { useAssignWorkout } from '@/hooks/useClientWorkouts'
@@ -817,10 +817,31 @@ function WorkoutsList() {
   )
 }
 
-// ─── Programs list (real data, create only) ───────────────────
+// ─── Programs list ────────────────────────────────────────────
 function ProgramsList() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const { data: programs = [], isLoading } = usePrograms(search.length >= 2 ? search : undefined)
+  const createProgram = useCreateProgram()
+  const deleteProgram = useDeleteProgram()
+
+  async function handleCreate() {
+    const p = await createProgram.mutateAsync({
+      name: 'New Program',
+      description: null,
+      duration_weeks: 4,
+      workouts_per_week: null,
+      difficulty: null,
+      category: null,
+    })
+    navigate(`/library/programs/${p.id}`)
+  }
+
+  async function handleDelete(e: MouseEvent, id: string, name: string) {
+    e.stopPropagation()
+    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return
+    await deleteProgram.mutateAsync(id)
+  }
 
   return (
     <div className="space-y-4">
@@ -830,8 +851,10 @@ function ProgramsList() {
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search programs..."
             className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 shadow-sm" />
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all">
-          <Plus size={15} />New Program
+        <button onClick={handleCreate} disabled={createProgram.isPending}
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all disabled:opacity-60">
+          {createProgram.isPending ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+          New Program
         </button>
       </div>
 
@@ -846,18 +869,28 @@ function ProgramsList() {
           </div>
           <p className="font-semibold text-gray-700 mb-1">No programs yet</p>
           <p className="text-sm text-gray-400 mb-4">Build multi-week training programs for your clients</p>
-          <button className="px-4 py-2 bg-brand-50 text-brand-600 text-sm font-semibold rounded-xl hover:bg-brand-100 transition-colors">
+          <button onClick={handleCreate} disabled={createProgram.isPending}
+            className="px-4 py-2 bg-brand-50 text-brand-600 text-sm font-semibold rounded-xl hover:bg-brand-100 transition-colors disabled:opacity-60">
             + New Program
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {programs.map(program => (
-            <div key={program.id} className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-card-hover hover:border-brand-200 transition-all cursor-pointer group">
+            <div key={program.id}
+              onClick={() => navigate(`/library/programs/${program.id}`)}
+              className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-card-hover hover:border-brand-200 transition-all cursor-pointer group relative">
+              {/* Delete btn */}
+              <button
+                onClick={e => handleDelete(e, program.id, program.name)}
+                disabled={deleteProgram.isPending}
+                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-300 hover:text-rose-400 hover:bg-rose-50 transition-all">
+                <Trash2 size={13} />
+              </button>
               <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center mb-3">
                 <BarChart3 size={20} className="text-emerald-600" />
               </div>
-              <h3 className="font-semibold text-gray-800 mb-1">{program.name}</h3>
+              <h3 className="font-semibold text-gray-800 mb-1 pr-6">{program.name}</h3>
               {program.description && (
                 <p className="text-xs text-gray-500 mb-3 line-clamp-2">{program.description}</p>
               )}

@@ -17,7 +17,10 @@ import {
   useRemoveClientWorkout, useLogWorkoutSession,
 } from '@/hooks/useClientWorkouts'
 import { useGetOrCreateConversation } from '@/hooks/useConversations'
-import { useWorkouts, useWorkoutDetail } from '@/hooks/useWorkouts'
+import {
+  useWorkouts, useWorkoutDetail,
+  usePrograms, useClientProgramAssignment, useAssignProgram, useUnassignProgram,
+} from '@/hooks/useWorkouts'
 import { useUnitSystem, weightLabel } from '@/lib/units'
 import { playRestEndChime } from '@/lib/sound'
 import type { DbClient, DbTask, DbClientWorkoutWithWorkout, PortalSection } from '@/lib/database.types'
@@ -372,6 +375,140 @@ function addDays(date: Date, n: number): Date {
 }
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+// ─── Assign program modal ─────────────────────────────────────
+function AssignProgramModal({ clientId, onClose }: { clientId: string; onClose: () => void }) {
+  const { data: programs = [], isLoading } = usePrograms()
+  const assign = useAssignProgram(clientId)
+  const [selected, setSelected] = useState<string | null>(null)
+  const [search, setSearch]     = useState('')
+  const [error, setError]       = useState<string | null>(null)
+
+  const filtered = programs.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!selected) { setError('Please select a program'); return }
+    setError(null)
+    try {
+      await assign.mutateAsync({ program_id: selected })
+      onClose()
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-gray-900">Assign Program</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18} /></button>
+        </div>
+        {error && <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">{error}</div>}
+        <div className="relative mb-3">
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search programs..."
+            className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+        </div>
+        <div className="flex-1 overflow-y-auto space-y-1.5 mb-4 min-h-0" style={{ maxHeight: 260 }}>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">No programs found</p>
+          ) : filtered.map(p => (
+            <button key={p.id} type="button" onClick={() => setSelected(p.id)}
+              className={clsx('w-full text-left px-4 py-3 rounded-xl border-2 transition-all',
+                selected === p.id ? 'border-brand-500 bg-brand-50' : 'border-transparent bg-gray-50 hover:bg-gray-100')}>
+              <div className="flex items-center gap-3">
+                <div className={clsx('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                  selected === p.id ? 'bg-brand-600' : 'bg-gray-200')}>
+                  <BarChart2 size={15} className={selected === p.id ? 'text-white' : 'text-gray-500'} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
+                  <p className="text-xs text-gray-500">
+                    {p.duration_weeks ? `${p.duration_weeks} weeks` : ''}
+                    {p.difficulty ? ` · ${p.difficulty}` : ''}
+                  </p>
+                </div>
+                {selected === p.id && <CheckCircle2 size={16} className="text-brand-600 flex-shrink-0" />}
+              </div>
+            </button>
+          ))}
+        </div>
+        <form onSubmit={submit} className="flex gap-3 border-t border-gray-100 pt-4">
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+            Cancel
+          </button>
+          <button type="submit" disabled={!selected || assign.isPending}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all">
+            {assign.isPending ? <Loader2 size={15} className="animate-spin" /> : <><Send size={14} /> Assign</>}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ─── Program section (overview tab) ───────────────────────────
+function ProgramSection({ clientId }: { clientId: string }) {
+  const [showAssign, setShowAssign] = useState(false)
+  const { data: assignment, isLoading } = useClientProgramAssignment(clientId)
+  const unassign = useUnassignProgram(clientId)
+  const navigate = useNavigate()
+
+  return (
+    <div className="mt-4">
+      {showAssign && <AssignProgramModal clientId={clientId} onClose={() => setShowAssign(false)} />}
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-gray-800">Assigned Program</h3>
+        <button onClick={() => setShowAssign(true)}
+          className="flex items-center gap-1 text-xs text-brand-600 font-medium hover:text-brand-700">
+          <Plus size={12} />{assignment ? 'Change' : 'Assign'}
+        </button>
+      </div>
+      {isLoading ? (
+        <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-center">
+          <Loader2 size={16} className="animate-spin text-gray-300" />
+        </div>
+      ) : assignment?.program ? (
+        <div className="bg-brand-50 border border-brand-100 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-brand-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <BarChart2 size={15} className="text-brand-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <button onClick={() => navigate(`/library/programs/${assignment.program!.id}`)}
+                className="text-sm font-semibold text-brand-700 hover:underline truncate block text-left">
+                {assignment.program.name}
+              </button>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {assignment.program.duration_weeks ? `${assignment.program.duration_weeks} weeks` : ''}
+                {assignment.program.difficulty ? ` · ${assignment.program.difficulty}` : ''}
+              </p>
+            </div>
+            <button onClick={() => unassign.mutate(assignment.id)} disabled={unassign.isPending}
+              title="Remove program"
+              className="text-gray-300 hover:text-rose-400 transition-colors p-1 flex-shrink-0">
+              {unassign.isPending ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gray-50 rounded-xl p-4 text-center">
+          <Dumbbell size={24} className="mx-auto text-gray-300 mb-2" />
+          <p className="text-sm text-gray-500">No program assigned</p>
+          <button onClick={() => setShowAssign(true)}
+            className="mt-1 text-xs text-brand-600 font-medium hover:text-brand-700">
+            Assign a program
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── Assign workout modal ─────────────────────────────────────
 function AssignWorkoutModal({ clientId, defaultDate, onClose }: { clientId: string; defaultDate?: string; onClose: () => void }) {
@@ -1533,21 +1670,7 @@ export default function ClientDetail() {
                   ))}
                 </div>
 
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-gray-800">Assigned Program</h3>
-                    <button className="flex items-center gap-1 text-xs text-brand-600 font-medium hover:text-brand-700">
-                      <Plus size={12} />Assign
-                    </button>
-                  </div>
-                  <div className="bg-gray-50 rounded-xl p-4 text-center">
-                    <Dumbbell size={24} className="mx-auto text-gray-300 mb-2" />
-                    <p className="text-sm text-gray-500">No program assigned</p>
-                    <button className="mt-1 text-xs text-brand-600 font-medium hover:text-brand-700">
-                      Assign a program
-                    </button>
-                  </div>
-                </div>
+                <ProgramSection clientId={client.id} />
               </div>
 
               {/* Tasks */}

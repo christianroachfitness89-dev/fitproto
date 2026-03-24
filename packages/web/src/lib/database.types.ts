@@ -135,6 +135,28 @@ export interface DbProgram {
   created_at: string
 }
 
+export interface DbProgramWorkout {
+  id: string
+  program_id: string
+  workout_id: string | null
+  week_number: number
+  day_number: number
+}
+
+export type DbProgramWorkoutWithWorkout = DbProgramWorkout & {
+  workout: DbWorkout | null
+}
+
+export interface DbProgramAssignment {
+  id: string
+  client_id: string
+  program_id: string | null
+  start_date: string | null
+  end_date: string | null
+  active: boolean
+  created_at: string
+}
+
 export interface DbConversation {
   id: string
   org_id: string

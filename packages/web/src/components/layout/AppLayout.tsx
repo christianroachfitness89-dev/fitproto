@@ -28,7 +28,10 @@ const pageTitles: Record<string, string> = {
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
-  const title = pageTitles[location.pathname] ?? 'FitProto'
+  const title = pageTitles[location.pathname]
+    ?? (location.pathname.startsWith('/library/programs/') ? 'Program Builder'
+      : location.pathname.startsWith('/library/workouts/') ? 'Workout Builder'
+      : 'FitProto')
 
   return (
     <div className="flex h-screen overflow-hidden bg-surface-100">

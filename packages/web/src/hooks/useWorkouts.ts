@@ -3,7 +3,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
   DbExercise, DbWorkout, DbWorkoutExercise, DbWorkoutSet,
-  DbProgram, ProgressionType,
+  DbProgram, DbProgramWorkout, DbProgramWorkoutWithWorkout,
+  DbProgramAssignment, ProgressionType,
 } from '@/lib/database.types'
 
 // ─── Exercises ────────────────────────────────────────────────
@@ -353,3 +354,138 @@ export function useCreateProgram() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['programs'] }),
   })
 }
+
+export type DbProgramWithWorkouts = DbProgram & {
+  program_workouts: DbProgramWorkoutWithWorkout[]
+}
+
+export function useProgramDetail(programId: string | undefined) {
+  return useQuery({
+    queryKey: ['program-detail', programId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('programs')
+        .select('*, program_workouts(*, workout:workouts(*))')
+        .eq('id', programId!)
+        .single()
+      if (error) throw error
+      return data as DbProgramWithWorkouts
+    },
+    enabled: !!programId,
+  })
+}
+
+export function useUpdateProgram() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...update }: Partial<Omit<DbProgram, 'org_id' | 'created_at'>> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('programs')
+        .update(update as any)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data as DbProgram
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['programs'] })
+      qc.invalidateQueries({ queryKey: ['program-detail', data.id] })
+    },
+  })
+}
+
+export function useDeleteProgram() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('programs').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['programs'] }),
+  })
+}
+
+export function useAddProgramWorkout(programId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { workout_id: string; week_number: number; day_number: number }) => {
+      const { data, error } = await supabase
+        .from('program_workouts')
+        .insert({ program_id: programId, ...input } as any)
+        .select('*, workout:workouts(*)')
+        .single()
+      if (error) throw error
+      return data as DbProgramWorkoutWithWorkout
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['program-detail', programId] }),
+  })
+}
+
+export function useRemoveProgramWorkout(programId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('program_workouts').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['program-detail', programId] }),
+  })
+}
+
+export function useClientProgramAssignment(clientId: string) {
+  return useQuery({
+    queryKey: ['program-assignment', clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('program_assignments')
+        .select('*, program:programs(*)')
+        .eq('client_id', clientId)
+        .eq('active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (error) throw error
+      return data as (DbProgramAssignment & { program: DbProgram | null }) | null
+    },
+    enabled: !!clientId,
+  })
+}
+
+export function useAssignProgram(clientId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ program_id, start_date }: { program_id: string; start_date?: string }) => {
+      await supabase
+        .from('program_assignments')
+        .update({ active: false } as any)
+        .eq('client_id', clientId)
+        .eq('active', true)
+      const { data, error } = await supabase
+        .from('program_assignments')
+        .insert({ client_id: clientId, program_id, start_date: start_date ?? null, active: true } as any)
+        .select('*, program:programs(*)')
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['program-assignment', clientId] }),
+  })
+}
+
+export function useUnassignProgram(clientId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (assignmentId: string) => {
+      const { error } = await supabase
+        .from('program_assignments')
+        .update({ active: false } as any)
+        .eq('id', assignmentId)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['program-assignment', clientId] }),
+  })
+}
+
+// Re-export types so callers can import from this file
+export type { DbProgramWorkout, DbProgramWorkoutWithWorkout, DbProgramAssignment }
