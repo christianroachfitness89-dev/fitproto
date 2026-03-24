@@ -9,7 +9,7 @@ import clsx from 'clsx'
 import {
   useExercises, useCreateExercise, useDeleteExercise, useBulkImportExercises,
   useWorkouts,  useCreateWorkout,  useDeleteWorkout,
-  usePrograms,  useCreateProgram, useDeleteProgram,
+  usePrograms,  useCreateProgram, useDeleteProgram, useUpdateProgram,
 } from '@/hooks/useWorkouts'
 import { useClients } from '@/hooks/useClients'
 import { useAssignWorkout } from '@/hooks/useClientWorkouts'
@@ -820,10 +820,29 @@ function WorkoutsList() {
 // ─── Programs list ────────────────────────────────────────────
 function ProgramsList() {
   const navigate = useNavigate()
-  const [search, setSearch] = useState('')
+  const [search, setSearch]         = useState('')
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameVal, setRenameVal]   = useState('')
+  const renameRef = useRef<HTMLInputElement>(null)
   const { data: programs = [], isLoading } = usePrograms(search.length >= 2 ? search : undefined)
   const createProgram = useCreateProgram()
   const deleteProgram = useDeleteProgram()
+  const updateProgram = useUpdateProgram()
+
+  function startRename(e: MouseEvent, id: string, name: string) {
+    e.stopPropagation()
+    setRenamingId(id)
+    setRenameVal(name)
+    setTimeout(() => { renameRef.current?.select() }, 0)
+  }
+
+  async function commitRename(id: string) {
+    const trimmed = renameVal.trim()
+    if (trimmed && trimmed !== programs.find(p => p.id === id)?.name) {
+      await updateProgram.mutateAsync({ id, name: trimmed })
+    }
+    setRenamingId(null)
+  }
 
   async function handleCreate() {
     const p = await createProgram.mutateAsync({
@@ -890,7 +909,29 @@ function ProgramsList() {
               <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center mb-3">
                 <BarChart3 size={20} className="text-emerald-600" />
               </div>
-              <h3 className="font-semibold text-gray-800 mb-1 pr-6">{program.name}</h3>
+              {renamingId === program.id ? (
+                <input
+                  ref={renameRef}
+                  value={renameVal}
+                  onChange={e => setRenameVal(e.target.value)}
+                  onClick={e => e.stopPropagation()}
+                  onBlur={() => commitRename(program.id)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); commitRename(program.id) }
+                    if (e.key === 'Escape') setRenamingId(null)
+                  }}
+                  className="w-full font-semibold text-gray-800 mb-1 pr-6 bg-transparent border-b border-brand-400 outline-none text-base"
+                  autoFocus
+                />
+              ) : (
+                <h3
+                  className="font-semibold text-gray-800 mb-1 pr-6 cursor-text"
+                  onDoubleClick={e => startRename(e, program.id, program.name)}
+                  title="Double-click to rename"
+                >
+                  {program.name}
+                </h3>
+              )}
               {program.description && (
                 <p className="text-xs text-gray-500 mb-3 line-clamp-2">{program.description}</p>
               )}
