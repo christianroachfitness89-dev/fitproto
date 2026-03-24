@@ -4,7 +4,7 @@ import {
   Dumbbell, CheckCircle2, Clock, Calendar, ChevronDown, ChevronUp,
   Loader2, Target, ClipboardList, ArrowLeft, Lock,
   BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight, ChevronLeft,
-  X, Home, MoreHorizontal, MessageCircle, Settings, Send,
+  X, Home, MoreHorizontal, MessageCircle, Settings, Send, GripVertical,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { playRestEndChime } from '@/lib/sound'
@@ -130,6 +130,7 @@ interface PortalTask {
   title: string
   type: string | null
   due_date: string | null
+  completed: boolean
 }
 
 interface PortalMetricEntry {
@@ -974,13 +975,27 @@ function planCalendarWeeks(month: Date): Date[][] {
   )
 }
 
-function PlanView({ data, tasks }: { data: PortalData; tasks: PortalTask[] }) {
+function PlanView({
+  data, tasks, clientId, onRescheduleWorkout, onTaskToggled,
+}: {
+  data: PortalData
+  tasks: PortalTask[]
+  clientId: string
+  onRescheduleWorkout: (workoutId: string, newDate: string) => void
+  onTaskToggled: (taskId: string) => void
+}) {
   const todayRaw = new Date(); todayRaw.setHours(0,0,0,0)
   const todayKey = planIsoKey(todayRaw)
-  const [month, setMonth]   = useState(new Date(todayRaw.getFullYear(), todayRaw.getMonth(), 1))
-  const [selKey, setSelKey] = useState<string>(todayKey)
+  const [month, setMonth]         = useState(new Date(todayRaw.getFullYear(), todayRaw.getMonth(), 1))
+  const [selKey, setSelKey]       = useState<string>(todayKey)
+  // Workout move mode — id of the client_workout being rescheduled
+  const [movingId, setMovingId]   = useState<string | null>(null)
+  const [movingLabel, setMovingLabel] = useState('')
+  const [moving, setMoving]       = useState(false)
+  // Optimistic task done set
+  const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set())
 
-  // Build event map from all data sources
+  // Build event map — reacts to doneTasks so chips update instantly
   const eventMap = useMemo(() => {
     const map = new Map<string, PlanEvent[]>()
     function push(key: string, ev: PlanEvent) {
@@ -1002,12 +1017,15 @@ function PlanView({ data, tasks }: { data: PortalData; tasks: PortalTask[] }) {
     }
     // Tasks by due_date
     for (const t of tasks) {
-      if (t.due_date) push(t.due_date.slice(0,10), { kind: 'task', id: t.id, label: t.title })
+      if (t.due_date) push(t.due_date.slice(0,10), {
+        kind: 'task', id: t.id, label: t.title,
+        status: (doneTasks.has(t.id) || t.completed) ? 'done' : undefined,
+      })
     }
     return map
-  }, [data, tasks])
+  }, [data, tasks, doneTasks])
 
-  const weeks = planCalendarWeeks(month)
+  const weeks     = planCalendarWeeks(month)
   const selEvents = eventMap.get(selKey) ?? []
 
   const kindChip: Record<PlanEventKind, string> = {
@@ -1026,10 +1044,67 @@ function PlanView({ data, tasks }: { data: PortalData; tasks: PortalTask[] }) {
     task:    'Task',
   }
 
+  async function handleToggleTask(taskId: string) {
+    setDoneTasks(prev => {
+      const next = new Set(prev)
+      next.has(taskId) ? next.delete(taskId) : next.add(taskId)
+      return next
+    })
+    try {
+      await supabase.rpc('toggle_portal_task', { p_client_id: clientId, p_task_id: taskId })
+      onTaskToggled(taskId)
+    } catch {
+      // revert optimistic update on failure
+      setDoneTasks(prev => { const next = new Set(prev); next.delete(taskId); return next })
+    }
+  }
+
+  async function handleDrop(targetKey: string) {
+    if (!movingId || moving) return
+    setMoving(true)
+    try {
+      await supabase.rpc('reschedule_portal_workout', {
+        p_client_id: clientId,
+        p_client_workout_id: movingId,
+        p_new_due_date: targetKey,
+      })
+      onRescheduleWorkout(movingId, targetKey)
+      setSelKey(targetKey)
+    } finally {
+      setMovingId(null)
+      setMovingLabel('')
+      setMoving(false)
+    }
+  }
+
+  function handleDayClick(key: string) {
+    if (movingId) { handleDrop(key); return }
+    setSelKey(key)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] pb-28">
+
+      {/* ── Move-mode banner ── */}
+      {movingId && (
+        <div className="sticky top-0 z-20 bg-brand-600 px-4 py-3 flex items-center gap-3 shadow-lg shadow-brand-900/50">
+          <GripVertical size={16} className="text-white/70 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-white text-sm font-bold truncate">Moving: {movingLabel}</p>
+            <p className="text-white/60 text-xs">Tap any date to reschedule</p>
+          </div>
+          <button onClick={() => { setMovingId(null); setMovingLabel('') }}
+            className="text-white/60 hover:text-white p-1 transition-colors flex-shrink-0">
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-14 pb-5 border-b border-white/8">
+      <div className={clsx(
+        'flex items-center gap-3 px-4 pb-5 border-b border-white/8',
+        movingId ? 'pt-5' : 'pt-14',
+      )}>
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-lg shadow-brand-500/30 flex-shrink-0">
           <Calendar size={18} className="text-white" />
         </div>
@@ -1057,10 +1132,8 @@ function PlanView({ data, tasks }: { data: PortalData; tasks: PortalTask[] }) {
       {/* Day name header */}
       <div className="grid grid-cols-7 px-3 mb-1">
         {PLAN_DAYS.map((d, i) => (
-          <p key={d} className={clsx(
-            'text-center text-[11px] font-bold py-1',
-            i >= 5 ? 'text-white/20' : 'text-white/35',
-          )}>{d}</p>
+          <p key={d} className={clsx('text-center text-[11px] font-bold py-1',
+            i >= 5 ? 'text-white/20' : 'text-white/35')}>{d}</p>
         ))}
       </div>
 
@@ -1074,19 +1147,21 @@ function PlanView({ data, tasks }: { data: PortalData; tasks: PortalTask[] }) {
               const isToday = key === todayKey
               const isSel   = key === selKey
               const isWknd  = di >= 5
+              const isTarget = !!movingId  // all days are drop targets in move mode
               const events  = eventMap.get(key) ?? []
               const MAX = 2
 
               return (
-                <button key={key} onClick={() => setSelKey(key)}
+                <button key={key} onClick={() => handleDayClick(key)}
                   className={clsx(
                     'rounded-xl p-1 min-h-[60px] flex flex-col items-center gap-0.5 transition-all active:scale-95',
-                    isSel   ? 'bg-white/15 ring-1 ring-white/25'
-                    : isToday ? 'bg-brand-600/25 ring-1 ring-brand-400/40'
-                    : isWknd  ? 'bg-white/2'
-                    : 'bg-white/5 hover:bg-white/8',
+                    isTarget && !isSel
+                      ? 'bg-brand-500/15 ring-1 ring-brand-400/50 ring-offset-0'
+                      : isSel   ? 'bg-white/15 ring-1 ring-white/25'
+                      : isToday ? 'bg-brand-600/25 ring-1 ring-brand-400/40'
+                      : isWknd  ? 'bg-white/2'
+                      : 'bg-white/5 hover:bg-white/8',
                   )}>
-                  {/* Date number */}
                   <span className={clsx(
                     'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0',
                     isToday ? 'bg-brand-500 text-white'
@@ -1095,12 +1170,12 @@ function PlanView({ data, tasks }: { data: PortalData; tasks: PortalTask[] }) {
                     : 'text-white/15',
                   )}>{day.getDate()}</span>
 
-                  {/* Event chips — up to MAX */}
                   {events.slice(0, MAX).map((ev: PlanEvent, i: number) => (
                     <div key={i} className={clsx(
                       'w-full text-[8px] font-semibold px-1 py-0.5 rounded-md truncate leading-tight',
-                      (ev.status === 'completed') ? 'bg-emerald-500/25 text-emerald-300 line-through opacity-60'
-                      : kindChip[ev.kind],
+                      ev.status === 'completed' || ev.status === 'done'
+                        ? 'bg-emerald-500/25 text-emerald-300 line-through opacity-60'
+                        : kindChip[ev.kind],
                     )}>{ev.label}</div>
                   ))}
                   {events.length > MAX && (
@@ -1120,7 +1195,7 @@ function PlanView({ data, tasks }: { data: PortalData; tasks: PortalTask[] }) {
             {selKey === todayKey ? 'Today' : planLocalDate(selKey).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
           {selEvents.length > 0 && (
-            <p className="text-white/50 text-xs mt-0.5">{selEvents.length} item{selEvents.length !== 1 ? 's' : ''} scheduled</p>
+            <p className="text-white/35 text-xs mt-0.5">{selEvents.length} item{selEvents.length !== 1 ? 's' : ''}</p>
           )}
         </div>
 
@@ -1131,21 +1206,61 @@ function PlanView({ data, tasks }: { data: PortalData; tasks: PortalTask[] }) {
           </div>
         ) : (
           <div className="divide-y divide-white/6">
-            {selEvents.map((ev: PlanEvent, i: number) => (
-              <div key={i} className="flex items-center gap-3 px-4 py-3">
-                <div className={clsx('w-2 h-2 rounded-full flex-shrink-0', kindDot[ev.kind])} />
-                <div className="flex-1 min-w-0">
-                  <p className={clsx(
-                    'text-sm font-semibold leading-tight',
-                    ev.status === 'completed' ? 'text-white/30 line-through' : 'text-white/85',
-                  )}>{ev.label}</p>
-                  <p className="text-[10px] text-white/30 mt-0.5">{kindLabel[ev.kind]}</p>
+            {selEvents.map((ev: PlanEvent, i: number) => {
+              const isDone = ev.status === 'completed' || ev.status === 'done'
+              const isMoving = movingId === ev.id
+
+              return (
+                <div key={i} className={clsx(
+                  'flex items-center gap-3 px-4 py-3 transition-colors',
+                  isMoving && 'bg-brand-500/15',
+                )}>
+
+                  {/* Task checkbox / event dot */}
+                  {ev.kind === 'task' ? (
+                    <button
+                      onClick={() => handleToggleTask(ev.id)}
+                      className={clsx(
+                        'w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all active:scale-90',
+                        isDone
+                          ? 'bg-emerald-500 border-emerald-500'
+                          : 'border-amber-400/60 hover:border-amber-400',
+                      )}>
+                      {isDone && <CheckCircle2 size={13} className="text-white" />}
+                    </button>
+                  ) : (
+                    <div className={clsx('w-2 h-2 rounded-full flex-shrink-0 mt-0.5', kindDot[ev.kind])} />
+                  )}
+
+                  {/* Label + sub */}
+                  <div className="flex-1 min-w-0">
+                    <p className={clsx(
+                      'text-sm font-semibold leading-tight',
+                      isDone ? 'text-white/30 line-through' : 'text-white/85',
+                    )}>{ev.label}</p>
+                    <p className="text-[10px] text-white/30 mt-0.5">{kindLabel[ev.kind]}</p>
+                  </div>
+
+                  {/* Workout move handle (only assigned workouts, not program slots) */}
+                  {ev.kind === 'workout' && !isDone && (
+                    <button
+                      onClick={() => {
+                        if (movingId === ev.id) { setMovingId(null); setMovingLabel('') }
+                        else { setMovingId(ev.id); setMovingLabel(ev.label) }
+                      }}
+                      className={clsx(
+                        'p-1.5 rounded-lg flex-shrink-0 transition-all active:scale-90',
+                        isMoving
+                          ? 'bg-brand-500/40 text-brand-300'
+                          : 'text-white/20 hover:text-white/60 hover:bg-white/8',
+                      )}
+                      title="Move to another day">
+                      <GripVertical size={15} />
+                    </button>
+                  )}
                 </div>
-                {ev.status === 'completed' && (
-                  <CheckCircle2 size={15} className="text-emerald-400/70 flex-shrink-0" />
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
@@ -1155,7 +1270,9 @@ function PlanView({ data, tasks }: { data: PortalData; tasks: PortalTask[] }) {
         {(['program','workout','task'] as PlanEventKind[]).map(k => (
           <div key={k} className="flex items-center gap-1.5">
             <div className={clsx('w-2 h-2 rounded-full', kindDot[k])} />
-            <span className="text-[10px] text-white/35 capitalize">{k === 'program' ? 'Program' : k === 'workout' ? 'Workout' : 'Task'}</span>
+            <span className="text-[10px] text-white/35">
+              {k === 'program' ? 'Program' : k === 'workout' ? 'Workout' : 'Task'}
+            </span>
           </div>
         ))}
       </div>
@@ -2435,8 +2552,9 @@ export default function ClientPortal() {
     })
     .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())[0] ?? null
 
-  // Tasks due today or overdue only — not future tasks
+  // Tasks due today or overdue only — not future or already completed
   const dueTodayTasks = tasks.filter(t => {
+    if (t.completed) return false
     if (!t.due_date) return false
     const d = new Date(t.due_date + 'T00:00:00'); d.setHours(0, 0, 0, 0)
     return d <= todayDate
@@ -2481,7 +2599,24 @@ export default function ClientPortal() {
 
       {/* ── Section views ── */}
       {activeSection === 'plan' && (
-        <PlanView data={data} tasks={tasks} />
+        <PlanView
+          data={data}
+          tasks={tasks}
+          clientId={clientId!}
+          onRescheduleWorkout={(workoutId, newDate) => {
+            setData(prev => prev ? {
+              ...prev,
+              workouts: prev.workouts.map(w =>
+                w.id === workoutId ? { ...w, due_date: newDate } : w
+              ),
+            } : prev)
+          }}
+          onTaskToggled={(taskId) => {
+            setTasks(prev => prev.map(t =>
+              t.id === taskId ? { ...t, completed: !t.completed } : t
+            ))
+          }}
+        />
       )}
       {activeSection === 'workouts' && (
         <WorkoutsView data={data} clientId={clientId!} onMarkComplete={markComplete} />
