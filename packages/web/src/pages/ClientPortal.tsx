@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   Dumbbell, CheckCircle2, Clock, Calendar, ChevronDown, ChevronUp,
@@ -11,7 +11,7 @@ import { playRestEndChime } from '@/lib/sound'
 import clsx from 'clsx'
 
 // ─── Types ─────────────────────────────────────────────────────
-type ActiveSection = 'workouts' | 'history' | 'metrics' | 'nutrition' | 'messages' | null
+type ActiveSection = 'workouts' | 'history' | 'metrics' | 'nutrition' | 'messages' | 'plan' | null
 
 interface PortalMessage {
   id: string
@@ -943,6 +943,221 @@ function ProgramScheduleCard({
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+// ─── Plan / Calendar view ──────────────────────────────────────
+type PlanEventKind = 'program' | 'workout' | 'task'
+interface PlanEvent { kind: PlanEventKind; id: string; label: string; status?: string }
+
+const PLAN_MONTHS = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December']
+const PLAN_DAYS   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+
+function planIsoKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+function planLocalDate(s: string) {
+  const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d)
+}
+function planShift(d: Date, n: number) {
+  const r = new Date(d); r.setDate(r.getDate() + n); return r
+}
+function planCalendarWeeks(month: Date): Date[][] {
+  const first = new Date(month.getFullYear(), month.getMonth(), 1)
+  const offset = (first.getDay() + 6) % 7
+  const start  = planShift(first, -offset)
+  return Array.from({ length: 6 }, (_, w) =>
+    Array.from({ length: 7 }, (_, d) => planShift(start, w * 7 + d))
+  )
+}
+
+function PlanView({ data, tasks }: { data: PortalData; tasks: PortalTask[] }) {
+  const todayRaw = new Date(); todayRaw.setHours(0,0,0,0)
+  const todayKey = planIsoKey(todayRaw)
+  const [month, setMonth]   = useState(new Date(todayRaw.getFullYear(), todayRaw.getMonth(), 1))
+  const [selKey, setSelKey] = useState<string>(todayKey)
+
+  // Build event map from all data sources
+  const eventMap = useMemo(() => {
+    const map = new Map<string, PlanEvent[]>()
+    function push(key: string, ev: PlanEvent) {
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(ev)
+    }
+    // Program slots → actual dates via start_date
+    if (data.program?.start_date) {
+      const start = planLocalDate(data.program.start_date)
+      for (const slot of data.program.schedule) {
+        const d = planShift(start, (slot.week_number - 1) * 7 + (slot.day_number - 1))
+        push(planIsoKey(d), { kind: 'program', id: slot.workout.id, label: slot.workout.name })
+      }
+    }
+    // Workouts by due_date
+    for (const w of data.workouts) {
+      const key = w.due_date?.slice(0,10)
+      if (key) push(key, { kind: 'workout', id: w.id, label: w.workout.name, status: w.status })
+    }
+    // Tasks by due_date
+    for (const t of tasks) {
+      if (t.due_date) push(t.due_date.slice(0,10), { kind: 'task', id: t.id, label: t.title })
+    }
+    return map
+  }, [data, tasks])
+
+  const weeks = planCalendarWeeks(month)
+  const selEvents = eventMap.get(selKey) ?? []
+
+  const kindChip: Record<PlanEventKind, string> = {
+    program: 'bg-violet-500/30 text-violet-200',
+    workout: 'bg-brand-500/30 text-brand-200',
+    task:    'bg-amber-500/30 text-amber-200',
+  }
+  const kindDot: Record<PlanEventKind, string> = {
+    program: 'bg-violet-400',
+    workout: 'bg-brand-400',
+    task:    'bg-amber-400',
+  }
+  const kindLabel: Record<PlanEventKind, string> = {
+    program: 'Program session',
+    workout: 'Assigned workout',
+    task:    'Task',
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] pb-28">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 pt-14 pb-5 border-b border-white/8">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-lg shadow-brand-500/30 flex-shrink-0">
+          <Calendar size={18} className="text-white" />
+        </div>
+        <div>
+          <p className="text-white font-bold text-base">My Plan</p>
+          <p className="text-white/35 text-xs">Workouts, sessions &amp; tasks</p>
+        </div>
+      </div>
+
+      {/* Month nav */}
+      <div className="flex items-center justify-between px-5 py-4">
+        <button onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth()-1, 1))}
+          className="w-9 h-9 rounded-xl bg-white/8 border border-white/10 flex items-center justify-center text-white/50 hover:text-white/90 hover:bg-white/14 transition-all active:scale-95">
+          <ChevronLeft size={16} />
+        </button>
+        <p className="text-white font-bold text-base tracking-tight">
+          {PLAN_MONTHS[month.getMonth()]} {month.getFullYear()}
+        </p>
+        <button onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth()+1, 1))}
+          className="w-9 h-9 rounded-xl bg-white/8 border border-white/10 flex items-center justify-center text-white/50 hover:text-white/90 hover:bg-white/14 transition-all active:scale-95">
+          <ChevronRight size={16} />
+        </button>
+      </div>
+
+      {/* Day name header */}
+      <div className="grid grid-cols-7 px-3 mb-1">
+        {PLAN_DAYS.map((d, i) => (
+          <p key={d} className={clsx(
+            'text-center text-[11px] font-bold py-1',
+            i >= 5 ? 'text-white/20' : 'text-white/35',
+          )}>{d}</p>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="px-3 space-y-1">
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7 gap-1">
+            {week.map((day, di) => {
+              const key     = planIsoKey(day)
+              const inMonth = day.getMonth() === month.getMonth()
+              const isToday = key === todayKey
+              const isSel   = key === selKey
+              const isWknd  = di >= 5
+              const events  = eventMap.get(key) ?? []
+              const MAX = 2
+
+              return (
+                <button key={key} onClick={() => setSelKey(key)}
+                  className={clsx(
+                    'rounded-xl p-1 min-h-[60px] flex flex-col items-center gap-0.5 transition-all active:scale-95',
+                    isSel   ? 'bg-white/15 ring-1 ring-white/25'
+                    : isToday ? 'bg-brand-600/25 ring-1 ring-brand-400/40'
+                    : isWknd  ? 'bg-white/2'
+                    : 'bg-white/5 hover:bg-white/8',
+                  )}>
+                  {/* Date number */}
+                  <span className={clsx(
+                    'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0',
+                    isToday ? 'bg-brand-500 text-white'
+                    : isSel  ? 'text-white'
+                    : inMonth ? (isWknd ? 'text-white/25' : 'text-white/60')
+                    : 'text-white/15',
+                  )}>{day.getDate()}</span>
+
+                  {/* Event chips — up to MAX */}
+                  {events.slice(0, MAX).map((ev: PlanEvent, i: number) => (
+                    <div key={i} className={clsx(
+                      'w-full text-[8px] font-semibold px-1 py-0.5 rounded-md truncate leading-tight',
+                      (ev.status === 'completed') ? 'bg-emerald-500/25 text-emerald-300 line-through opacity-60'
+                      : kindChip[ev.kind],
+                    )}>{ev.label}</div>
+                  ))}
+                  {events.length > MAX && (
+                    <p className="text-[8px] text-white/25 font-medium">+{events.length - MAX}</p>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* Selected day detail */}
+      <div className="mx-3 mt-4 rounded-2xl bg-white/6 border border-white/10 overflow-hidden">
+        <div className="px-4 py-3 border-b border-white/8">
+          <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">
+            {selKey === todayKey ? 'Today' : planLocalDate(selKey).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
+          {selEvents.length > 0 && (
+            <p className="text-white/50 text-xs mt-0.5">{selEvents.length} item{selEvents.length !== 1 ? 's' : ''} scheduled</p>
+          )}
+        </div>
+
+        {selEvents.length === 0 ? (
+          <div className="px-4 py-6 text-center">
+            <p className="text-white/25 text-sm font-medium">Nothing scheduled</p>
+            <p className="text-white/15 text-xs mt-1">Rest day or no items planned</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-white/6">
+            {selEvents.map((ev: PlanEvent, i: number) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-3">
+                <div className={clsx('w-2 h-2 rounded-full flex-shrink-0', kindDot[ev.kind])} />
+                <div className="flex-1 min-w-0">
+                  <p className={clsx(
+                    'text-sm font-semibold leading-tight',
+                    ev.status === 'completed' ? 'text-white/30 line-through' : 'text-white/85',
+                  )}>{ev.label}</p>
+                  <p className="text-[10px] text-white/30 mt-0.5">{kindLabel[ev.kind]}</p>
+                </div>
+                {ev.status === 'completed' && (
+                  <CheckCircle2 size={15} className="text-emerald-400/70 flex-shrink-0" />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="mx-3 mt-3 flex items-center gap-4 px-4 py-3 rounded-2xl bg-white/4">
+        {(['program','workout','task'] as PlanEventKind[]).map(k => (
+          <div key={k} className="flex items-center gap-1.5">
+            <div className={clsx('w-2 h-2 rounded-full', kindDot[k])} />
+            <span className="text-[10px] text-white/35 capitalize">{k === 'program' ? 'Program' : k === 'workout' ? 'Workout' : 'Task'}</span>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -1979,14 +2194,14 @@ function BottomTabBar({
   onMoreToggle: () => void
 }) {
   const tabs = [
-    { label: 'Home',     Icon: Home,           section: null as ActiveSection,        unread: false },
-    { label: 'Workouts', Icon: Dumbbell,        section: 'workouts' as ActiveSection,  unread: false },
-    { label: 'Messages', Icon: MessageCircle,   section: 'messages' as ActiveSection,  unread: hasUnreadMessages },
-    { label: 'Progress', Icon: TrendingUp,      section: 'metrics' as ActiveSection,   unread: false },
+    { label: 'Home',     Icon: Home,           section: null as ActiveSection,       unread: false },
+    { label: 'Workouts', Icon: Dumbbell,        section: 'workouts' as ActiveSection, unread: false },
+    { label: 'Plan',     Icon: Calendar,        section: 'plan' as ActiveSection,     unread: false },
+    { label: 'Messages', Icon: MessageCircle,   section: 'messages' as ActiveSection, unread: hasUnreadMessages },
   ]
 
-  // "More" is active when the sheet is open or on a sub-page (nutrition, history)
-  const moreActive = showMore || activeSection === 'nutrition' || activeSection === 'history'
+  // "More" is active when the sheet is open or on a sub-page
+  const moreActive = showMore || activeSection === 'nutrition' || activeSection === 'history' || activeSection === 'metrics'
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#09091a]/95 backdrop-blur-xl border-t border-white/10">
@@ -2108,7 +2323,6 @@ export default function ClientPortal() {
   const [showMore, setShowMore]             = useState(false)
   const [tasks, setTasks]                   = useState<PortalTask[]>([])
   const [loggingWorkout, setLoggingWorkout] = useState<PortalWorkout | null>(null)
-  const [missedBannerDismissed, setMissedBannerDismissed] = useState(false)
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false)
 
   useEffect(() => {
@@ -2198,17 +2412,51 @@ export default function ClientPortal() {
   const assigned   = data.workouts.filter(w => w.status === 'assigned')
   const todayDate  = new Date(); todayDate.setHours(0, 0, 0, 0)
 
+  // Strictly today only — no fallback to first assigned workout
   const todaysWorkout = assigned.find(w => {
     if (!w.due_date) return false
     const d = new Date(w.due_date + 'T00:00:00'); d.setHours(0, 0, 0, 0)
     return d.getTime() === todayDate.getTime()
-  }) ?? (assigned[0] ?? null)
+  }) ?? null
 
-  const missedWorkouts = assigned.filter(w => {
+  // Overdue = due_date in the past
+  const overdueWorkouts = assigned.filter(w => {
     if (!w.due_date) return false
     const d = new Date(w.due_date + 'T00:00:00'); d.setHours(0, 0, 0, 0)
     return d < todayDate
   })
+
+  // Next upcoming workout (future, not today)
+  const nextWorkout = assigned
+    .filter(w => {
+      if (!w.due_date) return false
+      const d = new Date(w.due_date + 'T00:00:00'); d.setHours(0, 0, 0, 0)
+      return d > todayDate
+    })
+    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())[0] ?? null
+
+  // Tasks due today or overdue only — not future tasks
+  const dueTodayTasks = tasks.filter(t => {
+    if (!t.due_date) return false
+    const d = new Date(t.due_date + 'T00:00:00'); d.setHours(0, 0, 0, 0)
+    return d <= todayDate
+  })
+
+  // Greeting based on time of day
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+
+  // Rotating motivational content (by day of week)
+  const MOTIV = [
+    { headline: 'Stay consistent',    sub: 'Every rest day is building towards your next breakthrough.' },
+    { headline: 'Recovery matters',   sub: 'Your muscles grow when you rest. Take it easy today.' },
+    { headline: 'Keep the momentum',  sub: 'No session today — but your next one is just around the corner.' },
+    { headline: 'Trust the process',  sub: 'Consistency over time beats intensity every time.' },
+    { headline: 'You\'re doing great', sub: 'Rest days are part of the plan. Show up tomorrow.' },
+    { headline: 'Recharge today',     sub: 'Fuel up, sleep well, and come back stronger.' },
+    { headline: 'Active recovery',    sub: 'A walk, a stretch, some good food — that\'s the plan today.' },
+  ]
+  const motiv = MOTIV[todayDate.getDay()]
 
   return (
     <div className="relative">
@@ -2232,6 +2480,9 @@ export default function ClientPortal() {
       )}
 
       {/* ── Section views ── */}
+      {activeSection === 'plan' && (
+        <PlanView data={data} tasks={tasks} />
+      )}
       {activeSection === 'workouts' && (
         <WorkoutsView data={data} clientId={clientId!} onMarkComplete={markComplete} />
       )}
@@ -2255,12 +2506,16 @@ export default function ClientPortal() {
 
             {/* Greeting */}
             <div className="px-5 pt-14 pb-4">
-              <h1 className="text-[28px] font-extrabold text-gray-900 tracking-tight">Let's do this</h1>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">{greeting}</p>
+              <h1 className="text-[28px] font-extrabold text-gray-900 tracking-tight">
+                {todaysWorkout ? 'Time to train 💪' : "You've got this"}
+              </h1>
             </div>
 
-            {/* Today's Workout hero card */}
+            {/* ── Hero card ── */}
             <div className="px-4 mb-3">
               {todaysWorkout ? (
+                /* Workout due today */
                 <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#1e4ed8] via-[#2563eb] to-[#7c3aed] p-6 shadow-xl shadow-blue-900/25 min-h-[220px] flex flex-col">
                   <div className="absolute -top-8 -right-8 pointer-events-none select-none opacity-[0.18]">
                     <Dumbbell size={190} className="text-white" style={{ transform: 'rotate(-25deg)' }} />
@@ -2285,75 +2540,79 @@ export default function ClientPortal() {
                   </button>
                 </div>
               ) : (
-                <div className="rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 p-6 shadow-lg min-h-[180px] flex flex-col justify-center items-center text-center">
-                  <CheckCircle2 size={40} className="text-white/80 mb-3" />
-                  <p className="text-white font-bold text-xl">All caught up!</p>
-                  <p className="text-white/70 text-sm mt-1">No workouts pending right now.</p>
+                /* No workout today — motivational + next session teaser */
+                <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] p-6 shadow-xl min-h-[200px] flex flex-col">
+                  <div className="absolute -top-6 -right-6 pointer-events-none select-none opacity-[0.07]">
+                    <Target size={180} className="text-white" />
+                  </div>
+                  <p className="text-white/40 text-[11px] font-bold uppercase tracking-[0.2em] mb-3">
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </p>
+                  <h2 className="text-white text-[22px] font-extrabold leading-tight">
+                    {motiv.headline}
+                  </h2>
+                  <p className="text-white/50 text-sm mt-2 leading-relaxed max-w-[80%]">
+                    {motiv.sub}
+                  </p>
+                  <div className="flex-1" />
+                  {nextWorkout && (
+                    <div className="mt-4 flex items-center gap-2.5 bg-white/8 rounded-2xl px-4 py-3 border border-white/10 self-start">
+                      <Calendar size={14} className="text-brand-400 flex-shrink-0" />
+                      <div>
+                        <p className="text-white/40 text-[10px] font-semibold uppercase tracking-wide">Next session</p>
+                        <p className="text-white/80 text-sm font-bold leading-tight">
+                          {nextWorkout.workout.name}
+                          <span className="font-normal text-white/40"> · {new Date(nextWorkout.due_date! + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Missed workouts banner */}
-            {missedWorkouts.length > 0 && !missedBannerDismissed && (
+            {/* ── Overdue workouts (persistent, below hero) ── */}
+            {overdueWorkouts.length > 0 && (
               <div className="mx-4 mb-3">
-                <div className="bg-[#fff4eb] border border-orange-100 rounded-2xl px-4 py-3.5 flex items-center gap-3">
-                  <span className="text-lg flex-shrink-0">👉</span>
-                  <p className="flex-1 text-sm text-gray-700 leading-snug">
-                    You missed{' '}
-                    <button
-                      onClick={() => unlocked.includes('workouts') && goTo('workouts')}
-                      className="text-orange-500 font-bold"
-                    >
-                      {missedWorkouts.length} {missedWorkouts.length === 1 ? 'workout' : 'workouts'}
-                    </button>
-                    {missedWorkouts[0]?.due_date && (
-                      <> from {new Date(missedWorkouts[0].due_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}</>
-                    )}
-                  </p>
-                  <button
-                    onClick={() => setMissedBannerDismissed(true)}
-                    className="text-gray-400 hover:text-gray-600 flex-shrink-0 p-1 transition-colors"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Tasks */}
-            {tasks.length > 0 && (
-              <div className="mx-4 mb-3">
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="px-4 pt-4 pb-2">
-                    <h3 className="text-[16px] font-bold text-gray-900">Tasks (0/{tasks.length})</h3>
+                <div className="rounded-2xl border border-orange-200 bg-orange-50 overflow-hidden">
+                  <div className="px-4 pt-3.5 pb-2 flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-orange-500">Overdue</span>
+                    <span className="text-[11px] font-bold text-orange-400 bg-orange-100 rounded-full px-2 py-0.5">
+                      {overdueWorkouts.length}
+                    </span>
                   </div>
                   <div>
-                    {tasks.map((task, i) => {
-                      const isLast  = i === tasks.length - 1
-                      const dueObj  = task.due_date
-                        ? (() => { const d = new Date(task.due_date + 'T00:00:00'); d.setHours(0, 0, 0, 0); return d })()
-                        : null
-                      const overdue = dueObj ? dueObj < todayDate : false
-                      const dueFmt  = dueObj
-                        ? dueObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                        : null
+                    {overdueWorkouts.map((w, i) => {
+                      const isLast = i === overdueWorkouts.length - 1
+                      const dueDate = new Date(w.due_date! + 'T00:00:00')
+                      const daysAgo = Math.round((todayDate.getTime() - dueDate.getTime()) / 86400000)
                       return (
                         <div
-                          key={task.id}
-                          className={clsx('flex items-center gap-3 px-4 py-3.5', !isLast && 'border-b border-gray-100')}
+                          key={w.id}
+                          className={clsx(
+                            'flex items-center gap-3 px-4 py-3',
+                            !isLast && 'border-b border-orange-100',
+                          )}
                         >
-                          <div className="w-7 h-7 rounded-full border-2 border-gray-200 flex items-center justify-center flex-shrink-0">
-                            <CheckCircle2 size={14} className="text-gray-200" />
+                          <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
+                            <Dumbbell size={14} className="text-orange-500" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[15px] font-semibold text-gray-800 leading-tight">{task.title}</p>
-                            {dueFmt && (
-                              <p className={clsx('text-xs font-medium mt-0.5', overdue ? 'text-orange-500' : 'text-gray-400')}>
-                                {overdue ? `Past: ${dueFmt}` : `Due: ${dueFmt}`}
-                              </p>
-                            )}
+                            <p className="text-[14px] font-semibold text-gray-800 leading-tight truncate">
+                              {w.workout.name}
+                            </p>
+                            <p className="text-xs text-orange-500 font-medium mt-0.5">
+                              {daysAgo === 1 ? 'Yesterday' : `${daysAgo} days ago`}
+                            </p>
                           </div>
-                          <ChevronRight size={18} className="text-gray-300 flex-shrink-0" />
+                          {unlocked.includes('workouts') && (
+                            <button
+                              onClick={() => goTo('workouts')}
+                              className="text-xs font-bold text-orange-500 bg-orange-100 hover:bg-orange-200 px-3 py-1.5 rounded-xl transition-colors flex-shrink-0"
+                            >
+                              Log it
+                            </button>
+                          )}
                         </div>
                       )
                     })}
@@ -2362,15 +2621,47 @@ export default function ClientPortal() {
               </div>
             )}
 
-            {/* Step tracker */}
-            <div className="mx-4 mb-3">
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-5">
-                <h3 className="text-[16px] font-bold text-gray-900">Step tracker</h3>
-                <p className="text-sm text-gray-400 mt-1">Connect your device to track daily steps.</p>
+            {/* ── Tasks due today / overdue ── */}
+            {dueTodayTasks.length > 0 && (
+              <div className="mx-4 mb-3">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                    <h3 className="text-[15px] font-bold text-gray-900">Due today</h3>
+                    <span className="text-xs font-bold text-gray-400">{dueTodayTasks.length} task{dueTodayTasks.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div>
+                    {dueTodayTasks.map((task, i) => {
+                      const isLast  = i === dueTodayTasks.length - 1
+                      const dueObj  = new Date(task.due_date! + 'T00:00:00'); dueObj.setHours(0,0,0,0)
+                      const overdue = dueObj < todayDate
+                      return (
+                        <div
+                          key={task.id}
+                          className={clsx('flex items-center gap-3 px-4 py-3.5', !isLast && 'border-b border-gray-100')}
+                        >
+                          <div className={clsx(
+                            'w-7 h-7 rounded-full border-2 flex items-center justify-center flex-shrink-0',
+                            overdue ? 'border-orange-300' : 'border-gray-200',
+                          )}>
+                            <CheckCircle2 size={14} className={overdue ? 'text-orange-300' : 'text-gray-200'} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[14px] font-semibold text-gray-800 leading-tight">{task.title}</p>
+                            {overdue && (
+                              <p className="text-xs font-medium text-orange-500 mt-0.5">
+                                Overdue · {dueObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
-            <p className="text-center text-[11px] text-gray-300 pt-4 pb-2 uppercase tracking-[0.2em] font-medium">
+            <p className="text-center text-[11px] text-gray-300 pt-6 pb-2 uppercase tracking-[0.2em] font-medium">
               Powered by FitProto
             </p>
           </div>
