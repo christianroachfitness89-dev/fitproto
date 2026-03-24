@@ -1126,22 +1126,193 @@ function HistoryView({ clientId }: { clientId: string }) {
   )
 }
 
+// ─── Metric chart ──────────────────────────────────────────────
+type MetricKey = 'weight_kg' | 'body_fat_pct' | 'energy_level' | 'sleep_hours'
+
+const METRIC_TABS: {
+  key: MetricKey; label: string; stroke: string; unit: string
+  format: (v: number) => string
+}[] = [
+  { key: 'weight_kg',    label: 'Weight',   stroke: '#10b981', unit: 'kg',  format: v => `${v} kg`  },
+  { key: 'body_fat_pct', label: 'Body Fat', stroke: '#14b8a6', unit: '%',   format: v => `${v}%`    },
+  { key: 'energy_level', label: 'Energy',   stroke: '#f59e0b', unit: '/10', format: v => `${v}/10`  },
+  { key: 'sleep_hours',  label: 'Sleep',    stroke: '#8b5cf6', unit: 'h',   format: v => `${v}h`    },
+]
+
+const SVG_W = 320, SVG_H = 160
+const PAD   = { top: 20, right: 16, bottom: 28, left: 42 }
+const CW    = SVG_W - PAD.left - PAD.right
+const CH    = SVG_H - PAD.top  - PAD.bottom
+
+function smoothLinePath(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return ''
+  let d = `M ${pts[0].x} ${pts[0].y}`
+  for (let i = 1; i < pts.length; i++) {
+    const cp = (pts[i].x - pts[i - 1].x) / 3
+    d += ` C ${pts[i-1].x + cp} ${pts[i-1].y} ${pts[i].x - cp} ${pts[i].y} ${pts[i].x} ${pts[i].y}`
+  }
+  return d
+}
+
+function MetricChart({ entries, metric }: { entries: PortalMetricEntry[]; metric: MetricKey }) {
+  const [hovIdx, setHovIdx] = useState<number | null>(null)
+
+  const tab = METRIC_TABS.find(t => t.key === metric)!
+
+  const pts = [...entries]
+    .filter(e => e[metric] != null)
+    .sort((a, b) => a.checked_in_at.localeCompare(b.checked_in_at))
+    .map(e => ({ val: e[metric] as number, date: e.checked_in_at }))
+
+  if (pts.length === 0) return null
+
+  if (pts.length === 1) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-4xl font-bold text-white">{tab.format(pts[0].val)}</p>
+        <p className="text-white/30 text-xs mt-2 flex items-center justify-center gap-1">
+          <Calendar size={10} />
+          {new Date(pts[0].date + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+        </p>
+        <p className="text-white/20 text-xs mt-4">Log more check-ins to see your trend</p>
+      </div>
+    )
+  }
+
+  const minVal = Math.min(...pts.map(p => p.val))
+  const maxVal = Math.max(...pts.map(p => p.val))
+  const range  = maxVal - minVal || 1
+
+  const toX = (i: number) => PAD.left + (i / (pts.length - 1)) * CW
+  const toY = (v: number) => PAD.top + CH - ((v - minVal) / range) * CH
+
+  const svgPts = pts.map((p, i) => ({ ...p, x: toX(i), y: toY(p.val) }))
+  const line   = smoothLinePath(svgPts)
+  const area   = line + ` L ${svgPts[svgPts.length - 1].x} ${PAD.top + CH} L ${svgPts[0].x} ${PAD.top + CH} Z`
+  const gradId = `mg-${metric}`
+
+  const trend     = pts[pts.length - 1].val - pts[0].val
+  const trendSign = trend > 0 ? '+' : ''
+
+  function fmtDate(d: string) {
+    return new Date(d + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })
+  }
+
+  // Tooltip x clamp so it doesn't overflow SVG edges
+  function tipX(x: number) { return Math.max(PAD.left + 28, Math.min(SVG_W - PAD.right - 28, x)) }
+
+  return (
+    <div className="rounded-2xl bg-white/4 border border-white/8 px-4 pt-4 pb-3">
+      {/* Trend summary */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-white/30 text-[10px]">
+          {fmtDate(pts[0].date)} → {fmtDate(pts[pts.length - 1].date)}
+        </p>
+        <p className={clsx('text-xs font-semibold',
+          trend > 0.05 ? 'text-emerald-400' : trend < -0.05 ? 'text-rose-400' : 'text-white/30')}>
+          {trendSign}{trend.toFixed(1)}{tab.unit}
+        </p>
+      </div>
+
+      {/* SVG */}
+      <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full" style={{ overflow: 'visible' }}>
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor={tab.stroke} stopOpacity="0.35" />
+            <stop offset="100%" stopColor={tab.stroke} stopOpacity="0.03" />
+          </linearGradient>
+        </defs>
+
+        {/* Grid lines */}
+        {[0, 0.5, 1].map(t => {
+          const y = PAD.top + CH * (1 - t)
+          const v = minVal + range * t
+          return (
+            <g key={t}>
+              <line x1={PAD.left} y1={y} x2={PAD.left + CW} y2={y}
+                stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+              <text x={PAD.left - 6} y={y + 3.5} textAnchor="end"
+                fill="rgba(255,255,255,0.22)" fontSize="9">
+                {Number.isInteger(range) ? Math.round(v) : v.toFixed(1)}
+              </text>
+            </g>
+          )
+        })}
+
+        {/* Area fill */}
+        <path d={area} fill={`url(#${gradId})`} />
+
+        {/* Line */}
+        <path d={line} stroke={tab.stroke} strokeWidth="2"
+          fill="none" strokeLinecap="round" strokeLinejoin="round" />
+
+        {/* Points + touch targets */}
+        {svgPts.map((p, i) => (
+          <g key={i}
+            onMouseEnter={() => setHovIdx(i)}
+            onMouseLeave={() => setHovIdx(null)}
+            onClick={() => setHovIdx(hovIdx === i ? null : i)}>
+            {/* large invisible hit area */}
+            <rect x={p.x - 16} y={PAD.top} width={32} height={CH} fill="transparent" />
+            {/* dot */}
+            <circle cx={p.x} cy={p.y} r={hovIdx === i ? 5 : 3.5}
+              fill={hovIdx === i ? tab.stroke : '#1a1a35'}
+              stroke={tab.stroke} strokeWidth="2"
+              style={{ transition: 'r 0.12s' }}
+            />
+            {/* tooltip */}
+            {hovIdx === i && (
+              <g>
+                <rect x={tipX(p.x) - 30} y={p.y - 38} width={60} height={24} rx={7}
+                  fill="rgba(10,10,28,0.95)" stroke={tab.stroke} strokeWidth="1" strokeOpacity="0.5" />
+                <text x={tipX(p.x)} y={p.y - 21} textAnchor="middle"
+                  fill="white" fontSize="11" fontWeight="700">{tab.format(p.val)}</text>
+              </g>
+            )}
+          </g>
+        ))}
+
+        {/* X-axis date labels */}
+        {[0, pts.length - 1].map(i => (
+          <text key={i} x={svgPts[i].x} y={SVG_H - 4} textAnchor="middle"
+            fill="rgba(255,255,255,0.2)" fontSize="9">
+            {fmtDate(pts[i].date)}
+          </text>
+        ))}
+        {pts.length > 3 && (
+          <text x={svgPts[Math.floor(pts.length / 2)].x} y={SVG_H - 4} textAnchor="middle"
+            fill="rgba(255,255,255,0.15)" fontSize="9">
+            {fmtDate(pts[Math.floor(pts.length / 2)].date)}
+          </text>
+        )}
+      </svg>
+    </div>
+  )
+}
+
 // ─── Metrics section view ──────────────────────────────────────
 function MetricsView({ clientId }: { clientId: string }) {
-  const [entries, setEntries] = useState<PortalMetricEntry[]>([])
-  const [loading, setLoading] = useState(true)
+  const [entries, setEntries]   = useState<PortalMetricEntry[]>([])
+  const [loading, setLoading]   = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [selMetric, setSelMetric] = useState<MetricKey>('weight_kg')
 
   function loadEntries() {
     supabase.rpc('get_portal_metrics', { p_client_id: clientId }).then(({ data }) => {
-      setEntries((data as PortalMetricEntry[]) ?? [])
+      const rows = (data as PortalMetricEntry[]) ?? []
+      setEntries(rows)
       setLoading(false)
+      // Default to the first metric that actually has data
+      const first = METRIC_TABS.find(t => rows.some(r => r[t.key] != null))
+      if (first) setSelMetric(first.key)
     })
   }
 
   useEffect(() => { loadEntries() }, [clientId])
 
   const latest = entries[0]
+  // Only show tabs that have at least one data point
+  const availTabs = METRIC_TABS.filter(t => entries.some(e => e[t.key] != null))
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
@@ -1178,6 +1349,33 @@ function MetricsView({ clientId }: { clientId: string }) {
           />
         ) : (
           <>
+            {/* Metric selector + chart */}
+            {availTabs.length > 0 && (
+              <div className="space-y-3">
+                {/* Tab row */}
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                  {availTabs.map(t => {
+                    const active = selMetric === t.key
+                    return (
+                      <button key={t.key} onClick={() => setSelMetric(t.key)}
+                        className={clsx(
+                          'flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border',
+                          active
+                            ? 'text-white border-transparent'
+                            : 'text-white/40 bg-white/5 border-white/8 hover:text-white/60',
+                        )}
+                        style={active ? { background: t.stroke + '33', borderColor: t.stroke + '55', color: t.stroke } : {}}
+                      >
+                        {t.label}
+                      </button>
+                    )
+                  })}
+                </div>
+                {/* Chart */}
+                <MetricChart entries={entries} metric={selMetric} />
+              </div>
+            )}
+
             {/* Latest snapshot */}
             {latest && (
               <div className="rounded-2xl bg-gradient-to-br from-emerald-500/15 to-teal-500/10 border border-emerald-500/20 p-5">
