@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import {
   Dumbbell, CheckCircle2, Clock, Calendar, ChevronDown, ChevronUp,
   Loader2, Target, ClipboardList, ArrowLeft, Lock,
-  BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight,
+  BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight, ChevronLeft,
   X, Home, MoreHorizontal, MessageCircle, Settings, Send,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -38,12 +38,32 @@ interface PortalWorkout {
   }
 }
 
+interface PortalProgramSlot {
+  week_number: number
+  day_number: number
+  workout: {
+    id: string
+    name: string
+    difficulty: string | null
+    duration_minutes: number | null
+  }
+}
+
+interface PortalProgram {
+  id: string
+  name: string
+  duration_weeks: number | null
+  start_date: string | null
+  schedule: PortalProgramSlot[]
+}
+
 interface PortalData {
   name: string
   status: string
   goal: string | null
   workouts: PortalWorkout[]
   portal_sections: string[]
+  program?: PortalProgram | null
 }
 
 interface PortalSet {
@@ -777,6 +797,106 @@ function CheckInForm({ clientId, onClose, onSaved }: {
   )
 }
 
+// ─── Program schedule card ─────────────────────────────────────
+const PORTAL_DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+function calcProgramWeek(startDate: string | null): number {
+  if (!startDate) return 1
+  const start = new Date(startDate + 'T00:00:00')
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const days = Math.floor((today.getTime() - start.getTime()) / 86_400_000)
+  return Math.max(1, Math.floor(days / 7) + 1)
+}
+
+function ProgramScheduleCard({ program }: { program: PortalProgram }) {
+  const totalWeeks = program.duration_weeks ?? 1
+  const defaultWeek = Math.min(calcProgramWeek(program.start_date), totalWeeks)
+  const [week, setWeek] = useState(defaultWeek)
+
+  const byDay = Object.fromEntries(
+    program.schedule
+      .filter(s => s.week_number === week)
+      .map(s => [s.day_number, s.workout])
+  ) as Record<number, PortalProgramSlot['workout']>
+
+  const workoutDays = Object.keys(byDay).length
+
+  return (
+    <div className="rounded-2xl bg-gradient-to-br from-violet-500/12 to-brand-500/8 border border-violet-500/20 overflow-hidden">
+      {/* Header */}
+      <div className="px-4 pt-4 pb-3 border-b border-white/8">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-brand-600 flex items-center justify-center shadow-md shadow-violet-500/30 flex-shrink-0">
+              <Calendar size={15} className="text-white" />
+            </div>
+            <div>
+              <p className="text-white font-bold text-sm leading-tight">{program.name}</p>
+              <p className="text-white/35 text-xs mt-0.5">
+                {workoutDays} session{workoutDays !== 1 ? 's' : ''} this week
+                {totalWeeks > 1 ? ` · ${totalWeeks}-week program` : ''}
+              </p>
+            </div>
+          </div>
+          {/* Week navigator */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button onClick={() => setWeek(w => Math.max(1, w - 1))} disabled={week <= 1}
+              className="w-7 h-7 rounded-lg bg-white/8 border border-white/10 flex items-center justify-center text-white/40 hover:text-white/70 hover:bg-white/15 disabled:opacity-30 transition-all">
+              <ChevronLeft size={13} />
+            </button>
+            <span className="text-white/60 text-xs font-semibold min-w-[52px] text-center">
+              Wk {week}/{totalWeeks}
+            </span>
+            <button onClick={() => setWeek(w => Math.min(totalWeeks, w + 1))} disabled={week >= totalWeeks}
+              className="w-7 h-7 rounded-lg bg-white/8 border border-white/10 flex items-center justify-center text-white/40 hover:text-white/70 hover:bg-white/15 disabled:opacity-30 transition-all">
+              <ChevronRight size={13} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 7-day schedule strip */}
+      <div className="grid grid-cols-7 gap-1 p-3">
+        {PORTAL_DAY_NAMES.map((dayName, idx) => {
+          const dayNum = idx + 1
+          const workout = byDay[dayNum]
+          const isWeekend = dayNum >= 6
+          return (
+            <div key={dayNum} className="flex flex-col items-center gap-1">
+              <p className={clsx(
+                'text-[10px] font-semibold',
+                isWeekend ? 'text-white/25' : 'text-white/40',
+              )}>{dayName}</p>
+              {workout ? (
+                <div className="w-full rounded-xl bg-white/10 border border-violet-400/20 px-1.5 py-2 flex flex-col items-center gap-1 min-h-[52px]">
+                  <div className="w-4 h-4 rounded-md bg-gradient-to-br from-violet-500 to-brand-500 flex items-center justify-center flex-shrink-0">
+                    <Dumbbell size={9} className="text-white" />
+                  </div>
+                  <p className="text-white/80 text-[9px] font-semibold text-center leading-tight line-clamp-2 w-full">
+                    {workout.name}
+                  </p>
+                  {workout.duration_minutes && (
+                    <p className="text-white/30 text-[9px] flex items-center gap-0.5">
+                      <Clock size={8} />{workout.duration_minutes}m
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className={clsx(
+                  'w-full rounded-xl border min-h-[52px] flex items-center justify-center',
+                  isWeekend ? 'bg-white/3 border-white/5' : 'bg-white/5 border-white/8',
+                )}>
+                  <p className="text-white/15 text-[9px]">Rest</p>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─── Workouts section view ─────────────────────────────────────
 function WorkoutsView({ data, clientId, onMarkComplete }: {
   data: PortalData
@@ -810,6 +930,11 @@ function WorkoutsView({ data, clientId, onMarkComplete }: {
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-5 space-y-6 pb-28">
+        {/* Active program schedule */}
+        {data.program && (
+          <ProgramScheduleCard program={data.program} />
+        )}
+
         {assigned.length > 0 && (
           <div>
             <SectionLabel>Assigned</SectionLabel>
@@ -822,7 +947,7 @@ function WorkoutsView({ data, clientId, onMarkComplete }: {
           </div>
         )}
 
-        {assigned.length === 0 && (
+        {assigned.length === 0 && !data.program && (
           <EmptyState
             icon={<Dumbbell size={28} className="text-violet-400/60" />}
             title="All caught up!"
