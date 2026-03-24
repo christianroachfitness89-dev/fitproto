@@ -6,7 +6,7 @@ import {
   Clock, Loader2, X, ChevronDown, Trash2, Send,
   ClipboardList, ChevronLeft, ChevronRight, ClipboardCheck,
   SkipForward, ExternalLink, Copy, History, BarChart2, Utensils, Lock,
-  ChevronUp, Scale, Zap, TrendingUp,
+  ChevronUp, Scale, Zap, TrendingUp, Search, ListChecks,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { supabase } from '@/lib/supabase'
@@ -18,14 +18,14 @@ import {
 } from '@/hooks/useClientWorkouts'
 import { useGetOrCreateConversation } from '@/hooks/useConversations'
 import {
-  useWorkouts, useWorkoutDetail,
+  useWorkouts, useWorkoutDetail, useProgramDetail,
   usePrograms, useClientProgramAssignment, useAssignProgram, useUnassignProgram,
 } from '@/hooks/useWorkouts'
 import { useUnitSystem, weightLabel } from '@/lib/units'
 import { playRestEndChime } from '@/lib/sound'
 import type { DbClient, DbTask, DbClientWorkoutWithWorkout, PortalSection } from '@/lib/database.types'
 
-type Tab = 'overview' | 'workouts' | 'history' | 'nutrition' | 'metrics' | 'notes'
+type Tab = 'overview' | 'plan' | 'workouts' | 'history' | 'nutrition' | 'metrics' | 'notes'
 
 // ─── Types for session history ─────────────────────────────────
 interface CoachHistoryEntry {
@@ -1114,6 +1114,409 @@ function WorkoutCalendar({
   )
 }
 
+// ─── Plan / Calendar tab ──────────────────────────────────────
+type CalEventKind = 'program' | 'workout' | 'task'
+interface CalEvent {
+  kind:    CalEventKind
+  id:      string
+  label:   string
+  status?: string   // workout status or 'done' for tasks
+}
+
+const CAL_DAY_NAMES  = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const CAL_MONTH_NAMES = ['January','February','March','April','May','June',
+                         'July','August','September','October','November','December']
+
+function dateKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+function parseLocalDate(s: string) {
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+function calAddDays(d: Date, n: number) {
+  const r = new Date(d); r.setDate(r.getDate() + n); return r
+}
+
+function buildCalendarWeeks(month: Date) {
+  const year = month.getFullYear()
+  const mon  = month.getMonth()
+  const firstDay = new Date(year, mon, 1)
+  // Week starts Monday: 0=Mon … 6=Sun
+  const startOffset = (firstDay.getDay() + 6) % 7
+  const start = calAddDays(firstDay, -startOffset)
+  const weeks: Date[][] = []
+  for (let w = 0; w < 6; w++) {
+    const week: Date[] = []
+    for (let d = 0; d < 7; d++) week.push(calAddDays(start, w * 7 + d))
+    weeks.push(week)
+  }
+  return weeks
+}
+
+// ── Quick add modal inside Plan tab ──
+function AddToDayModal({
+  date, clientId,
+  onClose,
+}: {
+  date: string
+  clientId: string
+  onClose: () => void
+}) {
+  const [mode, setMode]     = useState<'workout' | 'task'>('workout')
+  const [search, setSearch] = useState('')
+  const [taskTitle, setTaskTitle] = useState('')
+  const { data: workouts = [], isLoading: wLoading } = useWorkouts(search.length >= 2 ? search : undefined)
+  const assignWorkout = useAssignWorkout()
+  const createTask    = useCreateTask()
+
+  const label = new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+
+  async function handleAssignWorkout(workoutId: string) {
+    await assignWorkout.mutateAsync({ client_id: clientId, workout_id: workoutId, due_date: date })
+    onClose()
+  }
+  async function handleAddTask() {
+    if (!taskTitle.trim()) return
+    await createTask.mutateAsync({ title: taskTitle.trim(), client_id: clientId, due_date: date })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col z-10 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div>
+            <p className="text-xs text-gray-400 font-medium">Add to</p>
+            <h2 className="text-base font-bold text-gray-900">{label}</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"><X size={18} /></button>
+        </div>
+
+        {/* Mode toggle */}
+        <div className="flex gap-1 p-3 border-b border-gray-100">
+          {(['workout', 'task'] as const).map(m => (
+            <button key={m} onClick={() => setMode(m)}
+              className={clsx(
+                'flex-1 py-2 rounded-xl text-sm font-semibold transition-all',
+                mode === m ? 'bg-brand-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100',
+              )}>
+              {m === 'workout' ? '🏋️ Workout' : '✅ Task'}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'workout' ? (
+          <>
+            <div className="px-4 py-3 border-b border-gray-100">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search workouts…"
+                  autoFocus
+                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+              </div>
+            </div>
+            <div className="max-h-72 overflow-y-auto p-3 space-y-1">
+              {wLoading ? (
+                <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+              ) : workouts.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">
+                  {search.length >= 2 ? 'No workouts match' : 'Type to search workouts'}
+                </p>
+              ) : workouts.map(w => (
+                <button key={w.id} onClick={() => handleAssignWorkout(w.id)}
+                  disabled={assignWorkout.isPending}
+                  className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors group disabled:opacity-50">
+                  <div className="w-8 h-8 rounded-xl bg-brand-100 flex items-center justify-center flex-shrink-0">
+                    <Dumbbell size={13} className="text-brand-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{w.name}</p>
+                    <p className="text-xs text-gray-400">
+                      {w.difficulty ?? 'Any level'}
+                      {w.duration_minutes ? ` · ${w.duration_minutes}min` : ''}
+                    </p>
+                  </div>
+                  <Plus size={13} className="text-gray-300 group-hover:text-brand-500 flex-shrink-0 transition-colors" />
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="p-4 space-y-3">
+            <input
+              value={taskTitle} onChange={e => setTaskTitle(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleAddTask() }}
+              placeholder="Task title…"
+              autoFocus
+              className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
+            />
+            <button onClick={handleAddTask}
+              disabled={!taskTitle.trim() || createTask.isPending}
+              className="w-full py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+              {createTask.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+              Add Task
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PlanTab({ clientId }: { clientId: string }) {
+  const today = new Date()
+  const [month, setMonth]         = useState(new Date(today.getFullYear(), today.getMonth(), 1))
+  const [selected, setSelected]   = useState<string | null>(dateKey(today))
+  const [addingTo, setAddingTo]   = useState<string | null>(null)
+
+  const { data: assignment } = useClientProgramAssignment(clientId)
+  const { data: program }    = useProgramDetail(assignment?.program_id ?? undefined)
+  const { data: workouts = [] } = useClientWorkouts(clientId)
+  const { data: tasks = [] }    = useTasks(clientId)
+
+  // Build event map
+  const eventMap = useMemo(() => {
+    const map = new Map<string, CalEvent[]>()
+    function push(key: string, ev: CalEvent) {
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(ev)
+    }
+
+    // Program schedule → overlay onto calendar dates
+    if (program && assignment?.start_date) {
+      const start = parseLocalDate(assignment.start_date)
+      for (const slot of program.program_workouts) {
+        const d = calAddDays(start, (slot.week_number - 1) * 7 + (slot.day_number - 1))
+        push(dateKey(d), {
+          kind:  'program',
+          id:    slot.id,
+          label: slot.workout?.name ?? 'Workout',
+        })
+      }
+    }
+
+    // Assigned workouts (by due_date)
+    for (const cw of workouts) {
+      const key = cw.due_date ? cw.due_date.slice(0, 10) : cw.assigned_at?.slice(0, 10)
+      if (key) push(key, { kind: 'workout', id: cw.id, label: cw.workout?.name ?? 'Workout', status: cw.status })
+    }
+
+    // Tasks
+    for (const t of tasks) {
+      if (t.due_date) push(t.due_date.slice(0, 10), { kind: 'task', id: t.id, label: t.title, status: t.completed ? 'done' : 'pending' })
+    }
+
+    return map
+  }, [program, assignment, workouts, tasks])
+
+  const weeks   = buildCalendarWeeks(month)
+  const todayKey = dateKey(today)
+  const selectedEvents = selected ? (eventMap.get(selected) ?? []) : []
+
+  const eventDot: Record<CalEventKind, string> = {
+    program: 'bg-violet-500',
+    workout: 'bg-brand-500',
+    task:    'bg-amber-400',
+  }
+  const eventChip: Record<CalEventKind, string> = {
+    program: 'bg-violet-100 text-violet-700',
+    workout: 'bg-brand-100 text-brand-700',
+    task:    'bg-amber-100 text-amber-700',
+  }
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-5">
+      {addingTo && (
+        <AddToDayModal date={addingTo} clientId={clientId} onClose={() => setAddingTo(null)} />
+      )}
+
+      {/* ── Calendar ── */}
+      <div className="flex-1 min-w-0">
+        {/* Month nav */}
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
+            className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
+            <ChevronLeft size={16} />
+          </button>
+          <h3 className="font-bold text-gray-900 text-base">
+            {CAL_MONTH_NAMES[month.getMonth()]} {month.getFullYear()}
+          </h3>
+          <button onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+            className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+
+        {/* Day headers */}
+        <div className="grid grid-cols-7 mb-1">
+          {CAL_DAY_NAMES.map(d => (
+            <div key={d} className="text-center text-[11px] font-bold text-gray-400 py-1.5">{d}</div>
+          ))}
+        </div>
+
+        {/* Grid */}
+        <div className="border border-gray-100 rounded-2xl overflow-hidden">
+          {weeks.map((week, wi) => (
+            <div key={wi} className={clsx('grid grid-cols-7', wi < 5 && 'border-b border-gray-100')}>
+              {week.map((day, di) => {
+                const key      = dateKey(day)
+                const isToday  = key === todayKey
+                const isSel    = key === selected
+                const inMonth  = day.getMonth() === month.getMonth()
+                const isWeekend = di >= 5
+                const events   = eventMap.get(key) ?? []
+                const MAX_CHIPS = 2
+                const shown    = events.slice(0, MAX_CHIPS)
+                const overflow = events.length - MAX_CHIPS
+
+                return (
+                  <button key={key} onClick={() => setSelected(isSel ? null : key)}
+                    className={clsx(
+                      'relative min-h-[72px] p-1.5 text-left transition-colors',
+                      di < 6 && 'border-r border-gray-100',
+                      isSel    ? 'bg-brand-50'
+                      : isToday ? 'bg-brand-500/5'
+                      : isWeekend ? 'bg-gray-50/50'
+                      : 'bg-white hover:bg-gray-50',
+                    )}>
+                    {/* Date number */}
+                    <span className={clsx(
+                      'inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-bold mb-1',
+                      isToday ? 'bg-brand-600 text-white'
+                      : isSel  ? 'bg-brand-200 text-brand-800'
+                      : inMonth ? (isWeekend ? 'text-gray-400' : 'text-gray-700')
+                      : 'text-gray-300',
+                    )}>
+                      {day.getDate()}
+                    </span>
+
+                    {/* Event chips */}
+                    <div className="space-y-0.5">
+                      {shown.map((ev, i) => (
+                        <div key={i} className={clsx(
+                          'text-[9px] font-semibold px-1.5 py-0.5 rounded-md truncate leading-tight',
+                          ev.status === 'completed' || ev.status === 'done'
+                            ? 'bg-emerald-100 text-emerald-700 line-through opacity-70'
+                            : eventChip[ev.kind],
+                        )}>
+                          {ev.label}
+                        </div>
+                      ))}
+                      {overflow > 0 && (
+                        <p className="text-[9px] text-gray-400 font-medium pl-1">+{overflow} more</p>
+                      )}
+                    </div>
+
+                    {/* Add button on hover */}
+                    <button
+                      onClick={e => { e.stopPropagation(); setAddingTo(key) }}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-md bg-brand-500 text-white opacity-0 hover:opacity-100 group-hover:opacity-100 flex items-center justify-center transition-opacity shadow-sm"
+                      style={{ opacity: isSel ? 1 : undefined }}
+                      title={`Add to ${key}`}>
+                      <Plus size={11} />
+                    </button>
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Today shortcut */}
+        {dateKey(new Date(month.getFullYear(), month.getMonth(), 1)) !== dateKey(new Date(today.getFullYear(), today.getMonth(), 1)) && (
+          <button onClick={() => { setMonth(new Date(today.getFullYear(), today.getMonth(), 1)); setSelected(todayKey) }}
+            className="mt-3 text-xs text-brand-600 font-semibold hover:underline">
+            ← Back to today
+          </button>
+        )}
+      </div>
+
+      {/* ── Day detail panel ── */}
+      <div className="lg:w-72 xl:w-80 flex-shrink-0">
+        {selected ? (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+            {/* Panel header */}
+            <div className="px-4 py-3.5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Selected</p>
+                <p className="font-bold text-gray-900 text-sm mt-0.5">
+                  {parseLocalDate(selected).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </p>
+              </div>
+              <button onClick={() => setAddingTo(selected)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 text-white text-xs font-semibold rounded-xl hover:bg-brand-700 transition-colors">
+                <Plus size={12} /> Add
+              </button>
+            </div>
+
+            {/* Events list */}
+            <div className="p-3 space-y-2 max-h-96 overflow-y-auto">
+              {selectedEvents.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-gray-400 mb-3">Nothing planned yet</p>
+                  <button onClick={() => setAddingTo(selected)}
+                    className="text-xs text-brand-600 font-semibold hover:underline">
+                    + Add something
+                  </button>
+                </div>
+              ) : (
+                selectedEvents.map((ev, i) => (
+                  <div key={i} className={clsx(
+                    'flex items-start gap-2.5 px-3 py-2.5 rounded-xl',
+                    ev.status === 'completed' || ev.status === 'done' ? 'bg-emerald-50' : 'bg-gray-50',
+                  )}>
+                    <div className={clsx('w-2 h-2 rounded-full mt-1.5 flex-shrink-0', eventDot[ev.kind])} />
+                    <div className="flex-1 min-w-0">
+                      <p className={clsx(
+                        'text-xs font-semibold text-gray-800 leading-tight',
+                        (ev.status === 'completed' || ev.status === 'done') && 'line-through text-gray-400',
+                      )}>{ev.label}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5 capitalize">
+                        {ev.kind === 'program' ? 'Program session'
+                         : ev.kind === 'workout' ? (ev.status ?? 'assigned')
+                         : (ev.status === 'done' ? 'Completed' : 'Task')}
+                      </p>
+                    </div>
+                    {(ev.status === 'completed' || ev.status === 'done') && (
+                      <CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6 text-center">
+            <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <Calendar size={18} className="text-brand-400" />
+            </div>
+            <p className="text-sm font-semibold text-gray-600 mb-1">Select a day</p>
+            <p className="text-xs text-gray-400">Click any date to view or add workouts and tasks</p>
+          </div>
+        )}
+
+        {/* Legend */}
+        <div className="mt-4 p-3 bg-gray-50 rounded-xl space-y-2">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Legend</p>
+          {([
+            { kind: 'program', label: 'Program session' },
+            { kind: 'workout', label: 'Assigned workout' },
+            { kind: 'task',    label: 'Task' },
+          ] as const).map(({ kind, label }) => (
+            <div key={kind} className="flex items-center gap-2">
+              <div className={clsx('w-2.5 h-2.5 rounded-full flex-shrink-0', eventDot[kind])} />
+              <span className="text-xs text-gray-500">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Workouts tab ─────────────────────────────────────────────
 type WorkoutsView = 'list' | 'schedule'
 
@@ -1506,6 +1909,7 @@ export default function ClientDetail() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'overview',  label: 'Overview' },
+    { key: 'plan',      label: 'Plan' },
     { key: 'workouts',  label: 'Workouts' },
     { key: 'history',   label: 'History' },
     { key: 'nutrition', label: 'Nutrition' },
@@ -1731,6 +2135,7 @@ export default function ClientDetail() {
             </div>
           )}
 
+          {activeTab === 'plan'      && <PlanTab clientId={client.id} />}
           {activeTab === 'workouts'  && <WorkoutsTab clientId={client.id} />}
           {activeTab === 'history'   && <HistoryTab clientId={client.id} />}
           {activeTab === 'nutrition' && <ComingSoon label="Nutrition plans" />}
