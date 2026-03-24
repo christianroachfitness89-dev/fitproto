@@ -1584,6 +1584,19 @@ export default function ClientPortal() {
     })
   }, [clientId])
 
+  // Background poll — picks up newly assigned workouts without a page refresh
+  useEffect(() => {
+    if (!clientId) return
+    let alive = true
+    const id = setInterval(async () => {
+      const { data: result } = await supabase.rpc('get_portal_data', { p_client_id: clientId })
+      if (alive && result) setData(result as PortalData)
+      const { data: taskData } = await supabase.rpc('get_portal_tasks', { p_client_id: clientId })
+      if (alive && taskData) setTasks(taskData as PortalTask[])
+    }, 30_000)
+    return () => { alive = false; clearInterval(id) }
+  }, [clientId])
+
   function markComplete(clientWorkoutId: string) {
     setData(prev => prev ? {
       ...prev,
