@@ -1,31 +1,14 @@
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
-  Users,
-  BookOpen,
-  MessageSquare,
-  Zap,
-  PlayCircle,
-  Users2,
-  CreditCard,
-  ChevronDown,
-  Dumbbell,
-  LayoutDashboard,
-  CheckSquare,
-  ClipboardList,
-  Utensils,
-  BarChart3,
-  HelpCircle,
-  ShoppingBag,
-  Gift,
-  UserCog,
-  X,
-  Menu,
-  LogOut,
-  Settings,
-  Loader2,
-  CheckCircle2,
+  Users, BookOpen, MessageSquare,
+  Zap, PlayCircle, Users2, CreditCard,
+  ChevronDown, Dumbbell, LayoutDashboard,
+  CheckSquare, ClipboardList, Utensils, BarChart3,
+  HelpCircle, ShoppingBag, Gift, UserCog,
+  X, Menu, LogOut, Settings, Loader2, CheckCircle2,
 } from 'lucide-react'
+import type React from 'react'
 import clsx from 'clsx'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
@@ -127,11 +110,22 @@ const libraryItems: LibraryItem[] = [
   { label: 'Exercises', href: '/library/exercises', icon: <Dumbbell size={14} /> },
   { label: 'Workouts', href: '/library/workouts', icon: <ClipboardList size={14} /> },
   { label: 'Programs', href: '/library/programs', icon: <BarChart3 size={14} /> },
-  { label: 'Tasks', href: '/library/tasks', icon: <CheckSquare size={14} /> },
-  { label: 'Forms & Questionnaires', href: '/library/forms', icon: <BookOpen size={14} /> },
-  { label: 'Meal Plan Templates', href: '/library/meals', icon: <Utensils size={14} /> },
-  { label: 'Metric Groups', href: '/library/metrics', icon: <BarChart3 size={14} /> },
 ]
+
+const libraryPlaceholders: LibraryItem[] = [
+  { label: 'Tasks', href: '', icon: <CheckSquare size={14} /> },
+  { label: 'Forms & Questionnaires', href: '', icon: <BookOpen size={14} /> },
+  { label: 'Meal Plan Templates', href: '', icon: <Utensils size={14} /> },
+  { label: 'Metric Groups', href: '', icon: <BarChart3 size={14} /> },
+]
+
+function SoonBadge() {
+  return (
+    <span className="text-[9px] font-bold uppercase tracking-wide text-gray-600 bg-sidebar-hover border border-gray-700/40 px-1.5 py-0.5 rounded-md leading-none">
+      Soon
+    </span>
+  )
+}
 
 interface SidebarProps {
   mobile?: boolean
@@ -237,6 +231,14 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
                   {item.label}
                 </NavLink>
               ))}
+              {libraryPlaceholders.map((item) => (
+                <div key={item.label}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-gray-700 cursor-default select-none">
+                  {item.icon}
+                  <span className="flex-1">{item.label}</span>
+                  <SoonBadge />
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -256,90 +258,24 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
           )}
         </NavLink>
 
-        <NavLink to="/automation" className={navItemClass}>
-          {({ isActive }) => (
-            <>
-              <Zap size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
-              Automation
-              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
-            </>
-          )}
-        </NavLink>
-
-        <NavLink to="/on-demand" className={navItemClass}>
-          {({ isActive }) => (
-            <>
-              <PlayCircle size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
-              On-demand
-              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
-            </>
-          )}
-        </NavLink>
-
-        <NavLink to="/community" className={navItemClass}>
-          {({ isActive }) => (
-            <>
-              <Users2 size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
-              Community Forums
-              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
-            </>
-          )}
-        </NavLink>
-
-        <NavLink to="/payments" className={navItemClass}>
-          {({ isActive }) => (
-            <>
-              <CreditCard size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
-              Payment & Packages
-              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
-            </>
-          )}
-        </NavLink>
-
-        <div className="pt-3 pb-1">
-          <div className="h-px bg-sidebar-border mx-1" />
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-600 px-3 mt-3 mb-1">More</p>
-        </div>
-
-        <NavLink to="/quick-start" className={navItemClass}>
-          {({ isActive }) => (
-            <>
-              <HelpCircle size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
-              Quick Start Guide
-              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
-            </>
-          )}
-        </NavLink>
-
-        <NavLink to="/marketplace" className={navItemClass}>
-          {({ isActive }) => (
-            <>
-              <ShoppingBag size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
-              Marketplace
-              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
-            </>
-          )}
-        </NavLink>
-
-        <NavLink to="/referral" className={navItemClass}>
-          {({ isActive }) => (
-            <>
-              <Gift size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
-              Referral Program
-              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
-            </>
-          )}
-        </NavLink>
-
-        <NavLink to="/teammates" className={navItemClass}>
-          {({ isActive }) => (
-            <>
-              <UserCog size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
-              Teammates
-              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
-            </>
-          )}
-        </NavLink>
+        {/* ── Coming soon ─────────────────────────────── */}
+        {([
+          { icon: <Zap     size={17} />, label: 'Automation'         },
+          { icon: <PlayCircle size={17} />, label: 'On-demand'       },
+          { icon: <Users2  size={17} />, label: 'Community Forums'   },
+          { icon: <CreditCard size={17} />, label: 'Payment & Packages' },
+          { icon: <UserCog size={17} />, label: 'Teammates'          },
+          { icon: <ShoppingBag size={17} />, label: 'Marketplace'    },
+          { icon: <Gift    size={17} />, label: 'Referral Program'   },
+          { icon: <HelpCircle size={17} />, label: 'Quick Start Guide' },
+        ] as { icon: React.ReactNode; label: string }[]).map(item => (
+          <div key={item.label}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 cursor-default select-none">
+            <span className="text-gray-700">{item.icon}</span>
+            <span className="flex-1">{item.label}</span>
+            <SoonBadge />
+          </div>
+        ))}
       </nav>
 
       {/* Coach profile */}

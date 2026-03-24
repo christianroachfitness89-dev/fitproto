@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Bell, CheckSquare, Sparkles } from 'lucide-react'
+import { Search, Bell, CheckSquare } from 'lucide-react'
 import { MobileMenuButton } from './Sidebar'
 import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifications'
 import clsx from 'clsx'
@@ -36,11 +36,6 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
       <div className="flex items-center gap-1.5 ml-auto">
         <button className="p-2 rounded-lg text-gray-400 hover:bg-white hover:text-gray-600 transition-all hover:shadow-sm">
           <CheckSquare size={18} />
-        </button>
-
-        <button className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 text-white text-xs font-semibold rounded-lg transition-all shadow-md shadow-brand-500/25">
-          <Sparkles size={13} />
-          Upgrade
         </button>
 
         {/* Notifications */}
