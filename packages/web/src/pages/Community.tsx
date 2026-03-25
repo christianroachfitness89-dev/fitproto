@@ -45,6 +45,8 @@ interface CommunityModule {
   access_type: 'all' | 'enrolled'
   auto_enroll_on_join: boolean
   created_at: string
+  community_id: string | null
+  community?: { id: string; name: string; emoji: string } | null
 }
 
 interface ClientRow {
@@ -1014,9 +1016,113 @@ function ClientCoursesModal({ client, modules, enrollments, onClose, onSaved }: 
   )
 }
 
+// ─── Assign Courses Modal ───────────────────────────────────────
+
+function AssignCoursesModal({ orgId, communityId, communityName, onClose, onAssigned }: {
+  orgId: string
+  communityId: string
+  communityName: string
+  onClose: () => void
+  onAssigned: () => void
+}) {
+  const [modules, setModules] = useState<CommunityModule[]>([])
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    supabase
+      .from('community_modules')
+      .select('id,title,description,cover_url,position,published,access_type,auto_enroll_on_join,created_at,community_id')
+      .eq('org_id', orgId)
+      .is('community_id', null)
+      .order('position', { ascending: true })
+      .then(({ data }) => { setModules((data ?? []) as CommunityModule[]); setLoading(false) })
+  }, [orgId])
+
+  async function handleAssign() {
+    if (selected.size === 0) return
+    setSaving(true)
+    await Promise.all(
+      [...selected].map(id =>
+        supabase.from('community_modules').update({ community_id: communityId }).eq('id', id)
+      )
+    )
+    setSaving(false)
+    onAssigned()
+  }
+
+  const filtered = modules.filter(m => m.title.toLowerCase().includes(search.toLowerCase()))
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between mb-1">
+          <p className="font-bold text-gray-800">Assign Courses</p>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
+        </div>
+        <p className="text-xs text-gray-400 mb-4">Move General courses into <span className="font-semibold text-brand-600">{communityName}</span>. They'll only be visible to that community.</p>
+
+        <div className="relative mb-3">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search courses…"
+            className="w-full pl-8 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400" />
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-1.5 min-h-0">
+          {loading ? (
+            <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-brand-500" /></div>
+          ) : filtered.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-8">
+              {modules.length === 0 ? 'All courses are already assigned to communities.' : 'No courses match your search.'}
+            </p>
+          ) : filtered.map(m => (
+            <button key={m.id}
+              onClick={() => setSelected(prev => { const n = new Set(prev); n.has(m.id) ? n.delete(m.id) : n.add(m.id); return n })}
+              className={clsx('w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left',
+                selected.has(m.id) ? 'border-brand-400 bg-brand-50' : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50')}>
+              <div className={clsx('w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors',
+                selected.has(m.id) ? 'bg-brand-500 border-brand-500' : 'border-gray-300')}>
+                {selected.has(m.id) && <Check size={11} className="text-white" />}
+              </div>
+              {m.cover_url ? (
+                <img src={m.cover_url} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+                  <BookOpen size={14} className="text-white" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800 truncate">{m.title}</p>
+                {m.description && <p className="text-xs text-gray-400 truncate">{m.description}</p>}
+              </div>
+              <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0',
+                m.published ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500')}>
+                {m.published ? 'Live' : 'Draft'}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
+          <span className="text-xs text-gray-400">{selected.size} selected</span>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+            <button onClick={handleAssign} disabled={selected.size === 0 || saving}
+              className="px-5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-40 flex items-center gap-2 transition-colors">
+              {saving && <Loader2 size={14} className="animate-spin" />} Assign {selected.size > 0 ? `(${selected.size})` : ''}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Courses Tab ────────────────────────────────────────────────
 
-function CoursesTab({ orgId, communityId }: { orgId: string; communityId: string | null }) {
+function CoursesTab({ orgId, communityId, communityName }: { orgId: string; communityId: string | null; communityName?: string }) {
   const [modules, setModules]       = useState<CommunityModule[]>([])
   const [lessons, setLessons]       = useState<Record<string, CommunityLesson[]>>({})
   const [expanded, setExpanded]     = useState<Set<string>>(new Set())
@@ -1029,6 +1135,8 @@ function CoursesTab({ orgId, communityId }: { orgId: string; communityId: string
   const [coverUploading, setCoverUploading]   = useState(false)
   // Access modal
   const [accessModal, setAccessModal]         = useState<CommunityModule | null>(null)
+  // Assign courses modal
+  const [showAssignModal, setShowAssignModal] = useState(false)
   // Drag-to-reorder modules
   const [dragModIdx, setDragModIdx]           = useState<number | null>(null)
   // Drag-to-reorder lessons
@@ -1050,16 +1158,23 @@ function CoursesTab({ orgId, communityId }: { orgId: string; communityId: string
     setLoading(true)
     let q = supabase
       .from('community_modules')
-      .select('*')
+      .select('*, community:communities(id,name,emoji)')
       .eq('org_id', orgId)
       .order('position', { ascending: true })
       .order('created_at', { ascending: true })
     if (communityId) {
-      q = q.or(`community_id.eq.${communityId},community_id.is.null`) as typeof q
+      // Community view: show only this community's modules
+      q = q.eq('community_id', communityId) as typeof q
     }
+    // General view: show all modules (including community-assigned ones, with badge)
     const { data } = await q
-    setModules(data ?? [])
+    setModules((data ?? []) as CommunityModule[])
     setLoading(false)
+  }
+
+  async function removeFromCommunity(moduleId: string) {
+    await supabase.from('community_modules').update({ community_id: null }).eq('id', moduleId)
+    setModules(prev => prev.filter(m => m.id !== moduleId))
   }
 
   async function fetchLessons(moduleId: string) {
@@ -1220,14 +1335,22 @@ function CoursesTab({ orgId, communityId }: { orgId: string; communityId: string
   return (
     <div className="space-y-4">
       {/* Header bar */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">Organise your content into modules and lessons.</p>
-        <button
-          onClick={() => setShowModuleForm(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors"
-        >
-          <Plus size={16} /> New Module
-        </button>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-gray-500">
+          {communityId ? `Courses assigned to this community.` : 'All courses — build here and assign to communities.'}
+        </p>
+        <div className="flex items-center gap-2">
+          {communityId && (
+            <button onClick={() => setShowAssignModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-brand-300 bg-brand-50 hover:bg-brand-100 text-brand-700 text-sm font-semibold transition-colors">
+              <Plus size={15} /> Assign Courses
+            </button>
+          )}
+          <button onClick={() => setShowModuleForm(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors">
+            <Plus size={16} /> New Course
+          </button>
+        </div>
       </div>
 
       {/* New module form */}
@@ -1304,6 +1427,9 @@ function CoursesTab({ orgId, communityId }: { orgId: string; communityId: string
             onLessonPublish={toggleLessonPublish}
             onLessonDelete={deleteLesson}
             onManageAccess={() => setAccessModal(mod)}
+            // Community assignment
+            communityBadge={!communityId && mod.community ? `${mod.community.emoji} ${mod.community.name}` : undefined}
+            onRemoveFromCommunity={communityId && mod.community_id ? () => removeFromCommunity(mod.id) : undefined}
             // Module drag
             modIdx={modIdx}
             isDraggingMod={dragModIdx === modIdx}
@@ -1329,6 +1455,17 @@ function CoursesTab({ orgId, communityId }: { orgId: string; communityId: string
             setModules(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m))
             setAccessModal(null)
           }}
+        />
+      )}
+
+      {/* Assign Courses Modal */}
+      {showAssignModal && communityId && (
+        <AssignCoursesModal
+          orgId={orgId}
+          communityId={communityId}
+          communityName={communityName ?? 'this community'}
+          onClose={() => setShowAssignModal(false)}
+          onAssigned={() => { setShowAssignModal(false); fetchModules() }}
         />
       )}
 
@@ -1496,6 +1633,7 @@ function CoursesTab({ orgId, communityId }: { orgId: string; communityId: string
 
 function ModuleCard({
   mod, lessons, expanded, onToggle, onPublish, onDelete, onAddLesson, onLessonPublish, onLessonDelete, onManageAccess,
+  communityBadge, onRemoveFromCommunity,
   modIdx, isDraggingMod, onModDragStart, onModDragOver, onModDragEnd,
   dragLsnIdx, onLsnDragStart, onLsnDragOver, onLsnDragEnd,
 }: {
@@ -1509,6 +1647,8 @@ function ModuleCard({
   onLessonPublish: (l: CommunityLesson) => void
   onLessonDelete:  (l: CommunityLesson) => void
   onManageAccess: () => void
+  communityBadge?: string
+  onRemoveFromCommunity?: () => void
   // module drag
   modIdx: number
   isDraggingMod: boolean
@@ -1523,6 +1663,7 @@ function ModuleCard({
 }) {
   const [pendingDeleteMod, setPendingDeleteMod] = useState(false)
   const [pendingDeleteLsn, setPendingDeleteLsn] = useState<string | null>(null)
+  const [pendingRemove, setPendingRemove] = useState(false)
 
   return (
     <div
@@ -1550,7 +1691,14 @@ function ModuleCard({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-800 truncate">{mod.title}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-gray-800 truncate">{mod.title}</p>
+              {communityBadge && (
+                <span className="text-[10px] font-semibold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full flex-shrink-0">
+                  {communityBadge}
+                </span>
+              )}
+            </div>
             {mod.description && <p className="text-xs text-gray-400 truncate mt-0.5">{mod.description}</p>}
           </div>
           {expanded ? <ChevronDown size={16} className="text-gray-400 flex-shrink-0" /> : <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />}
@@ -1571,6 +1719,24 @@ function ModuleCard({
               mod.published ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-gray-100 text-gray-500 hover:bg-gray-200')}>
             {mod.published ? <><Globe size={12} /> Live</> : <><Lock size={12} /> Draft</>}
           </button>
+
+          {/* Remove from community */}
+          {onRemoveFromCommunity && (
+            pendingRemove ? (
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-amber-600 font-semibold">Move to General?</span>
+                <button onClick={() => { onRemoveFromCommunity(); setPendingRemove(false) }}
+                  className="px-2 py-1 rounded-lg bg-amber-500 text-white text-[10px] font-semibold hover:bg-amber-600">Yes</button>
+                <button onClick={() => setPendingRemove(false)}
+                  className="px-2 py-1 rounded-lg border border-gray-200 text-[10px] text-gray-600 hover:bg-gray-50">No</button>
+              </div>
+            ) : (
+              <button onClick={() => setPendingRemove(true)} title="Remove from community"
+                className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors">
+                <X size={14} />
+              </button>
+            )
+          )}
 
           {/* Module delete with confirmation */}
           {pendingDeleteMod ? (
@@ -2197,7 +2363,7 @@ export default function Community() {
       </div>
 
       {tab === 'feed'    && <FeedTab    orgId={profile.org_id} communityId={communityId} />}
-      {tab === 'courses' && <CoursesTab orgId={profile.org_id} communityId={communityId} />}
+      {tab === 'courses' && <CoursesTab orgId={profile.org_id} communityId={communityId} communityName={activeCommunity?.name} />}
       {tab === 'members' && <MembersTab orgId={profile.org_id} communityId={communityId} />}
       {tab === 'preview' && <PreviewTab orgId={profile.org_id} communityId={communityId} />}
 
