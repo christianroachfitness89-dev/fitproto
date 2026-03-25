@@ -339,7 +339,7 @@ function PortalLogOverlay({ cw, clientId, onClose, onDone }: {
     setTimeout(() => { onDone(cw.id); onClose() }, 1000)
   }
 
-  const inp = 'w-full px-2 py-2 text-[13px] text-center bg-[#1e1e3a] border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 transition-all'
+  const inp = 'w-full px-2 py-2 text-[13px] text-center bg-[#1e1e3a] border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 transition-all [color-scheme:dark]'
 
   // Count total and done sets for progress
   const totalSets = (detail?.exercises ?? []).reduce((n, ex) => n + (ex.sets?.length ?? 0), 0)
@@ -364,7 +364,7 @@ function PortalLogOverlay({ cw, clientId, onClose, onDone }: {
           </p>
         </div>
         <input type="date" value={completedAt} onChange={e => setCompletedAt(e.target.value)}
-          className="px-3 py-2 text-[11px] bg-white/8 border border-white/12 rounded-2xl text-white/80 focus:outline-none focus:border-brand-400" />
+          className="px-3 py-2 text-[11px] bg-[#1e1e3a] border border-white/15 rounded-2xl text-white/80 focus:outline-none focus:border-brand-400 [color-scheme:dark]" />
       </div>
 
       {/* Progress bar */}
@@ -513,7 +513,7 @@ function PortalLogOverlay({ cw, clientId, onClose, onDone }: {
           value={notes} onChange={e => setNotes(e.target.value)}
           placeholder="Session notes (optional)..."
           rows={2}
-          className="w-full px-3.5 py-2.5 text-sm bg-white/6 border border-white/10 rounded-2xl text-white placeholder-white/25 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/15 transition-all resize-none leading-relaxed"
+          className="w-full px-3.5 py-2.5 text-sm bg-[#1a1a35] border border-white/12 rounded-2xl text-white/90 placeholder-white/35 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 transition-all resize-none leading-relaxed"
         />
         <button
           onClick={submit}
@@ -718,7 +718,7 @@ function CheckInForm({ clientId, onClose, onSaved }: {
                 type="number" inputMode="decimal" step="0.1" min="0" max="500"
                 value={weight} onChange={e => setWeight(e.target.value)}
                 placeholder="0.0"
-                className="w-full bg-transparent text-white text-2xl font-bold placeholder-white/15 outline-none"
+                className="w-full bg-transparent text-white text-2xl font-bold placeholder-white/30 outline-none [color-scheme:dark]"
               />
               <span className="text-white/30 text-sm">kg</span>
             </div>
@@ -733,7 +733,7 @@ function CheckInForm({ clientId, onClose, onSaved }: {
                 type="number" inputMode="decimal" step="0.1" min="0" max="100"
                 value={bodyFat} onChange={e => setBodyFat(e.target.value)}
                 placeholder="0.0"
-                className="w-full bg-transparent text-white text-2xl font-bold placeholder-white/15 outline-none"
+                className="w-full bg-transparent text-white text-2xl font-bold placeholder-white/30 outline-none [color-scheme:dark]"
               />
               <span className="text-white/30 text-sm">%</span>
             </div>
@@ -751,7 +751,7 @@ function CheckInForm({ clientId, onClose, onSaved }: {
               type="number" inputMode="decimal" step="0.5" min="0" max="24"
               value={sleep} onChange={e => setSleep(e.target.value)}
               placeholder="0"
-              className="w-24 bg-transparent text-white text-2xl font-bold placeholder-white/15 outline-none"
+              className="w-24 bg-transparent text-white text-2xl font-bold placeholder-white/30 outline-none [color-scheme:dark]"
             />
             <span className="text-white/30 text-sm">hours</span>
           </div>
@@ -786,7 +786,7 @@ function CheckInForm({ clientId, onClose, onSaved }: {
             value={notes} onChange={e => setNotes(e.target.value)}
             placeholder="How are you feeling? Any wins or struggles this week?"
             rows={3}
-            className="w-full bg-transparent text-white/80 text-sm placeholder-white/20 outline-none resize-none leading-relaxed"
+            className="w-full bg-white/8 border border-white/10 rounded-xl px-3 py-2 text-white/85 text-sm placeholder-white/30 outline-none focus:ring-1 focus:ring-brand-400/40 resize-none leading-relaxed"
           />
         </div>
 
@@ -1216,11 +1216,11 @@ function CommunityView({ clientId }: { clientId: string }) {
                 onChange={e => setPostContent(e.target.value)}
                 placeholder="What's on your mind?"
                 rows={3}
-                className="w-full resize-none bg-white/8 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/85 placeholder-white/25 focus:outline-none focus:ring-1 focus:ring-white/20"
+                className="w-full resize-none bg-[#1a1a35] border border-white/12 rounded-xl px-4 py-3 text-sm text-white/90 placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-brand-400/50"
               />
               {sections.length > 0 && (
                 <select value={postSection} onChange={e => setPostSection(e.target.value)}
-                  className="w-full bg-white/8 border border-white/10 rounded-xl px-3 py-2 text-sm text-white/70 focus:outline-none focus:ring-1 focus:ring-white/20">
+                  className="w-full bg-[#1a1a35] border border-white/12 rounded-xl px-3 py-2 text-sm text-white/85 focus:outline-none focus:ring-1 focus:ring-brand-400/50 [color-scheme:dark]">
                   <option value="">No section</option>
                   {sections.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}
                 </select>
@@ -1348,7 +1348,7 @@ function CommunityView({ clientId }: { clientId: string }) {
                         onChange={e => setCommentInput(prev => ({ ...prev, [post.id]: e.target.value }))}
                         onKeyDown={e => e.key === 'Enter' && sendComment(post.id)}
                         placeholder="Add a comment…"
-                        className="flex-1 bg-white/8 border border-white/10 rounded-xl px-3 py-2 text-sm text-white/80 placeholder-white/25 focus:outline-none focus:ring-1 focus:ring-brand-400/40"
+                        className="flex-1 bg-[#1a1a35] border border-white/12 rounded-xl px-3 py-2 text-sm text-white/90 placeholder-white/35 focus:outline-none focus:ring-1 focus:ring-brand-400/50"
                       />
                       <button
                         onClick={() => sendComment(post.id)}
@@ -2748,7 +2748,7 @@ function MessagesView({ clientId, onUnreadChange }: {
             onChange={e => setDraft(e.target.value)}
             onKeyDown={handleKey}
             placeholder="Message your coach…"
-            className="flex-1 bg-transparent text-sm text-white placeholder-white/30 outline-none"
+            className="flex-1 bg-transparent text-sm text-white/90 placeholder-white/35 outline-none"
           />
           <button
             onClick={send}
