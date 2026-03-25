@@ -6,6 +6,7 @@ import {
   BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight, ChevronLeft,
   X, Home, MoreHorizontal, MessageCircle, Settings, Send, GripVertical,
   Users2, Heart, BookOpen, Video, Headphones, FileText, AlignLeft, ExternalLink,
+  Download, Eye, EyeOff,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { playRestEndChime } from '@/lib/sound'
@@ -1016,6 +1017,25 @@ function isEmbedUrl(url: string) {
   return /youtube\.com|youtu\.be|vimeo\.com|loom\.com|wistia\.com|dailymotion\.com/.test(url)
 }
 
+/** Returns the best embeddable preview URL for a document */
+function getDocPreviewUrl(url: string): string {
+  // Google Drive share link → embed link
+  const driveFile = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/)
+  if (driveFile) return `https://drive.google.com/file/d/${driveFile[1]}/preview`
+
+  const driveOpen = url.match(/drive\.google\.com\/open\?id=([^&]+)/)
+  if (driveOpen) return `https://drive.google.com/file/d/${driveOpen[1]}/preview`
+
+  // Dropbox → force raw download URL so browser can render it
+  if (url.includes('dropbox.com')) return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '')
+
+  // PDF or Supabase storage → embed directly
+  if (/\.pdf(\?|$)/i.test(url) || url.includes('supabase')) return url
+
+  // Everything else → Google Docs Viewer (handles Word, Excel, PPT, PDF)
+  return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
+}
+
 function CommunityView({ clientId }: { clientId: string }) {
   const [subTab, setSubTab] = useState<'feed' | 'courses'>('feed')
   // Sections
@@ -1037,6 +1057,7 @@ function CommunityView({ clientId }: { clientId: string }) {
   const [modules, setModules]           = useState<CommunityModule[]>([])
   const [coursesLoading, setCoursesLoading] = useState(false)
   const [openLesson, setOpenLesson]     = useState<CommunityLesson | null>(null)
+  const [previewDoc, setPreviewDoc]     = useState(false)
   const [completingLesson, setCompletingLesson] = useState<string | null>(null)
 
   useEffect(() => { loadSections(); loadFeed() }, [clientId])
@@ -1413,7 +1434,7 @@ function CommunityView({ clientId }: { clientId: string }) {
                   {mod.lessons.map((lesson, i) => (
                     <button
                       key={lesson.id}
-                      onClick={() => !lesson.locked && setOpenLesson(lesson)}
+                      onClick={() => { if (!lesson.locked) { setOpenLesson(lesson); setPreviewDoc(false) } }}
                       disabled={lesson.locked}
                       className={clsx(
                         'w-full flex items-center gap-3 px-4 py-3 text-left transition-all',
@@ -1482,19 +1503,62 @@ function CommunityView({ clientId }: { clientId: string }) {
               </div>
             )}
 
-            {/* Document file / PDF link */}
+            {/* Document file — preview + download */}
             {openLesson.content_type === 'document' && openLesson.content_url && (
-              <a href={openLesson.content_url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-3 bg-white/6 border border-white/10 rounded-2xl p-4 mb-5 hover:bg-white/10 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                  <FileText size={18} className="text-blue-400" />
+              <div className="mb-5">
+                {/* Action bar */}
+                <div className="flex items-center gap-2 bg-white/6 border border-white/10 rounded-2xl px-4 py-3 mb-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <FileText size={16} className="text-blue-400" />
+                  </div>
+                  <p className="flex-1 text-white/75 text-sm font-semibold truncate min-w-0">
+                    {openLesson.content_url.split('/').pop()?.split('?')[0] ?? 'Document'}
+                  </p>
+                  {/* Preview toggle */}
+                  <button
+                    onClick={() => setPreviewDoc(v => !v)}
+                    className={clsx(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex-shrink-0',
+                      previewDoc
+                        ? 'bg-brand-500/30 text-brand-300 border border-brand-500/40'
+                        : 'bg-white/10 text-white/60 hover:bg-white/15 border border-white/10'
+                    )}
+                  >
+                    {previewDoc ? <><EyeOff size={13} /> Hide</> : <><Eye size={13} /> Preview</>}
+                  </button>
+                  {/* Download */}
+                  <a
+                    href={openLesson.content_url}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 text-white/60 hover:bg-white/15 border border-white/10 transition-colors flex-shrink-0"
+                  >
+                    <Download size={13} /> Save
+                  </a>
+                  {/* Open externally */}
+                  <a
+                    href={openLesson.content_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 text-white/60 hover:bg-white/15 border border-white/10 transition-colors flex-shrink-0"
+                  >
+                    <ExternalLink size={13} /> Open
+                  </a>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white/80 font-semibold text-sm">Open Document</p>
-                  <p className="text-white/30 text-xs truncate mt-0.5">{openLesson.content_url}</p>
-                </div>
-                <ExternalLink size={14} className="text-white/30 flex-shrink-0" />
-              </a>
+
+                {/* Inline previewer */}
+                {previewDoc && (
+                  <div className="rounded-2xl overflow-hidden border border-white/10 bg-white" style={{ height: '70vh' }}>
+                    <iframe
+                      src={getDocPreviewUrl(openLesson.content_url)}
+                      className="w-full h-full"
+                      title={openLesson.title}
+                      allowFullScreen
+                    />
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Description */}
