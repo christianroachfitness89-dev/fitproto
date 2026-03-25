@@ -49,16 +49,12 @@ DROP POLICY IF EXISTS "communities_coach_all"       ON communities;
 DROP POLICY IF EXISTS "community_members_coach_all" ON community_members;
 
 CREATE POLICY "communities_coach_all" ON communities
-  FOR ALL USING  (org_id IN (SELECT org_id FROM profiles WHERE id = auth.uid()))
-  WITH CHECK     (org_id IN (SELECT org_id FROM profiles WHERE id = auth.uid()));
+  USING  (org_id = get_user_org_id())
+  WITH CHECK (org_id = get_user_org_id());
 
 CREATE POLICY "community_members_coach_all" ON community_members
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM communities c
-      WHERE c.id = community_id
-        AND c.org_id IN (SELECT org_id FROM profiles WHERE id = auth.uid())
-    )
+  USING (
+    EXISTS (SELECT 1 FROM communities c WHERE c.id = community_id AND c.org_id = get_user_org_id())
   );
 
 -- ── 6. Updated get_community_feed_coach (adds p_community_id) ───
