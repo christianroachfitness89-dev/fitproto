@@ -110,6 +110,7 @@ const libraryItems: LibraryItem[] = [
   { label: 'Exercises', href: '/library/exercises', icon: <Dumbbell size={14} /> },
   { label: 'Workouts', href: '/library/workouts', icon: <ClipboardList size={14} /> },
   { label: 'Programs', href: '/library/programs', icon: <BarChart3 size={14} /> },
+  { label: 'Courses', href: '/library/courses', icon: <BookOpen size={14} /> },
 ]
 
 const libraryPlaceholders: LibraryItem[] = [

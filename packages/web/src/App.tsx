@@ -12,6 +12,7 @@ import WorkoutBuilder from './pages/WorkoutBuilder'
 import ProgramBuilder from './pages/ProgramBuilder'
 import Inbox from './pages/Inbox'
 import Community from './pages/Community'
+import CourseBuilder from './pages/CourseBuilder'
 import Placeholder from './pages/Placeholder'
 import ClientPortal from './pages/ClientPortal'
 
@@ -127,6 +128,7 @@ export default function App() {
               <Route path="library/:section" element={<Library />} />
               <Route path="library/workouts/:id" element={<WorkoutBuilder />} />
               <Route path="library/programs/:id" element={<ProgramBuilder />} />
+              <Route path="library/courses" element={<CourseBuilder />} />
               <Route path="library" element={<Navigate to="/library/exercises" replace />} />
               <Route path="inbox" element={<Inbox />} />
               <Route path="automation" element={<Placeholder title="Automation" description="Set up automated workflows, reminders, and check-ins for your clients." />} />

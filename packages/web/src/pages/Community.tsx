@@ -1124,7 +1124,7 @@ function AssignCoursesModal({ orgId, communityId, communityName, onClose, onAssi
 
 // ─── Courses Tab ────────────────────────────────────────────────
 
-function CoursesTab({ orgId, communityId, communityName }: { orgId: string; communityId: string | null; communityName?: string }) {
+export function CoursesTab({ orgId, communityId, communityName }: { orgId: string; communityId: string | null; communityName?: string }) {
   const [modules, setModules]       = useState<CommunityModule[]>([])
   const [lessons, setLessons]       = useState<Record<string, CommunityLesson[]>>({})
   const [expanded, setExpanded]     = useState<Set<string>>(new Set())
@@ -2338,7 +2338,7 @@ function CommunityCoursesView({ orgId, communityId, communityName }: { orgId: st
 
 export default function Community() {
   const { profile } = useAuth()
-  const [tab, setTab]               = useState<'feed' | 'courses' | 'library' | 'members' | 'preview'>('feed')
+  const [tab, setTab]               = useState<'feed' | 'courses' | 'members' | 'preview'>('feed')
   const [communities, setCommunities] = useState<CommunityGroup[]>([])
   const [communityId, setCommunityId] = useState<string | null>(null)
   const [showCreateComm, setShowCreateComm] = useState(false)
@@ -2454,7 +2454,6 @@ export default function Community() {
         {([
           { id: 'feed'    as const, label: 'Feed',    Icon: MessageCircle, show: true },
           { id: 'courses' as const, label: 'Courses', Icon: BookOpen,      show: !!communityId },
-          { id: 'library' as const, label: 'Library', Icon: BookOpen,      show: true },
           { id: 'members' as const, label: 'Members', Icon: Users,         show: true },
           { id: 'preview' as const, label: 'Preview', Icon: Monitor,       show: true },
         ] as const).filter(t => t.show).map(({ id, label, Icon }) => (
@@ -2470,7 +2469,6 @@ export default function Community() {
       {tab === 'courses' && communityId && (
         <CommunityCoursesView orgId={profile.org_id} communityId={communityId} communityName={activeCommunity?.name ?? 'Community'} />
       )}
-      {tab === 'library' && <CoursesTab orgId={profile.org_id} communityId={null} communityName={undefined} />}
       {tab === 'members' && <MembersTab orgId={profile.org_id} communityId={communityId} />}
       {tab === 'preview' && <PreviewTab orgId={profile.org_id} communityId={communityId} />}
 
