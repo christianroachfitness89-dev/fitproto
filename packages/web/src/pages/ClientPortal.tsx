@@ -5,7 +5,7 @@ import {
   Loader2, Target, ClipboardList, ArrowLeft, Lock,
   BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight, ChevronLeft,
   X, Home, MoreHorizontal, MessageCircle, Settings, Send, GripVertical,
-  Users2, Heart, BookOpen, Video, Headphones, FileText, AlignLeft,
+  Users2, Heart, BookOpen, Video, Headphones, FileText, AlignLeft, ExternalLink,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { playRestEndChime } from '@/lib/sound'
@@ -1004,6 +1004,10 @@ function communityTimeAgo(iso: string) {
   return `${Math.floor(diff / 86400)}d ago`
 }
 
+function isEmbedUrl(url: string) {
+  return /youtube\.com|youtu\.be|vimeo\.com|loom\.com|wistia\.com|dailymotion\.com/.test(url)
+}
+
 function CommunityView({ clientId }: { clientId: string }) {
   const [subTab, setSubTab] = useState<'feed' | 'courses'>('feed')
   // Feed state
@@ -1029,7 +1033,6 @@ function CommunityView({ clientId }: { clientId: string }) {
   }
 
   async function loadCourses() {
-    if (modules.length > 0) return
     setCoursesLoading(true)
     const { data } = await supabase.rpc('get_community_modules', { p_client_id: clientId })
     setModules((data as CommunityModule[]) ?? [])
@@ -1344,10 +1347,13 @@ function CommunityView({ clientId }: { clientId: string }) {
           </div>
 
           <div className="px-4 py-5 pb-28 max-w-2xl mx-auto">
-            {/* Video embed */}
+            {/* Video — embed (YouTube/Vimeo/Loom) or direct file */}
             {openLesson.content_type === 'video' && openLesson.content_url && (
               <div className="rounded-2xl overflow-hidden aspect-video bg-black mb-5">
-                <iframe src={openLesson.content_url} className="w-full h-full" allowFullScreen />
+                {isEmbedUrl(openLesson.content_url)
+                  ? <iframe src={openLesson.content_url} className="w-full h-full" allowFullScreen />
+                  : <video src={openLesson.content_url} controls className="w-full h-full" />
+                }
               </div>
             )}
 
@@ -1361,12 +1367,27 @@ function CommunityView({ clientId }: { clientId: string }) {
               </div>
             )}
 
+            {/* Document file / PDF link */}
+            {openLesson.content_type === 'document' && openLesson.content_url && (
+              <a href={openLesson.content_url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-3 bg-white/6 border border-white/10 rounded-2xl p-4 mb-5 hover:bg-white/10 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                  <FileText size={18} className="text-blue-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white/80 font-semibold text-sm">Open Document</p>
+                  <p className="text-white/30 text-xs truncate mt-0.5">{openLesson.content_url}</p>
+                </div>
+                <ExternalLink size={14} className="text-white/30 flex-shrink-0" />
+              </a>
+            )}
+
             {/* Description */}
             {openLesson.description && (
               <p className="text-white/55 text-sm leading-relaxed mb-4">{openLesson.description}</p>
             )}
 
-            {/* Body / document content */}
+            {/* Body / text content */}
             {openLesson.body && (
               <div className="bg-white/6 border border-white/10 rounded-2xl p-5 mb-5">
                 <p className="text-white/75 text-sm leading-relaxed whitespace-pre-wrap">{openLesson.body}</p>

@@ -757,20 +757,35 @@ function CoursesTab({ orgId }: { orgId: string }) {
                 ))}
               </div>
 
-              {(lessonDraft.content_type === 'video' || lessonDraft.content_type === 'audio') && (
-                <input
-                  value={lessonDraft.content_url}
-                  onChange={e => setLessonDraft(d => ({ ...d, content_url: e.target.value }))}
-                  placeholder={lessonDraft.content_type === 'video' ? 'YouTube / Vimeo embed URL…' : 'Audio URL…'}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
-                />
+              {/* URL field — video, audio, and document */}
+              {(lessonDraft.content_type === 'video' || lessonDraft.content_type === 'audio' || lessonDraft.content_type === 'document') && (
+                <div>
+                  <input
+                    value={lessonDraft.content_url}
+                    onChange={e => setLessonDraft(d => ({ ...d, content_url: e.target.value }))}
+                    placeholder={
+                      lessonDraft.content_type === 'video'
+                        ? 'YouTube, Vimeo, Loom, or direct video URL (.mp4)…'
+                        : lessonDraft.content_type === 'document'
+                        ? 'PDF or file URL (Google Drive, Dropbox, direct link)…'
+                        : 'Audio URL (.mp3, .wav, Spotify, etc.)…'
+                    }
+                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+                  />
+                  {lessonDraft.content_type === 'video' && (
+                    <p className="text-[11px] text-gray-400 mt-1.5 ml-1">
+                      Embed links (YouTube/Vimeo) show inline. Direct .mp4 links play natively.
+                    </p>
+                  )}
+                </div>
               )}
 
+              {/* Body text — document and text types */}
               {(lessonDraft.content_type === 'document' || lessonDraft.content_type === 'text') && (
                 <textarea
                   value={lessonDraft.body}
                   onChange={e => setLessonDraft(d => ({ ...d, body: e.target.value }))}
-                  placeholder="Lesson content…"
+                  placeholder={lessonDraft.content_type === 'document' ? 'Additional notes or instructions (optional)…' : 'Lesson content…'}
                   rows={5}
                   className="w-full resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
                 />
