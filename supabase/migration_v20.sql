@@ -53,6 +53,8 @@ CREATE POLICY "community_members_coach_all" ON community_members
   );
 
 -- ── 6. Updated get_community_feed_coach (adds p_community_id) ───
+-- Drop old signature (different param list) before replacing
+DROP FUNCTION IF EXISTS get_community_feed_coach(uuid, uuid, int, int);
 CREATE OR REPLACE FUNCTION get_community_feed_coach(
   p_org_id       uuid,
   p_section_id   uuid  DEFAULT NULL,
@@ -114,6 +116,7 @@ $$;
 GRANT EXECUTE ON FUNCTION get_community_feed_coach TO authenticated;
 
 -- ── 7. Updated get_community_feed (adds p_community_id, checks membership) ──
+DROP FUNCTION IF EXISTS public.get_community_feed(uuid, uuid);
 CREATE OR REPLACE FUNCTION public.get_community_feed(
   p_client_id    uuid,
   p_section_id   uuid DEFAULT NULL,
@@ -170,6 +173,7 @@ END; $$;
 GRANT EXECUTE ON FUNCTION public.get_community_feed(uuid, uuid, uuid) TO anon;
 
 -- ── 8. Updated get_community_sections (adds p_community_id) ─────
+DROP FUNCTION IF EXISTS public.get_community_sections(uuid);
 CREATE OR REPLACE FUNCTION public.get_community_sections(
   p_client_id    uuid,
   p_community_id uuid DEFAULT NULL
@@ -193,6 +197,7 @@ END; $$;
 GRANT EXECUTE ON FUNCTION public.get_community_sections(uuid, uuid) TO anon;
 
 -- ── 9. Updated create_community_post (adds p_community_id) ──────
+DROP FUNCTION IF EXISTS public.create_community_post(uuid, text, uuid);
 CREATE OR REPLACE FUNCTION public.create_community_post(
   p_client_id    uuid,
   p_content      text,
@@ -247,6 +252,7 @@ END; $$;
 GRANT EXECUTE ON FUNCTION public.create_community_post(uuid, text, uuid, uuid) TO anon;
 
 -- ── 10. Updated get_community_modules (adds p_community_id) ─────
+DROP FUNCTION IF EXISTS public.get_community_modules(uuid);
 CREATE OR REPLACE FUNCTION public.get_community_modules(
   p_client_id    uuid,
   p_community_id uuid DEFAULT NULL
