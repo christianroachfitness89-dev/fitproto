@@ -125,10 +125,10 @@ export default function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="clients" element={<Clients />} />
               <Route path="clients/:id" element={<ClientDetail />} />
-              <Route path="library/:section" element={<Library />} />
+              <Route path="library/courses" element={<CourseBuilder />} />
               <Route path="library/workouts/:id" element={<WorkoutBuilder />} />
               <Route path="library/programs/:id" element={<ProgramBuilder />} />
-              <Route path="library/courses" element={<CourseBuilder />} />
+              <Route path="library/:section" element={<Library />} />
               <Route path="library" element={<Navigate to="/library/exercises" replace />} />
               <Route path="inbox" element={<Inbox />} />
               <Route path="automation" element={<Placeholder title="Automation" description="Set up automated workflows, reminders, and check-ins for your clients." />} />
