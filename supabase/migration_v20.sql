@@ -4,10 +4,15 @@
 -- Posts, sections, and modules can be assigned to a specific community.
 -- Items with community_id IS NULL are "general" and visible in all communities.
 
+-- ── 0. Drop any partially-created tables from a previous failed run ──
+--    (safe: no data exists yet; CASCADE drops community_members too)
+DROP TABLE IF EXISTS community_members CASCADE;
+DROP TABLE IF EXISTS communities CASCADE;
+
 -- ── 1. communities table ─────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS communities (
   id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
-  org_id      uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  org_id      uuid        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name        text        NOT NULL,
   description text,
   emoji       text        NOT NULL DEFAULT '🏘️',
@@ -44,12 +49,16 @@ DROP POLICY IF EXISTS "communities_coach_all"       ON communities;
 DROP POLICY IF EXISTS "community_members_coach_all" ON community_members;
 
 CREATE POLICY "communities_coach_all" ON communities
-  FOR ALL USING  (org_id = auth.uid())
-  WITH CHECK     (org_id = auth.uid());
+  FOR ALL USING  (org_id IN (SELECT org_id FROM profiles WHERE id = auth.uid()))
+  WITH CHECK     (org_id IN (SELECT org_id FROM profiles WHERE id = auth.uid()));
 
 CREATE POLICY "community_members_coach_all" ON community_members
   FOR ALL USING (
-    EXISTS (SELECT 1 FROM communities c WHERE c.id = community_id AND c.org_id = auth.uid())
+    EXISTS (
+      SELECT 1 FROM communities c
+      WHERE c.id = community_id
+        AND c.org_id IN (SELECT org_id FROM profiles WHERE id = auth.uid())
+    )
   );
 
 -- ── 6. Updated get_community_feed_coach (adds p_community_id) ───
