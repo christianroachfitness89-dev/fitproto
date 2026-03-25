@@ -1129,6 +1129,7 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
   const [lessons, setLessons]       = useState<Record<string, CommunityLesson[]>>({})
   const [expanded, setExpanded]     = useState<Set<string>>(new Set())
   const [loading, setLoading]       = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   // Module form
   const [showModuleForm, setShowModuleForm]   = useState(false)
   const [moduleDraft, setModuleDraft]         = useState({ title: '', description: '', cover_url: '' })
@@ -1158,6 +1159,8 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
 
   async function fetchModules() {
     setLoading(true)
+    setFetchError(null)
+    // Try with community join first; fall back to plain select if the FK isn't present
     let q = supabase
       .from('community_modules')
       .select('*, community:communities(id,name,emoji)')
@@ -1165,11 +1168,21 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
       .order('position', { ascending: true })
       .order('created_at', { ascending: true })
     if (communityId) {
-      // Community view: show only this community's modules
       q = q.eq('community_id', communityId) as typeof q
     }
-    // General view: show all modules (including community-assigned ones, with badge)
-    const { data } = await q
+    let { data, error } = await q
+    if (error) {
+      // Retry without the join (community_id FK may not exist yet)
+      const fallback = await supabase
+        .from('community_modules')
+        .select('*')
+        .eq('org_id', orgId)
+        .order('position', { ascending: true })
+        .order('created_at', { ascending: true })
+      data  = fallback.data
+      error = fallback.error
+    }
+    if (error) setFetchError(error.message)
     setModules((data ?? []) as CommunityModule[])
     setLoading(false)
   }
@@ -1405,6 +1418,11 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
       )}
 
       {/* Module list */}
+      {fetchError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+          <span className="font-semibold">Error loading courses:</span> {fetchError}
+        </div>
+      )}
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-brand-500" /></div>
       ) : modules.length === 0 ? (
