@@ -249,12 +249,14 @@ function FeedTab({ orgId, communityId }: { orgId: string; communityId: string | 
       .select('id,name,emoji,position')
       .eq('org_id', orgId)
       .order('position', { ascending: true })
+    // Strict isolation: General = community_id IS NULL, community = exact match
     if (communityId) {
-      q = q.or(`community_id.eq.${communityId},community_id.is.null`) as typeof q
+      q = q.eq('community_id', communityId) as typeof q
+    } else {
+      q = q.is('community_id', null) as typeof q
     }
     const { data } = await q
     setSections((data ?? []) as CommunitySection[])
-    // If the active section no longer exists in the new list, reset it
     setActiveSection(prev => data?.find((s: any) => s.id === prev) ? prev : null)
   }
 
