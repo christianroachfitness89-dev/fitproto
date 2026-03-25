@@ -1005,6 +1005,13 @@ interface CommunitySection {
   position: number
 }
 
+interface ClientCommunity {
+  id: string
+  name: string
+  emoji: string
+  description: string | null
+}
+
 function communityTimeAgo(iso: string) {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000
   if (diff < 60)    return 'just now'
@@ -1038,6 +1045,9 @@ function getDocPreviewUrl(url: string): string {
 
 function CommunityView({ clientId }: { clientId: string }) {
   const [subTab, setSubTab] = useState<'feed' | 'courses'>('feed')
+  // Communities
+  const [clientCommunities, setClientCommunities] = useState<ClientCommunity[]>([])
+  const [activeCommunityId, setActiveCommunityId] = useState<string | null>(null)
   // Sections
   const [sections, setSections]         = useState<CommunitySection[]>([])
   const [activeSection, setActiveSection] = useState<string | null>(null)
@@ -1060,44 +1070,68 @@ function CommunityView({ clientId }: { clientId: string }) {
   const [previewDoc, setPreviewDoc]     = useState(false)
   const [completingLesson, setCompletingLesson] = useState<string | null>(null)
 
-  useEffect(() => { loadSections(); loadFeed() }, [clientId])
+  useEffect(() => {
+    loadClientCommunities()
+    loadSections(null)
+    loadFeed(null, null)
+  }, [clientId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function loadSections() {
-    const { data } = await supabase.rpc('get_community_sections', { p_client_id: clientId })
-    setSections((data as CommunitySection[]) ?? [])
+  async function loadClientCommunities() {
+    const { data } = await supabase.rpc('get_client_communities', { p_client_id: clientId })
+    setClientCommunities((data as ClientCommunity[]) ?? [])
   }
 
-  async function loadFeed(sectionId?: string | null) {
+  async function loadSections(communityId: string | null) {
+    const { data } = await supabase.rpc('get_community_sections', {
+      p_client_id:    clientId,
+      p_community_id: communityId,
+    })
+    setSections((data as CommunitySection[]) ?? [])
+    setActiveSection(null)
+  }
+
+  async function loadFeed(sectionId: string | null, communityId: string | null) {
     setFeedLoading(true)
     const args: any = { p_client_id: clientId }
-    if (sectionId) args.p_section_id = sectionId
+    if (sectionId)   args.p_section_id   = sectionId
+    if (communityId) args.p_community_id = communityId
     const { data } = await supabase.rpc('get_community_feed', args)
     setPosts((data as CommunityPost[]) ?? [])
     setFeedLoading(false)
   }
 
-  async function loadCourses() {
+  async function loadCourses(communityId: string | null) {
     setCoursesLoading(true)
-    const { data } = await supabase.rpc('get_community_modules', { p_client_id: clientId })
+    const args: any = { p_client_id: clientId }
+    if (communityId) args.p_community_id = communityId
+    const { data } = await supabase.rpc('get_community_modules', args)
     setModules((data as CommunityModule[]) ?? [])
     setCoursesLoading(false)
   }
 
+  function handleCommunitySwitch(id: string | null) {
+    setActiveCommunityId(id)
+    setSubTab('feed')
+    loadSections(id)
+    loadFeed(null, id)
+  }
+
   function handleSubTab(t: 'feed' | 'courses') {
     setSubTab(t)
-    if (t === 'courses') loadCourses()
+    if (t === 'courses') loadCourses(activeCommunityId)
   }
 
   function handleSectionFilter(id: string | null) {
     setActiveSection(id)
-    loadFeed(id)
+    loadFeed(id, activeCommunityId)
   }
 
   async function submitPost() {
     if (!postContent.trim()) return
     setPosting(true)
     const args: any = { p_client_id: clientId, p_content: postContent.trim() }
-    if (postSection) args.p_section_id = postSection
+    if (postSection)        args.p_section_id   = postSection
+    if (activeCommunityId) args.p_community_id = activeCommunityId
     const { data } = await supabase.rpc('create_community_post', args)
     if (data) setPosts(prev => [data as CommunityPost, ...prev])
     setPostContent(''); setPostSection(''); setComposing(false); setPosting(false)
@@ -1175,6 +1209,34 @@ function CommunityView({ clientId }: { clientId: string }) {
           <p className="text-white/35 text-xs">Feed &amp; education hub</p>
         </div>
       </div>
+
+      {/* Community selector tabs */}
+      {clientCommunities.length > 0 && (
+        <div className="mx-4 mt-4 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+          <button
+            onClick={() => handleCommunitySwitch(null)}
+            className={clsx(
+              'flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border',
+              activeCommunityId === null
+                ? 'bg-white/15 text-white border-white/20'
+                : 'text-white/50 hover:text-white/80 border-white/10',
+            )}>
+            🌐 General
+          </button>
+          {clientCommunities.map(c => (
+            <button key={c.id}
+              onClick={() => handleCommunitySwitch(c.id)}
+              className={clsx(
+                'flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border',
+                activeCommunityId === c.id
+                  ? 'bg-white/15 text-white border-white/20'
+                  : 'text-white/50 hover:text-white/80 border-white/10',
+              )}>
+              {c.emoji} {c.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Sub-tab bar */}
       <div className="flex gap-1 mx-4 mt-4 bg-white/6 rounded-xl p-1">
