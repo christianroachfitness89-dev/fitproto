@@ -122,17 +122,24 @@ function CreateCommunityModal({ orgId, onClose, onCreated }: {
   const [description, setDesc]  = useState('')
   const [emoji, setEmoji]       = useState('🏘️')
   const [saving, setSaving]     = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
   async function handleCreate() {
     if (!name.trim()) return
     setSaving(true)
+    setErrorMsg('')
     const { data, error } = await supabase
       .from('communities')
       .insert({ org_id: orgId, name: name.trim(), description: description.trim() || null, emoji })
       .select()
       .single()
     setSaving(false)
-    if (!error && data) onCreated(data as CommunityGroup)
+    if (error) {
+      console.error('Create community error:', error)
+      setErrorMsg(error.message)
+      return
+    }
+    if (data) onCreated(data as CommunityGroup)
   }
 
   return (
@@ -171,7 +178,10 @@ function CreateCommunityModal({ orgId, onClose, onCreated }: {
             className="w-full resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
           />
         </div>
-        <div className="flex justify-end gap-2 mt-5">
+        {errorMsg && (
+          <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{errorMsg}</p>
+        )}
+        <div className="flex justify-end gap-2 mt-4">
           <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
           <button onClick={handleCreate} disabled={!name.trim() || saving}
             className="px-5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-40 flex items-center gap-2 transition-colors">
