@@ -964,6 +964,7 @@ interface CommunityPost {
   reaction_count: number
   client_reacted: boolean
   comment_count: number
+  section_id: string | null
 }
 
 interface CommunityComment {
@@ -996,6 +997,13 @@ interface CommunityModule {
   lessons: CommunityLesson[]
 }
 
+interface CommunitySection {
+  id: string
+  name: string
+  emoji: string
+  position: number
+}
+
 function communityTimeAgo(iso: string) {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000
   if (diff < 60)    return 'just now'
@@ -1010,24 +1018,39 @@ function isEmbedUrl(url: string) {
 
 function CommunityView({ clientId }: { clientId: string }) {
   const [subTab, setSubTab] = useState<'feed' | 'courses'>('feed')
+  // Sections
+  const [sections, setSections]         = useState<CommunitySection[]>([])
+  const [activeSection, setActiveSection] = useState<string | null>(null)
   // Feed state
-  const [posts, setPosts]         = useState<CommunityPost[]>([])
-  const [feedLoading, setFeedLoading] = useState(true)
+  const [posts, setPosts]               = useState<CommunityPost[]>([])
+  const [feedLoading, setFeedLoading]   = useState(true)
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
-  const [comments, setComments]   = useState<Record<string, CommunityComment[]>>({})
+  const [comments, setComments]         = useState<Record<string, CommunityComment[]>>({})
   const [commentInput, setCommentInput] = useState<Record<string, string>>({})
   const [sendingComment, setSendingComment] = useState<string | null>(null)
+  // Client composer
+  const [composing, setComposing]       = useState(false)
+  const [postContent, setPostContent]   = useState('')
+  const [postSection, setPostSection]   = useState('')
+  const [posting, setPosting]           = useState(false)
   // Courses state
-  const [modules, setModules]     = useState<CommunityModule[]>([])
+  const [modules, setModules]           = useState<CommunityModule[]>([])
   const [coursesLoading, setCoursesLoading] = useState(false)
-  const [openLesson, setOpenLesson] = useState<CommunityLesson | null>(null)
+  const [openLesson, setOpenLesson]     = useState<CommunityLesson | null>(null)
   const [completingLesson, setCompletingLesson] = useState<string | null>(null)
 
-  useEffect(() => { loadFeed() }, [clientId])
+  useEffect(() => { loadSections(); loadFeed() }, [clientId])
 
-  async function loadFeed() {
+  async function loadSections() {
+    const { data } = await supabase.rpc('get_community_sections', { p_client_id: clientId })
+    setSections((data as CommunitySection[]) ?? [])
+  }
+
+  async function loadFeed(sectionId?: string | null) {
     setFeedLoading(true)
-    const { data } = await supabase.rpc('get_community_feed', { p_client_id: clientId })
+    const args: any = { p_client_id: clientId }
+    if (sectionId) args.p_section_id = sectionId
+    const { data } = await supabase.rpc('get_community_feed', args)
     setPosts((data as CommunityPost[]) ?? [])
     setFeedLoading(false)
   }
@@ -1042,6 +1065,21 @@ function CommunityView({ clientId }: { clientId: string }) {
   function handleSubTab(t: 'feed' | 'courses') {
     setSubTab(t)
     if (t === 'courses') loadCourses()
+  }
+
+  function handleSectionFilter(id: string | null) {
+    setActiveSection(id)
+    loadFeed(id)
+  }
+
+  async function submitPost() {
+    if (!postContent.trim()) return
+    setPosting(true)
+    const args: any = { p_client_id: clientId, p_content: postContent.trim() }
+    if (postSection) args.p_section_id = postSection
+    const { data } = await supabase.rpc('create_community_post', args)
+    if (data) setPosts(prev => [data as CommunityPost, ...prev])
+    setPostContent(''); setPostSection(''); setComposing(false); setPosting(false)
   }
 
   async function toggleReaction(postId: string) {
@@ -1138,6 +1176,68 @@ function CommunityView({ clientId }: { clientId: string }) {
       {/* ── FEED ── */}
       {subTab === 'feed' && (
         <div className="px-4 mt-4 space-y-4">
+
+          {/* Section filter tabs */}
+          {sections.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              <button onClick={() => handleSectionFilter(null)}
+                className={clsx('flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
+                  activeSection === null
+                    ? 'bg-white/15 text-white border border-white/20'
+                    : 'text-white/50 hover:text-white/80 border border-white/10')}>
+                All
+              </button>
+              {sections.map(s => (
+                <button key={s.id} onClick={() => handleSectionFilter(s.id)}
+                  className={clsx('flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
+                    activeSection === s.id
+                      ? 'bg-white/15 text-white border border-white/20'
+                      : 'text-white/50 hover:text-white/80 border border-white/10')}>
+                  {s.emoji} {s.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Client post composer */}
+          {!composing ? (
+            <button onClick={() => setComposing(true)}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/6 border border-white/10 hover:bg-white/10 transition-colors text-left">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                Me
+              </div>
+              <span className="text-white/35 text-sm">Share something with the community…</span>
+            </button>
+          ) : (
+            <div className="bg-white/6 border border-white/10 rounded-2xl p-4 space-y-3">
+              <textarea
+                autoFocus
+                value={postContent}
+                onChange={e => setPostContent(e.target.value)}
+                placeholder="What's on your mind?"
+                rows={3}
+                className="w-full resize-none bg-white/8 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/85 placeholder-white/25 focus:outline-none focus:ring-1 focus:ring-white/20"
+              />
+              {sections.length > 0 && (
+                <select value={postSection} onChange={e => setPostSection(e.target.value)}
+                  className="w-full bg-white/8 border border-white/10 rounded-xl px-3 py-2 text-sm text-white/70 focus:outline-none focus:ring-1 focus:ring-white/20">
+                  <option value="">No section</option>
+                  {sections.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}
+                </select>
+              )}
+              <div className="flex justify-end gap-2">
+                <button onClick={() => { setComposing(false); setPostContent(''); setPostSection('') }}
+                  className="px-4 py-2 rounded-xl text-white/50 text-sm hover:text-white/80 transition-colors">
+                  Cancel
+                </button>
+                <button onClick={submitPost} disabled={!postContent.trim() || posting}
+                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold disabled:opacity-40 transition-colors">
+                  {posting && <Loader2 size={14} className="animate-spin" />} Post
+                </button>
+              </div>
+            </div>
+          )}
+
           {feedLoading ? (
             <div className="flex justify-center py-16">
               <Loader2 size={24} className="animate-spin text-brand-400" />
@@ -1165,11 +1265,26 @@ function CommunityView({ clientId }: { clientId: string }) {
               <div className="p-4">
                 {/* Author row */}
                 <div className="flex items-center gap-2.5 mb-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  <div className={clsx(
+                    'w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0',
+                    post.author_type === 'client'
+                      ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                      : 'bg-gradient-to-br from-brand-500 to-violet-600',
+                  )}>
                     {(post.author_name ?? 'C').charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <p className="text-white/85 text-sm font-semibold leading-tight">{post.author_name ?? 'Coach'}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-white/85 text-sm font-semibold leading-tight">{post.author_name ?? 'Coach'}</p>
+                      {post.section_id && (() => {
+                        const sec = sections.find(s => s.id === post.section_id)
+                        return sec ? (
+                          <span className="text-[10px] font-semibold bg-white/10 text-white/60 px-2 py-0.5 rounded-full">
+                            {sec.emoji} {sec.name}
+                          </span>
+                        ) : null
+                      })()}
+                    </div>
                     <p className="text-white/30 text-[10px]">{communityTimeAgo(post.created_at)}</p>
                   </div>
                 </div>

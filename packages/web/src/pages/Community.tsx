@@ -4,7 +4,7 @@ import {
   Video, FileText, Headphones, AlignLeft, ChevronDown, ChevronRight,
   Loader2, X, BookOpen, Eye, EyeOff, Clock, MoreVertical,
   Globe, Lock, Film, Users, UserCheck, Monitor, Settings2,
-  Check, CheckCircle2, Circle, Search, UserPlus, UploadCloud,
+  Check, CheckCircle2, Circle, Search, UserPlus, UploadCloud, Hash, Pencil,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { supabase } from '@/lib/supabase'
@@ -20,8 +20,17 @@ interface CommunityPost {
   pinned: boolean
   created_at: string
   author_type: string
+  author_name?: string
+  section_id: string | null
   reaction_count: number
   comment_count: number
+}
+
+interface CommunitySection {
+  id: string
+  name: string
+  emoji: string
+  position: number
 }
 
 interface CommunityModule {
@@ -93,46 +102,73 @@ function timeAgo(iso: string) {
 // ─── Feed Tab ───────────────────────────────────────────────────
 
 function FeedTab({ orgId }: { orgId: string }) {
-  const [posts, setPosts]       = useState<CommunityPost[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [content, setContent]   = useState('')
-  const [mediaUrl, setMediaUrl] = useState('')
-  const [mediaType, setMediaType] = useState<CommunityPost['media_type']>(null)
-  const [posting, setPosting]   = useState(false)
-  const [showMedia, setShowMedia] = useState(false)
+  const [posts, setPosts]           = useState<CommunityPost[]>([])
+  const [sections, setSections]     = useState<CommunitySection[]>([])
+  const [activeSection, setActiveSection] = useState<string | null>(null) // null = All
+  const [loading, setLoading]       = useState(true)
+  // Composer
+  const [content, setContent]       = useState('')
+  const [mediaUrl, setMediaUrl]     = useState('')
+  const [mediaType, setMediaType]   = useState<CommunityPost['media_type']>(null)
+  const [postSection, setPostSection] = useState<string>('')
+  const [posting, setPosting]       = useState(false)
+  const [showMedia, setShowMedia]   = useState(false)
+  // Sections panel
+  const [showSections, setShowSections] = useState(false)
+  const [newSectionName, setNewSectionName] = useState('')
+  const [newSectionEmoji, setNewSectionEmoji] = useState('💬')
+  const [savingSection, setSavingSection] = useState(false)
 
-  useEffect(() => { fetchPosts() }, [orgId])
+  useEffect(() => { fetchSections(); fetchPosts() }, [orgId])
+
+  async function fetchSections() {
+    const { data } = await supabase
+      .from('community_sections')
+      .select('id,name,emoji,position')
+      .eq('org_id', orgId)
+      .order('position', { ascending: true })
+    setSections((data ?? []) as CommunitySection[])
+  }
 
   async function fetchPosts() {
     setLoading(true)
-    const { data } = await supabase
+    let q = supabase
       .from('community_posts')
-      .select('id,content,media_url,media_type,pinned,created_at,author_type,author_client_id')
+      .select('id,content,media_url,media_type,pinned,created_at,author_type,author_client_id,section_id')
       .eq('org_id', orgId)
       .order('pinned', { ascending: false })
       .order('created_at', { ascending: false })
+    if (activeSection) q = q.eq('section_id', activeSection)
+    const { data } = await q
     if (data) {
-      // Enrich with counts
       const enriched: CommunityPost[] = await Promise.all(data.map(async p => {
         const [{ count: rc }, { count: cc }] = await Promise.all([
           supabase.from('community_reactions').select('*', { count: 'exact', head: true }).eq('post_id', p.id),
           supabase.from('community_comments').select('*',  { count: 'exact', head: true }).eq('post_id', p.id),
         ])
-        return { ...p, reaction_count: rc ?? 0, comment_count: cc ?? 0 } as CommunityPost
+        let author_name = 'Coach'
+        if (p.author_type === 'client' && p.author_client_id) {
+          const { data: cl } = await supabase.from('clients').select('name').eq('id', p.author_client_id).single()
+          author_name = cl?.name ?? 'Client'
+        }
+        return { ...p, reaction_count: rc ?? 0, comment_count: cc ?? 0, author_name } as CommunityPost
       }))
       setPosts(enriched)
     }
     setLoading(false)
   }
 
+  useEffect(() => { fetchPosts() }, [activeSection])
+
   async function handlePost() {
     if (!content.trim()) return
     setPosting(true)
     await supabase.from('community_posts').insert({
-      org_id: orgId,
-      content: content.trim(),
+      org_id:     orgId,
+      content:    content.trim(),
       media_url:  mediaUrl.trim() || null,
       media_type: mediaUrl.trim() ? mediaType : null,
+      section_id: postSection || null,
     })
     setContent(''); setMediaUrl(''); setMediaType(null); setShowMedia(false)
     setPosting(false)
@@ -150,8 +186,103 @@ function FeedTab({ orgId }: { orgId: string }) {
     setPosts(prev => prev.filter(p => p.id !== id))
   }
 
+  async function addSection() {
+    if (!newSectionName.trim()) return
+    setSavingSection(true)
+    await supabase.from('community_sections').insert({
+      org_id: orgId, name: newSectionName.trim(), emoji: newSectionEmoji, position: sections.length,
+    })
+    setNewSectionName(''); setNewSectionEmoji('💬')
+    setSavingSection(false)
+    fetchSections()
+  }
+
+  async function deleteSection(id: string) {
+    await supabase.from('community_sections').delete().eq('id', id)
+    setSections(prev => prev.filter(s => s.id !== id))
+    if (activeSection === id) setActiveSection(null)
+  }
+
+  const QUICK_EMOJIS = ['💬','📢','🏋️','🥗','💡','🎯','🔥','❓','🏆','📚']
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Section tabs + manage button */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 flex-wrap">
+          <button
+            onClick={() => setActiveSection(null)}
+            className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all',
+              activeSection === null ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
+            All
+          </button>
+          {sections.map(s => (
+            <button key={s.id}
+              onClick={() => setActiveSection(s.id)}
+              className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all',
+                activeSection === s.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
+              <span>{s.emoji}</span> {s.name}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setShowSections(v => !v)}
+          className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-sm font-semibold transition-colors',
+            showSections ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-gray-200 text-gray-500 hover:text-brand-600 hover:border-brand-300')}>
+          <Hash size={14} /> Manage Sections
+        </button>
+      </div>
+
+      {/* Sections management panel */}
+      {showSections && (
+        <div className="bg-white rounded-2xl border border-brand-200 p-5 shadow-sm space-y-4">
+          <p className="text-sm font-semibold text-gray-700 flex items-center gap-2"><Hash size={15} className="text-brand-500" /> Feed Sections</p>
+          <p className="text-xs text-gray-400 -mt-2">Create topic channels for your community. Clients can filter posts by section.</p>
+
+          {/* Existing sections */}
+          {sections.length > 0 && (
+            <div className="space-y-1">
+              {sections.map(s => (
+                <div key={s.id} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50">
+                  <span className="text-lg">{s.emoji}</span>
+                  <span className="flex-1 text-sm font-semibold text-gray-700">{s.name}</span>
+                  <button onClick={() => deleteSection(s.id)}
+                    className="text-gray-300 hover:text-red-500 transition-colors p-1"><Trash2 size={14} /></button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* New section form */}
+          <div className="border-t border-gray-100 pt-4">
+            <p className="text-xs font-semibold text-gray-500 mb-2">New Section</p>
+            <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-1 flex-wrap">
+                {QUICK_EMOJIS.map(e => (
+                  <button key={e} onClick={() => setNewSectionEmoji(e)}
+                    className={clsx('w-8 h-8 rounded-lg text-base flex items-center justify-center transition-all',
+                      newSectionEmoji === e ? 'bg-brand-100 ring-2 ring-brand-400' : 'hover:bg-gray-100')}>
+                    {e}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-1 gap-2">
+                <input
+                  value={newSectionName}
+                  onChange={e => setNewSectionName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addSection()}
+                  placeholder="Section name…"
+                  className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+                />
+                <button onClick={addSection} disabled={!newSectionName.trim() || savingSection}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold disabled:opacity-40 transition-colors">
+                  {savingSection ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Add
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Composer */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
         <p className="text-sm font-semibold text-gray-700 mb-3">New Post</p>
@@ -163,63 +294,57 @@ function FeedTab({ orgId }: { orgId: string }) {
           className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
         />
 
+        <div className="mt-3 flex gap-2 flex-wrap">
+          {sections.length > 0 && (
+            <select value={postSection} onChange={e => setPostSection(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+              <option value="">No section</option>
+              {sections.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}
+            </select>
+          )}
+        </div>
+
         {showMedia && (
           <div className="mt-3 flex gap-2">
-            <select
-              value={mediaType ?? ''}
-              onChange={e => setMediaType(e.target.value as CommunityPost['media_type'] || null)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
-            >
+            <select value={mediaType ?? ''} onChange={e => setMediaType(e.target.value as CommunityPost['media_type'] || null)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
               <option value="">Type…</option>
               <option value="image">Image</option>
               <option value="video">Video</option>
               <option value="audio">Audio</option>
             </select>
-            <input
-              value={mediaUrl}
-              onChange={e => setMediaUrl(e.target.value)}
-              placeholder="Paste URL…"
-              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
-            />
+            <input value={mediaUrl} onChange={e => setMediaUrl(e.target.value)} placeholder="Paste URL…"
+              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400" />
           </div>
         )}
 
         <div className="flex items-center justify-between mt-3">
-          <button
-            onClick={() => setShowMedia(v => !v)}
-            className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-brand-600 transition-colors"
-          >
-            <Film size={14} />
-            {showMedia ? 'Remove media' : 'Add media'}
+          <button onClick={() => setShowMedia(v => !v)}
+            className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-brand-600 transition-colors">
+            <Film size={14} /> {showMedia ? 'Remove media' : 'Add media'}
           </button>
-          <button
-            onClick={handlePost}
-            disabled={!content.trim() || posting}
-            className="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {posting && <Loader2 size={14} className="animate-spin" />}
-            Post
+          <button onClick={handlePost} disabled={!content.trim() || posting}
+            className="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
+            {posting && <Loader2 size={14} className="animate-spin" />} Post
           </button>
         </div>
       </div>
 
       {/* Posts */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 size={24} className="animate-spin text-brand-500" />
-        </div>
+        <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-brand-500" /></div>
       ) : posts.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <div className="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center mx-auto mb-3">
             <MessageCircle size={22} className="text-brand-500" />
           </div>
           <p className="font-semibold text-gray-700">No posts yet</p>
-          <p className="text-sm text-gray-400 mt-1">Write your first community update above.</p>
+          <p className="text-sm text-gray-400 mt-1">{activeSection ? 'No posts in this section yet.' : 'Write your first community update above.'}</p>
         </div>
       ) : (
         <div className="space-y-4">
           {posts.map(post => (
-            <PostCard key={post.id} post={post} onPin={handlePin} onDelete={handleDelete} />
+            <PostCard key={post.id} post={post} sections={sections} onPin={handlePin} onDelete={handleDelete} />
           ))}
         </div>
       )}
@@ -227,8 +352,9 @@ function FeedTab({ orgId }: { orgId: string }) {
   )
 }
 
-function PostCard({ post, onPin, onDelete }: {
+function PostCard({ post, sections, onPin, onDelete }: {
   post: CommunityPost
+  sections: CommunitySection[]
   onPin: (id: string, current: boolean) => void
   onDelete: (id: string) => void
 }) {
@@ -247,11 +373,26 @@ function PostCard({ post, onPin, onDelete }: {
     )}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            C
+          <div className={clsx(
+            'w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0',
+            post.author_type === 'client'
+              ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+              : 'bg-gradient-to-br from-brand-500 to-violet-600',
+          )}>
+            {(post.author_name ?? 'C').charAt(0).toUpperCase()}
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-800">Coach</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm font-semibold text-gray-800">{post.author_name ?? 'Coach'}</p>
+              {post.section_id && (() => {
+                const sec = sections.find(s => s.id === post.section_id)
+                return sec ? (
+                  <span className="text-[10px] font-semibold bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full">
+                    {sec.emoji} {sec.name}
+                  </span>
+                ) : null
+              })()}
+            </div>
             <p className="text-xs text-gray-400">{timeAgo(post.created_at)}</p>
           </div>
         </div>
