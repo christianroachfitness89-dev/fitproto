@@ -4,7 +4,7 @@ import {
   Video, FileText, Headphones, AlignLeft, ChevronDown, ChevronRight,
   Loader2, X, BookOpen, Eye, EyeOff, Clock, MoreVertical,
   Globe, Lock, Film, Users, UserCheck, Monitor, Settings2,
-  Check, CheckCircle2, Circle, Search, UserPlus, UploadCloud, Hash, Pencil,
+  Check, CheckCircle2, Circle, Search, UserPlus, UploadCloud, Hash, Pencil, Send,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { supabase } from '@/lib/supabase'
@@ -24,6 +24,7 @@ interface CommunityPost {
   section_id: string | null
   reaction_count: number
   comment_count: number
+  coach_reacted?: boolean
 }
 
 interface CommunitySection {
@@ -142,16 +143,17 @@ function FeedTab({ orgId }: { orgId: string }) {
     const { data } = await q
     if (data) {
       const enriched: CommunityPost[] = await Promise.all(data.map(async p => {
-        const [{ count: rc }, { count: cc }] = await Promise.all([
+        const [{ count: rc }, { count: cc }, { data: coachRxn }] = await Promise.all([
           supabase.from('community_reactions').select('*', { count: 'exact', head: true }).eq('post_id', p.id),
           supabase.from('community_comments').select('*',  { count: 'exact', head: true }).eq('post_id', p.id),
+          supabase.from('community_reactions').select('id').eq('post_id', p.id).eq('reactor_type', 'coach').eq('reactor_org_id', orgId).maybeSingle(),
         ])
         let author_name = 'Coach'
         if (p.author_type === 'client' && p.author_client_id) {
           const { data: cl } = await supabase.from('clients').select('name').eq('id', p.author_client_id).single()
           author_name = cl?.name ?? 'Client'
         }
-        return { ...p, reaction_count: rc ?? 0, comment_count: cc ?? 0, author_name } as CommunityPost
+        return { ...p, reaction_count: rc ?? 0, comment_count: cc ?? 0, author_name, coach_reacted: !!coachRxn } as CommunityPost
       }))
       setPosts(enriched)
     }
@@ -344,7 +346,7 @@ function FeedTab({ orgId }: { orgId: string }) {
       ) : (
         <div className="space-y-4">
           {posts.map(post => (
-            <PostCard key={post.id} post={post} sections={sections} onPin={handlePin} onDelete={handleDelete} />
+            <PostCard key={post.id} post={post} sections={sections} orgId={orgId} onPin={handlePin} onDelete={handleDelete} onReactionToggle={(id, reacted, count) => setPosts(ps => ps.map(p => p.id === id ? { ...p, coach_reacted: reacted, reaction_count: count } : p))} onCommentAdded={(id) => setPosts(ps => ps.map(p => p.id === id ? { ...p, comment_count: p.comment_count + 1 } : p))} />
           ))}
         </div>
       )}
@@ -352,19 +354,101 @@ function FeedTab({ orgId }: { orgId: string }) {
   )
 }
 
-function PostCard({ post, sections, onPin, onDelete }: {
+interface PostComment {
+  id: string
+  content: string
+  author_type: string
+  author_name: string
+  created_at: string
+}
+
+function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, onCommentAdded }: {
   post: CommunityPost
   sections: CommunitySection[]
+  orgId: string
   onPin: (id: string, current: boolean) => void
   onDelete: (id: string) => void
+  onReactionToggle: (id: string, reacted: boolean, count: number) => void
+  onCommentAdded: (id: string) => void
 }) {
   const [menu, setMenu] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [showComments, setShowComments] = useState(false)
+  const [comments, setComments] = useState<PostComment[]>([])
+  const [loadingComments, setLoadingComments] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [reacting, setReacting] = useState(false)
+
   useEffect(() => {
-    function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setMenu(false) }
+    function handler(e: MouseEvent) { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenu(false) }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  async function loadComments() {
+    setLoadingComments(true)
+    const { data } = await supabase
+      .from('community_comments')
+      .select('id,content,author_type,author_client_id,author_org_id,created_at')
+      .eq('post_id', post.id)
+      .order('created_at', { ascending: true })
+    if (data) {
+      const enriched: PostComment[] = await Promise.all(data.map(async c => {
+        let author_name = 'Coach'
+        if (c.author_type === 'client' && c.author_client_id) {
+          const { data: cl } = await supabase.from('clients').select('name').eq('id', c.author_client_id).single()
+          author_name = cl?.name ?? 'Client'
+        }
+        return { id: c.id, content: c.content, author_type: c.author_type, author_name, created_at: c.created_at }
+      }))
+      setComments(enriched)
+    }
+    setLoadingComments(false)
+  }
+
+  async function toggleComments() {
+    const next = !showComments
+    setShowComments(next)
+    if (next && comments.length === 0) loadComments()
+  }
+
+  async function toggleReaction() {
+    if (reacting) return
+    setReacting(true)
+    if (post.coach_reacted) {
+      await supabase.from('community_reactions')
+        .delete()
+        .eq('post_id', post.id)
+        .eq('reactor_type', 'coach')
+        .eq('reactor_org_id', orgId)
+      onReactionToggle(post.id, false, Math.max(0, post.reaction_count - 1))
+    } else {
+      await supabase.from('community_reactions')
+        .insert({ post_id: post.id, reactor_type: 'coach', reactor_org_id: orgId })
+      onReactionToggle(post.id, true, post.reaction_count + 1)
+    }
+    setReacting(false)
+  }
+
+  async function submitComment(e: React.FormEvent) {
+    e.preventDefault()
+    const txt = commentText.trim()
+    if (!txt || submitting) return
+    setSubmitting(true)
+    const ts = new Date().toISOString()
+    const { data, error } = await supabase
+      .from('community_comments')
+      .insert({ post_id: post.id, author_type: 'coach', author_org_id: orgId, content: txt, created_at: ts })
+      .select('id')
+      .single()
+    if (!error && data) {
+      setComments(cs => [...cs, { id: data.id, content: txt, author_type: 'coach', author_name: 'Coach', created_at: ts }])
+      setCommentText('')
+      onCommentAdded(post.id)
+    }
+    setSubmitting(false)
+  }
 
   return (
     <div className={clsx(
@@ -402,7 +486,7 @@ function PostCard({ post, sections, onPin, onDelete }: {
               <Pin size={10} /> Pinned
             </span>
           )}
-          <div ref={ref} className="relative">
+          <div ref={menuRef} className="relative">
             <button onClick={() => setMenu(v => !v)}
               className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
               <MoreVertical size={16} />
@@ -439,10 +523,78 @@ function PostCard({ post, sections, onPin, onDelete }: {
         <audio src={post.media_url} controls className="mt-3 w-full" />
       )}
 
-      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-gray-100 text-xs text-gray-400">
-        <span className="flex items-center gap-1.5"><Heart size={13} /> {post.reaction_count}</span>
-        <span className="flex items-center gap-1.5"><MessageCircle size={13} /> {post.comment_count}</span>
+      {/* Actions row */}
+      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-gray-100 text-xs">
+        <button
+          onClick={toggleReaction}
+          disabled={reacting}
+          className={clsx(
+            'flex items-center gap-1.5 transition-colors',
+            post.coach_reacted
+              ? 'text-rose-500 font-semibold'
+              : 'text-gray-400 hover:text-rose-400',
+          )}
+        >
+          <Heart size={13} fill={post.coach_reacted ? 'currentColor' : 'none'} />
+          {post.reaction_count}
+        </button>
+        <button
+          onClick={toggleComments}
+          className={clsx(
+            'flex items-center gap-1.5 transition-colors',
+            showComments ? 'text-brand-500 font-semibold' : 'text-gray-400 hover:text-brand-400',
+          )}
+        >
+          <MessageCircle size={13} /> {post.comment_count} {showComments ? 'Hide' : 'Reply'}
+        </button>
       </div>
+
+      {/* Comments section */}
+      {showComments && (
+        <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+          {loadingComments ? (
+            <div className="flex justify-center py-2"><Loader2 size={16} className="animate-spin text-gray-300" /></div>
+          ) : comments.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-1">No comments yet. Be the first to reply.</p>
+          ) : (
+            comments.map(c => (
+              <div key={c.id} className="flex gap-2.5">
+                <div className={clsx(
+                  'w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0',
+                  c.author_type === 'client'
+                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                    : 'bg-gradient-to-br from-brand-500 to-violet-600',
+                )}>
+                  {c.author_name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 bg-gray-50 rounded-xl px-3 py-2">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-xs font-semibold text-gray-700">{c.author_name}</span>
+                    <span className="text-[10px] text-gray-400">{timeAgo(c.created_at)}</span>
+                  </div>
+                  <p className="text-xs text-gray-600 leading-relaxed">{c.content}</p>
+                </div>
+              </div>
+            ))
+          )}
+          {/* Comment input */}
+          <form onSubmit={submitComment} className="flex gap-2 mt-2">
+            <input
+              value={commentText}
+              onChange={e => setCommentText(e.target.value)}
+              placeholder="Write a reply…"
+              className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-300 placeholder:text-gray-400"
+            />
+            <button
+              type="submit"
+              disabled={!commentText.trim() || submitting}
+              className="flex items-center gap-1.5 px-3 py-2 bg-brand-600 text-white text-xs font-semibold rounded-xl hover:bg-brand-700 disabled:opacity-40 transition-colors"
+            >
+              {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
