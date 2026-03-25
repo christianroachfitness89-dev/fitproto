@@ -2242,11 +2242,103 @@ function PreviewTab({ orgId, communityId }: { orgId: string; communityId: string
   )
 }
 
+// ─── Community Courses View (read-only, shows assigned courses) ──
+
+function CommunityCoursesView({ orgId, communityId, communityName }: { orgId: string; communityId: string; communityName: string }) {
+  const [modules, setModules]       = useState<CommunityModule[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [showAssignModal, setShowAssignModal] = useState(false)
+
+  useEffect(() => { fetchModules() }, [communityId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function fetchModules() {
+    setLoading(true)
+    const { data } = await supabase
+      .from('community_modules')
+      .select('id,title,description,cover_url,position,published,access_type,auto_enroll_on_join,created_at,community_id')
+      .eq('org_id', orgId)
+      .eq('community_id', communityId)
+      .order('position', { ascending: true })
+    setModules((data ?? []) as CommunityModule[])
+    setLoading(false)
+  }
+
+  async function removeFromCommunity(moduleId: string) {
+    if (!confirm('Move this course back to the Library (General)?')) return
+    await supabase.from('community_modules').update({ community_id: null }).eq('id', moduleId)
+    setModules(prev => prev.filter(m => m.id !== moduleId))
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-gray-500">Courses active in <span className="font-semibold text-gray-700">{communityName}</span>. Build courses in the Library tab.</p>
+        <button onClick={() => setShowAssignModal(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-brand-300 bg-brand-50 hover:bg-brand-100 text-brand-700 text-sm font-semibold transition-colors">
+          <Plus size={15} /> Assign Courses
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-brand-500" /></div>
+      ) : modules.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
+          <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center mx-auto mb-3">
+            <BookOpen size={22} className="text-violet-500" />
+          </div>
+          <p className="font-semibold text-gray-700">No courses assigned</p>
+          <p className="text-sm text-gray-400 mt-1">Assign courses from the Library to this community.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {modules.map(mod => (
+            <div key={mod.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-4 shadow-sm">
+              {mod.cover_url ? (
+                <img src={mod.cover_url} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+                  <BookOpen size={20} className="text-white" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800 truncate">{mod.title}</p>
+                {mod.description && <p className="text-xs text-gray-400 truncate mt-0.5">{mod.description}</p>}
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full',
+                    mod.published ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500')}>
+                    {mod.published ? 'Live' : 'Draft'}
+                  </span>
+                  <span className="text-[10px] text-gray-400">{mod.access_type === 'all' ? 'Open access' : 'Enrolled only'}</span>
+                </div>
+              </div>
+              <button onClick={() => removeFromCommunity(mod.id)}
+                title="Move back to Library"
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-200 text-amber-600 hover:bg-amber-50 text-xs font-semibold transition-colors">
+                <X size={12} /> Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showAssignModal && (
+        <AssignCoursesModal
+          orgId={orgId}
+          communityId={communityId}
+          communityName={communityName}
+          onClose={() => setShowAssignModal(false)}
+          onAssigned={() => { setShowAssignModal(false); fetchModules() }}
+        />
+      )}
+    </div>
+  )
+}
+
 // ─── Page ───────────────────────────────────────────────────────
 
 export default function Community() {
   const { profile } = useAuth()
-  const [tab, setTab]               = useState<'feed' | 'courses' | 'members' | 'preview'>('feed')
+  const [tab, setTab]               = useState<'feed' | 'courses' | 'library' | 'members' | 'preview'>('feed')
   const [communities, setCommunities] = useState<CommunityGroup[]>([])
   const [communityId, setCommunityId] = useState<string | null>(null)
   const [showCreateComm, setShowCreateComm] = useState(false)
@@ -2268,8 +2360,17 @@ export default function Community() {
   async function deleteCommunity(id: string) {
     await supabase.from('communities').delete().eq('id', id)
     setCommunities(prev => prev.filter(c => c.id !== id))
-    if (communityId === id) setCommunityId(null)
+    if (communityId === id) {
+      setCommunityId(null)
+      if (tab === 'courses') setTab('feed')
+    }
     setPendingDeleteComm(null)
+  }
+
+  function handleSetCommunityId(id: string | null) {
+    setCommunityId(id)
+    // Courses tab only makes sense inside a community
+    if (id === null && tab === 'courses') setTab('feed')
   }
 
   if (!profile?.org_id) return (
@@ -2297,7 +2398,7 @@ export default function Community() {
       <div className="flex items-center gap-2 flex-wrap mb-5">
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1 flex-wrap">
           <button
-            onClick={() => setCommunityId(null)}
+            onClick={() => handleSetCommunityId(null)}
             className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all',
               communityId === null ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
             🌐 General
@@ -2305,7 +2406,7 @@ export default function Community() {
           {communities.map(c => (
             <div key={c.id} className="relative group">
               <button
-                onClick={() => setCommunityId(c.id)}
+                onClick={() => handleSetCommunityId(c.id)}
                 className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all pr-6',
                   communityId === c.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
                 <span>{c.emoji}</span> {c.name}
@@ -2349,13 +2450,14 @@ export default function Community() {
       )}
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit mb-6">
-        {[
-          { id: 'feed'    as const, label: 'Feed',    Icon: MessageCircle },
-          { id: 'courses' as const, label: 'Courses', Icon: BookOpen },
-          { id: 'members' as const, label: 'Members', Icon: Users },
-          { id: 'preview' as const, label: 'Preview', Icon: Monitor },
-        ].map(({ id, label, Icon }) => (
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit mb-6 flex-wrap">
+        {([
+          { id: 'feed'    as const, label: 'Feed',    Icon: MessageCircle, show: true },
+          { id: 'courses' as const, label: 'Courses', Icon: BookOpen,      show: !!communityId },
+          { id: 'library' as const, label: 'Library', Icon: BookOpen,      show: true },
+          { id: 'members' as const, label: 'Members', Icon: Users,         show: true },
+          { id: 'preview' as const, label: 'Preview', Icon: Monitor,       show: true },
+        ] as const).filter(t => t.show).map(({ id, label, Icon }) => (
           <button key={id} onClick={() => setTab(id)}
             className={clsx('flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all',
               tab === id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
@@ -2365,7 +2467,10 @@ export default function Community() {
       </div>
 
       {tab === 'feed'    && <FeedTab    orgId={profile.org_id} communityId={communityId} />}
-      {tab === 'courses' && <CoursesTab orgId={profile.org_id} communityId={communityId} communityName={activeCommunity?.name} />}
+      {tab === 'courses' && communityId && (
+        <CommunityCoursesView orgId={profile.org_id} communityId={communityId} communityName={activeCommunity?.name ?? 'Community'} />
+      )}
+      {tab === 'library' && <CoursesTab orgId={profile.org_id} communityId={null} communityName={undefined} />}
       {tab === 'members' && <MembersTab orgId={profile.org_id} communityId={communityId} />}
       {tab === 'preview' && <PreviewTab orgId={profile.org_id} communityId={communityId} />}
 
@@ -2375,7 +2480,7 @@ export default function Community() {
           onClose={() => setShowCreateComm(false)}
           onCreated={g => {
             setCommunities(prev => [...prev, g])
-            setCommunityId(g.id)
+            handleSetCommunityId(g.id)
             setShowCreateComm(false)
           }}
         />
