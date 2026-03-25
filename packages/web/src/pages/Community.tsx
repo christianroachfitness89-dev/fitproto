@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Users2, Plus, Pin, PinOff, Trash2, Heart, MessageCircle,
   Video, FileText, Headphones, AlignLeft, ChevronDown, ChevronRight,
   Loader2, X, BookOpen, Eye, EyeOff, Clock, MoreVertical,
   Globe, Lock, Film, Users, UserCheck, Monitor, Settings2,
-  Check, CheckCircle2, Circle, Search, UserPlus,
+  Check, CheckCircle2, Circle, Search, UserPlus, UploadCloud,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { supabase } from '@/lib/supabase'
@@ -534,6 +534,9 @@ function CoursesTab({ orgId }: { orgId: string }) {
     content_url: string; body: string; drip_days: string; duration_minutes: string
   }>({ title: '', description: '', content_type: 'video', content_url: '', body: '', drip_days: '0', duration_minutes: '' })
   const [savingLesson, setSavingLesson]       = useState(false)
+  const [uploading, setUploading]             = useState(false)
+  const [uploadProgress, setUploadProgress]   = useState(0)
+  const fileInputRef                          = useRef<HTMLInputElement>(null)
 
   useEffect(() => { fetchModules() }, [orgId])
 
@@ -596,6 +599,26 @@ function CoursesTab({ orgId }: { orgId: string }) {
   function openLessonForm(moduleId: string) {
     setLessonFor(moduleId)
     setLessonDraft({ title: '', description: '', content_type: 'video', content_url: '', body: '', drip_days: '0', duration_minutes: '' })
+    setUploadProgress(0)
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !lessonFor) return
+    setUploading(true)
+    setUploadProgress(0)
+    const ext  = file.name.split('.').pop() ?? 'bin'
+    const path = `${orgId}/${lessonFor}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    const { data, error } = await supabase.storage
+      .from('course-files')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (error) { alert(`Upload failed: ${error.message}`); setUploading(false); return }
+    const { data: { publicUrl } } = supabase.storage.from('course-files').getPublicUrl(path)
+    setLessonDraft(d => ({ ...d, content_url: publicUrl }))
+    setUploadProgress(100)
+    setUploading(false)
+    // reset input so the same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   async function saveLesson() {
@@ -757,7 +780,49 @@ function CoursesTab({ orgId }: { orgId: string }) {
                 ))}
               </div>
 
-              {/* URL field — video, audio, and document */}
+              {/* File upload — document and video */}
+              {(lessonDraft.content_type === 'document' || lessonDraft.content_type === 'video') && (
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={lessonDraft.content_type === 'document'
+                      ? '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip'
+                      : '.mp4,.mov,.webm'}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  {lessonDraft.content_url && !uploading ? (
+                    /* Uploaded / URL set — show preview chip */
+                    <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">
+                      <FileText size={14} className="text-green-600 flex-shrink-0" />
+                      <span className="flex-1 text-xs text-green-700 truncate">{lessonDraft.content_url.split('/').pop()}</span>
+                      <button onClick={() => setLessonDraft(d => ({ ...d, content_url: '' }))}
+                        className="text-green-500 hover:text-red-500 transition-colors flex-shrink-0">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : uploading ? (
+                    /* Upload progress */
+                    <div className="flex items-center gap-3 bg-brand-50 border border-brand-200 rounded-xl px-4 py-2.5">
+                      <Loader2 size={14} className="animate-spin text-brand-500 flex-shrink-0" />
+                      <span className="text-sm text-brand-600 font-medium">Uploading…</span>
+                    </div>
+                  ) : (
+                    /* Upload button */
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 text-gray-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition-all text-sm font-semibold"
+                    >
+                      <UploadCloud size={18} />
+                      {lessonDraft.content_type === 'document' ? 'Upload File (PDF, Word, Excel, PPT…)' : 'Upload Video (.mp4, .mov)'}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* URL field — all media types (fallback / alternative) */}
               {(lessonDraft.content_type === 'video' || lessonDraft.content_type === 'audio' || lessonDraft.content_type === 'document') && (
                 <div>
                   <input
@@ -765,16 +830,16 @@ function CoursesTab({ orgId }: { orgId: string }) {
                     onChange={e => setLessonDraft(d => ({ ...d, content_url: e.target.value }))}
                     placeholder={
                       lessonDraft.content_type === 'video'
-                        ? 'YouTube, Vimeo, Loom, or direct video URL (.mp4)…'
+                        ? 'Or paste YouTube, Vimeo, Loom, or .mp4 URL…'
                         : lessonDraft.content_type === 'document'
-                        ? 'PDF or file URL (Google Drive, Dropbox, direct link)…'
-                        : 'Audio URL (.mp3, .wav, Spotify, etc.)…'
+                        ? 'Or paste Google Drive / Dropbox URL…'
+                        : 'Audio URL (.mp3, .wav, SoundCloud, etc.)…'
                     }
                     className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
                   />
                   {lessonDraft.content_type === 'video' && (
                     <p className="text-[11px] text-gray-400 mt-1.5 ml-1">
-                      Embed links (YouTube/Vimeo) show inline. Direct .mp4 links play natively.
+                      YouTube/Vimeo/Loom embed inline. Direct .mp4 plays natively.
                     </p>
                   )}
                 </div>
@@ -827,7 +892,7 @@ function CoursesTab({ orgId }: { orgId: string }) {
                 className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
                 Cancel
               </button>
-              <button onClick={saveLesson} disabled={!lessonDraft.title.trim() || savingLesson}
+              <button onClick={saveLesson} disabled={!lessonDraft.title.trim() || savingLesson || uploading}
                 className="px-5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-40 flex items-center gap-2 transition-colors">
                 {savingLesson && <Loader2 size={14} className="animate-spin" />} Add Lesson
               </button>
