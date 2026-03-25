@@ -7,6 +7,7 @@ import {
   ClipboardList, ChevronLeft, ChevronRight, ClipboardCheck,
   SkipForward, ExternalLink, Copy, History, BarChart2, Utensils, Lock,
   ChevronUp, Scale, Zap, TrendingUp, Search, ListChecks,
+  BookOpen, Check, UserCheck, Globe,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { supabase } from '@/lib/supabase'
@@ -104,6 +105,106 @@ const PORTAL_SECTIONS: {
     activeRing:  'ring-rose-400/40',
   },
 ]
+
+// ─── Courses section (overview tab) ───────────────────────────
+function CoursesSection({ client }: { client: DbClient }) {
+  const [modules, setModules]         = useState<any[]>([])
+  const [enrollments, setEnrollments] = useState<Set<string>>(new Set())
+  const [lessonCounts, setLessonCounts] = useState<Record<string, number>>({})
+  const [progress, setProgress]       = useState<Record<string, number>>({})
+  const [loading, setLoading]         = useState(true)
+  const [saving, setSaving]           = useState<string | null>(null)
+
+  useEffect(() => { load() }, [client.id, client.org_id])
+
+  async function load() {
+    setLoading(true)
+    const [{ data: m }, { data: e }] = await Promise.all([
+      supabase.from('community_modules').select('id,title,access_type,published').eq('org_id', client.org_id).order('position'),
+      supabase.from('community_module_enrollments').select('module_id').eq('client_id', client.id),
+    ])
+    const mods = (m ?? []) as any[]
+    setModules(mods)
+    setEnrollments(new Set((e ?? []).map((x: any) => x.module_id as string)))
+    if (mods.length > 0) {
+      const [{ data: lessons }, { data: p }] = await Promise.all([
+        supabase.from('community_lessons').select('id,module_id').in('module_id', mods.map(x => x.id)),
+        supabase.from('community_lesson_progress').select('lesson_id').eq('client_id', client.id).eq('completed', true),
+      ])
+      const lCounts: Record<string, number> = {}
+      const lessonToMod: Record<string, string> = {}
+      for (const l of lessons ?? []) { lCounts[l.module_id] = (lCounts[l.module_id] ?? 0) + 1; lessonToMod[l.id] = l.module_id }
+      setLessonCounts(lCounts)
+      const pMap: Record<string, number> = {}
+      for (const row of p ?? []) { const mod = lessonToMod[row.lesson_id]; if (mod) pMap[mod] = (pMap[mod] ?? 0) + 1 }
+      setProgress(pMap)
+    }
+    setLoading(false)
+  }
+
+  async function toggleEnroll(moduleId: string) {
+    setSaving(moduleId)
+    if (enrollments.has(moduleId)) {
+      await supabase.from('community_module_enrollments').delete().eq('module_id', moduleId).eq('client_id', client.id)
+      setEnrollments(prev => { const n = new Set(prev); n.delete(moduleId); return n })
+    } else {
+      await supabase.from('community_module_enrollments').insert({ module_id: moduleId, client_id: client.id })
+      setEnrollments(prev => new Set([...prev, moduleId]))
+    }
+    setSaving(null)
+  }
+
+  if (loading) return <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-gray-300" /></div>
+  if (modules.length === 0) return (
+    <div className="text-center py-6 text-sm text-gray-400">
+      No courses created yet. <a href="/community" className="text-brand-600 font-semibold hover:underline">Create one in Community</a>.
+    </div>
+  )
+
+  return (
+    <div className="space-y-2">
+      {modules.map(m => {
+        const isAll     = m.access_type === 'all'
+        const enrolled  = isAll || enrollments.has(m.id)
+        const done      = progress[m.id] ?? 0
+        const total     = lessonCounts[m.id] ?? 0
+        const pct       = total > 0 ? Math.round((done / total) * 100) : 0
+        return (
+          <div key={m.id} className={clsx('flex items-center gap-3 px-4 py-3 rounded-xl border transition-all',
+            enrolled ? 'border-brand-200 bg-brand-50/40' : 'border-gray-200')}>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+              <BookOpen size={14} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-gray-700 truncate">{m.title}</p>
+                {isAll && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 flex items-center gap-0.5"><Globe size={8} /> All</span>}
+              </div>
+              {enrolled && total > 0 && (
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-brand-500 rounded-full" style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="text-[10px] text-gray-400 flex-shrink-0">{done}/{total}</span>
+                </div>
+              )}
+            </div>
+            {!isAll && (
+              <button onClick={() => toggleEnroll(m.id)} disabled={saving === m.id}
+                className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex-shrink-0',
+                  enrolled
+                    ? 'bg-brand-100 text-brand-700 hover:bg-red-50 hover:text-red-600'
+                    : 'bg-gray-100 text-gray-600 hover:bg-brand-50 hover:text-brand-700')}>
+                {saving === m.id ? <Loader2 size={11} className="animate-spin" />
+                  : enrolled ? <><UserCheck size={11} /> Enrolled</> : <><Plus size={11} /> Enroll</>}
+              </button>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 // ─── Portal access card ────────────────────────────────────────
 function PortalAccessCard({ client }: { client: DbClient }) {
@@ -2131,6 +2232,16 @@ export default function ClientDetail() {
               {/* Portal Access — spans full width */}
               <div className="lg:col-span-2 border-t border-gray-100 pt-6">
                 <PortalAccessCard client={client} />
+              </div>
+
+              {/* Community Courses — spans full width */}
+              <div className="lg:col-span-2 border-t border-gray-100 pt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                    <BookOpen size={16} className="text-violet-500" /> Community Courses
+                  </h3>
+                </div>
+                <CoursesSection client={client} />
               </div>
             </div>
           )}
