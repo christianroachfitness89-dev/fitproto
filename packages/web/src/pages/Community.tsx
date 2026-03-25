@@ -4,7 +4,7 @@ import {
   Video, FileText, Headphones, AlignLeft, ChevronDown, ChevronRight,
   Loader2, X, BookOpen, Eye, EyeOff, Clock, MoreVertical,
   Globe, Lock, Film, Users, UserCheck, Monitor, Settings2,
-  Check, CheckCircle2, Circle, Search, UserPlus, UploadCloud, Hash, Pencil, Send,
+  Check, CheckCircle2, Circle, Search, UserPlus, UploadCloud, Hash, Pencil, Send, GripVertical,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { supabase } from '@/lib/supabase'
@@ -102,11 +102,17 @@ function timeAgo(iso: string) {
 
 // ─── Feed Tab ───────────────────────────────────────────────────
 
+const PAGE_SIZE = 20
+
 function FeedTab({ orgId }: { orgId: string }) {
   const [posts, setPosts]           = useState<CommunityPost[]>([])
   const [sections, setSections]     = useState<CommunitySection[]>([])
-  const [activeSection, setActiveSection] = useState<string | null>(null) // null = All
+  const [activeSection, setActiveSection] = useState<string | null>(null)
   const [loading, setLoading]       = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore]       = useState(false)
+  const [page, setPage]             = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
   // Composer
   const [content, setContent]       = useState('')
   const [mediaUrl, setMediaUrl]     = useState('')
@@ -114,13 +120,33 @@ function FeedTab({ orgId }: { orgId: string }) {
   const [postSection, setPostSection] = useState<string>('')
   const [posting, setPosting]       = useState(false)
   const [showMedia, setShowMedia]   = useState(false)
+  const postMediaRef                = useRef<HTMLInputElement>(null)
+  const [postMediaUploading, setPostMediaUploading] = useState(false)
   // Sections panel
   const [showSections, setShowSections] = useState(false)
   const [newSectionName, setNewSectionName] = useState('')
   const [newSectionEmoji, setNewSectionEmoji] = useState('💬')
   const [savingSection, setSavingSection] = useState(false)
 
-  useEffect(() => { fetchSections(); fetchPosts() }, [orgId])
+  // Fetch sections only when org changes
+  useEffect(() => { fetchSections() }, [orgId])
+
+  // Fetch posts (reset to page 0) whenever org, section, or a realtime event fires
+  useEffect(() => {
+    fetchPosts(true)
+  }, [orgId, activeSection, refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Realtime: re-fetch on any insert/update/delete to community_posts for this org
+  useEffect(() => {
+    const ch = supabase
+      .channel(`community_posts_${orgId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'community_posts',
+        filter: `org_id=eq.${orgId}`,
+      }, () => setRefreshKey(k => k + 1))
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [orgId])
 
   async function fetchSections() {
     const { data } = await supabase
@@ -131,36 +157,56 @@ function FeedTab({ orgId }: { orgId: string }) {
     setSections((data ?? []) as CommunitySection[])
   }
 
-  async function fetchPosts() {
-    setLoading(true)
-    let q = supabase
-      .from('community_posts')
-      .select('id,content,media_url,media_type,pinned,created_at,author_type,author_client_id,section_id')
-      .eq('org_id', orgId)
-      .order('pinned', { ascending: false })
-      .order('created_at', { ascending: false })
-    if (activeSection) q = q.eq('section_id', activeSection)
-    const { data } = await q
-    if (data) {
-      const enriched: CommunityPost[] = await Promise.all(data.map(async p => {
-        const [{ count: rc }, { count: cc }, { data: coachRxn }] = await Promise.all([
-          supabase.from('community_reactions').select('*', { count: 'exact', head: true }).eq('post_id', p.id),
-          supabase.from('community_comments').select('*',  { count: 'exact', head: true }).eq('post_id', p.id),
-          supabase.from('community_reactions').select('id').eq('post_id', p.id).eq('reactor_type', 'coach').eq('reactor_org_id', orgId).maybeSingle(),
-        ])
-        let author_name = 'Coach'
-        if (p.author_type === 'client' && p.author_client_id) {
-          const { data: cl } = await supabase.from('clients').select('name').eq('id', p.author_client_id).single()
-          author_name = cl?.name ?? 'Client'
-        }
-        return { ...p, reaction_count: rc ?? 0, comment_count: cc ?? 0, author_name, coach_reacted: !!coachRxn } as CommunityPost
-      }))
-      setPosts(enriched)
+  async function fetchPosts(reset = false) {
+    const p = reset ? 0 : page
+    if (reset) setPage(0)
+    setLoading(reset)
+    const { data } = await supabase.rpc('get_community_feed_coach', {
+      p_org_id:     orgId,
+      p_section_id: activeSection,
+      p_limit:      PAGE_SIZE,
+      p_offset:     p * PAGE_SIZE,
+    })
+    const rows = (data ?? []) as CommunityPost[]
+    if (reset) {
+      setPosts(rows)
+    } else {
+      setPosts(prev => [...prev, ...rows])
     }
+    setHasMore(rows.length === PAGE_SIZE)
     setLoading(false)
   }
 
-  useEffect(() => { fetchPosts() }, [activeSection])
+  async function loadMore() {
+    const next = page + 1
+    setPage(next)
+    setLoadingMore(true)
+    const { data } = await supabase.rpc('get_community_feed_coach', {
+      p_org_id:     orgId,
+      p_section_id: activeSection,
+      p_limit:      PAGE_SIZE,
+      p_offset:     next * PAGE_SIZE,
+    })
+    const rows = (data ?? []) as CommunityPost[]
+    setPosts(prev => [...prev, ...rows])
+    setHasMore(rows.length === PAGE_SIZE)
+    setLoadingMore(false)
+  }
+
+  async function handlePostMediaUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPostMediaUploading(true)
+    const path = `posts/${orgId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    const { error } = await supabase.storage.from('course-files').upload(path, file, { upsert: true, contentType: file.type })
+    if (!error) {
+      const { data: { publicUrl } } = supabase.storage.from('course-files').getPublicUrl(path)
+      setMediaUrl(publicUrl)
+      setMediaType(file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'audio')
+    }
+    setPostMediaUploading(false)
+    if (postMediaRef.current) postMediaRef.current.value = ''
+  }
 
   async function handlePost() {
     if (!content.trim()) return
@@ -307,16 +353,36 @@ function FeedTab({ orgId }: { orgId: string }) {
         </div>
 
         {showMedia && (
-          <div className="mt-3 flex gap-2">
-            <select value={mediaType ?? ''} onChange={e => setMediaType(e.target.value as CommunityPost['media_type'] || null)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
-              <option value="">Type…</option>
-              <option value="image">Image</option>
-              <option value="video">Video</option>
-              <option value="audio">Audio</option>
-            </select>
-            <input value={mediaUrl} onChange={e => setMediaUrl(e.target.value)} placeholder="Paste URL…"
-              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400" />
+          <div className="mt-3">
+            {/* Hidden file input */}
+            <input ref={postMediaRef} type="file" accept="image/*,video/*,audio/*" onChange={handlePostMediaUpload} className="hidden" />
+
+            {mediaUrl ? (
+              /* Uploaded / URL set — show chip */
+              <div className="flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-xl px-4 py-2.5">
+                {mediaType === 'image' ? <img src={mediaUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" /> : <Film size={14} className="text-brand-600 flex-shrink-0" />}
+                <span className="flex-1 text-xs text-brand-700 truncate">{mediaUrl.split('/').pop()}</span>
+                <button onClick={() => { setMediaUrl(''); setMediaType(null) }} className="text-brand-400 hover:text-red-500 transition-colors flex-shrink-0"><X size={14} /></button>
+              </div>
+            ) : (
+              /* URL + upload row */
+              <div className="flex gap-2">
+                <select value={mediaType ?? ''} onChange={e => setMediaType(e.target.value as CommunityPost['media_type'] || null)}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+                  <option value="">Type…</option>
+                  <option value="image">Image</option>
+                  <option value="video">Video</option>
+                  <option value="audio">Audio</option>
+                </select>
+                <input value={mediaUrl} onChange={e => setMediaUrl(e.target.value)} placeholder="Paste URL…"
+                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400" />
+                <button type="button" onClick={() => postMediaRef.current?.click()} disabled={postMediaUploading}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-xs font-semibold text-gray-500 hover:border-brand-300 hover:text-brand-600 transition-colors">
+                  {postMediaUploading ? <Loader2 size={13} className="animate-spin" /> : <UploadCloud size={13} />}
+                  {postMediaUploading ? 'Uploading…' : 'Upload'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -346,8 +412,22 @@ function FeedTab({ orgId }: { orgId: string }) {
       ) : (
         <div className="space-y-4">
           {posts.map(post => (
-            <PostCard key={post.id} post={post} sections={sections} orgId={orgId} onPin={handlePin} onDelete={handleDelete} onReactionToggle={(id, reacted, count) => setPosts(ps => ps.map(p => p.id === id ? { ...p, coach_reacted: reacted, reaction_count: count } : p))} onCommentAdded={(id) => setPosts(ps => ps.map(p => p.id === id ? { ...p, comment_count: p.comment_count + 1 } : p))} />
+            <PostCard key={post.id} post={post} sections={sections} orgId={orgId} onPin={handlePin} onDelete={handleDelete}
+              onReactionToggle={(id, reacted, count) => setPosts(ps => ps.map(p => p.id === id ? { ...p, coach_reacted: reacted, reaction_count: count } : p))}
+              onCommentAdded={(id) => setPosts(ps => ps.map(p => p.id === id ? { ...p, comment_count: p.comment_count + 1 } : p))}
+            />
           ))}
+
+          {/* Load more */}
+          {hasMore && (
+            <div className="flex justify-center pt-2">
+              <button onClick={loadMore} disabled={loadingMore}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
+                {loadingMore ? <Loader2 size={14} className="animate-spin" /> : <ChevronDown size={14} />}
+                {loadingMore ? 'Loading…' : 'Load more'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -373,6 +453,7 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
 }) {
   const [menu, setMenu] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const [pendingDelete, setPendingDelete] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState<PostComment[]>([])
   const [loadingComments, setLoadingComments] = useState(false)
@@ -429,6 +510,11 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
       onReactionToggle(post.id, true, post.reaction_count + 1)
     }
     setReacting(false)
+  }
+
+  async function deleteComment(id: string) {
+    await supabase.from('community_comments').delete().eq('id', id)
+    setComments(cs => cs.filter(c => c.id !== id))
   }
 
   async function submitComment(e: React.FormEvent) {
@@ -492,16 +578,28 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
               <MoreVertical size={16} />
             </button>
             {menu && (
-              <div className="absolute right-0 top-8 z-20 w-40 bg-white border border-gray-100 rounded-xl shadow-xl py-1 overflow-hidden">
+              <div className="absolute right-0 top-8 z-20 w-44 bg-white border border-gray-100 rounded-xl shadow-xl py-1 overflow-hidden">
                 <button onClick={() => { onPin(post.id, post.pinned); setMenu(false) }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                   {post.pinned ? <PinOff size={14} /> : <Pin size={14} />}
                   {post.pinned ? 'Unpin' : 'Pin post'}
                 </button>
-                <button onClick={() => { onDelete(post.id); setMenu(false) }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                  <Trash2 size={14} /> Delete
-                </button>
+                {pendingDelete ? (
+                  <div className="px-3 py-2 border-t border-red-50">
+                    <p className="text-xs text-red-600 font-semibold mb-1.5">Delete this post?</p>
+                    <div className="flex gap-1.5">
+                      <button onClick={() => { onDelete(post.id); setMenu(false); setPendingDelete(false) }}
+                        className="flex-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600">Yes</button>
+                      <button onClick={() => setPendingDelete(false)}
+                        className="flex-1 px-2 py-1 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50">No</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => setPendingDelete(true)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                    <Trash2 size={14} /> Delete
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -571,6 +669,12 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="text-xs font-semibold text-gray-700">{c.author_name}</span>
                     <span className="text-[10px] text-gray-400">{timeAgo(c.created_at)}</span>
+                    {c.author_type === 'coach' && (
+                      <button onClick={() => deleteComment(c.id)}
+                        className="ml-auto text-gray-300 hover:text-red-500 transition-colors p-0.5 rounded">
+                        <Trash2 size={11} />
+                      </button>
+                    )}
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">{c.content}</p>
                 </div>
@@ -816,10 +920,16 @@ function CoursesTab({ orgId }: { orgId: string }) {
   const [loading, setLoading]       = useState(true)
   // Module form
   const [showModuleForm, setShowModuleForm]   = useState(false)
-  const [moduleDraft, setModuleDraft]         = useState({ title: '', description: '' })
+  const [moduleDraft, setModuleDraft]         = useState({ title: '', description: '', cover_url: '' })
   const [savingModule, setSavingModule]       = useState(false)
+  const moduleCoverRef                        = useRef<HTMLInputElement>(null)
+  const [coverUploading, setCoverUploading]   = useState(false)
   // Access modal
   const [accessModal, setAccessModal]         = useState<CommunityModule | null>(null)
+  // Drag-to-reorder modules
+  const [dragModIdx, setDragModIdx]           = useState<number | null>(null)
+  // Drag-to-reorder lessons
+  const [dragLsn, setDragLsn]                = useState<{ modId: string; idx: number } | null>(null)
   // Lesson form
   const [lessonFor, setLessonFor]             = useState<string | null>(null) // module_id
   const [lessonDraft, setLessonDraft]         = useState<{
@@ -864,16 +974,31 @@ function CoursesTab({ orgId }: { orgId: string }) {
     })
   }
 
+  async function handleModuleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCoverUploading(true)
+    const path = `covers/${orgId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    const { error } = await supabase.storage.from('course-files').upload(path, file, { upsert: true, contentType: file.type })
+    if (!error) {
+      const { data: { publicUrl } } = supabase.storage.from('course-files').getPublicUrl(path)
+      setModuleDraft(d => ({ ...d, cover_url: publicUrl }))
+    }
+    setCoverUploading(false)
+    if (moduleCoverRef.current) moduleCoverRef.current.value = ''
+  }
+
   async function saveModule() {
     if (!moduleDraft.title.trim()) return
     setSavingModule(true)
     await supabase.from('community_modules').insert({
-      org_id: orgId,
-      title: moduleDraft.title.trim(),
+      org_id:      orgId,
+      title:       moduleDraft.title.trim(),
       description: moduleDraft.description.trim() || null,
-      position: modules.length,
+      cover_url:   moduleDraft.cover_url.trim() || null,
+      position:    modules.length,
     })
-    setModuleDraft({ title: '', description: '' })
+    setModuleDraft({ title: '', description: '', cover_url: '' })
     setShowModuleForm(false)
     setSavingModule(false)
     fetchModules()
@@ -887,6 +1012,41 @@ function CoursesTab({ orgId }: { orgId: string }) {
   async function deleteModule(id: string) {
     await supabase.from('community_modules').delete().eq('id', id)
     setModules(prev => prev.filter(m => m.id !== id))
+  }
+
+  // ── Module drag-to-reorder ───────────────────────────────────
+  function handleModDragOver(e: React.DragEvent, toIdx: number) {
+    e.preventDefault()
+    if (dragModIdx === null || dragModIdx === toIdx) return
+    const next = [...modules]
+    const [item] = next.splice(dragModIdx, 1)
+    next.splice(toIdx, 0, item)
+    setModules(next)
+    setDragModIdx(toIdx)
+  }
+  async function handleModDragEnd() {
+    setDragModIdx(null)
+    await Promise.all(modules.map((m, i) =>
+      supabase.from('community_modules').update({ position: i }).eq('id', m.id)
+    ))
+  }
+
+  // ── Lesson drag-to-reorder ───────────────────────────────────
+  function handleLsnDragOver(e: React.DragEvent, modId: string, toIdx: number) {
+    e.preventDefault()
+    if (!dragLsn || dragLsn.modId !== modId || dragLsn.idx === toIdx) return
+    const ls = [...(lessons[modId] ?? [])]
+    const [item] = ls.splice(dragLsn.idx, 1)
+    ls.splice(toIdx, 0, item)
+    setLessons(prev => ({ ...prev, [modId]: ls }))
+    setDragLsn({ modId, idx: toIdx })
+  }
+  async function handleLsnDragEnd(modId: string) {
+    setDragLsn(null)
+    const ls = lessons[modId] ?? []
+    await Promise.all(ls.map((l, i) =>
+      supabase.from('community_lessons').update({ position: i }).eq('id', l.id)
+    ))
   }
 
   function openLessonForm(moduleId: string) {
@@ -964,14 +1124,14 @@ function CoursesTab({ orgId }: { orgId: string }) {
 
       {/* New module form */}
       {showModuleForm && (
-        <div className="bg-white rounded-2xl border border-brand-200 p-5 shadow-sm">
-          <p className="text-sm font-semibold text-gray-700 mb-3">New Module</p>
+        <div className="bg-white rounded-2xl border border-brand-200 p-5 shadow-sm space-y-2">
+          <p className="text-sm font-semibold text-gray-700 mb-1">New Module</p>
           <input
             autoFocus
             value={moduleDraft.title}
             onChange={e => setModuleDraft(d => ({ ...d, title: e.target.value }))}
             placeholder="Module title…"
-            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 mb-2"
+            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
           />
           <textarea
             value={moduleDraft.description}
@@ -980,7 +1140,25 @@ function CoursesTab({ orgId }: { orgId: string }) {
             rows={2}
             className="w-full resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
           />
-          <div className="flex justify-end gap-2 mt-3">
+
+          {/* Cover image upload */}
+          <input ref={moduleCoverRef} type="file" accept="image/*" onChange={handleModuleCoverUpload} className="hidden" />
+          {moduleDraft.cover_url ? (
+            <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
+              <img src={moduleDraft.cover_url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+              <span className="flex-1 text-xs text-green-700 truncate">Cover image set</span>
+              <button onClick={() => setModuleDraft(d => ({ ...d, cover_url: '' }))}
+                className="text-green-500 hover:text-red-500 transition-colors"><X size={14} /></button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => moduleCoverRef.current?.click()} disabled={coverUploading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-gray-200 text-gray-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition-all text-sm font-semibold">
+              {coverUploading ? <Loader2 size={15} className="animate-spin" /> : <UploadCloud size={15} />}
+              {coverUploading ? 'Uploading cover…' : 'Upload cover image (optional)'}
+            </button>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
             <button onClick={() => setShowModuleForm(false)}
               className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
               Cancel
@@ -1005,7 +1183,7 @@ function CoursesTab({ orgId }: { orgId: string }) {
           <p className="text-sm text-gray-400 mt-1">Create your first module to get started.</p>
         </div>
       ) : (
-        modules.map(mod => (
+        modules.map((mod, modIdx) => (
           <ModuleCard
             key={mod.id}
             mod={mod}
@@ -1018,6 +1196,17 @@ function CoursesTab({ orgId }: { orgId: string }) {
             onLessonPublish={toggleLessonPublish}
             onLessonDelete={deleteLesson}
             onManageAccess={() => setAccessModal(mod)}
+            // Module drag
+            modIdx={modIdx}
+            isDraggingMod={dragModIdx === modIdx}
+            onModDragStart={() => setDragModIdx(modIdx)}
+            onModDragOver={(e) => handleModDragOver(e, modIdx)}
+            onModDragEnd={handleModDragEnd}
+            // Lesson drag
+            dragLsnIdx={dragLsn?.modId === mod.id ? dragLsn.idx : null}
+            onLsnDragStart={(idx) => setDragLsn({ modId: mod.id, idx })}
+            onLsnDragOver={(e, idx) => handleLsnDragOver(e, mod.id, idx)}
+            onLsnDragEnd={() => handleLsnDragEnd(mod.id)}
           />
         ))
       )}
@@ -1199,6 +1388,8 @@ function CoursesTab({ orgId }: { orgId: string }) {
 
 function ModuleCard({
   mod, lessons, expanded, onToggle, onPublish, onDelete, onAddLesson, onLessonPublish, onLessonDelete, onManageAccess,
+  modIdx, isDraggingMod, onModDragStart, onModDragOver, onModDragEnd,
+  dragLsnIdx, onLsnDragStart, onLsnDragOver, onLsnDragEnd,
 }: {
   mod: CommunityModule
   lessons: CommunityLesson[] | undefined
@@ -1210,15 +1401,46 @@ function ModuleCard({
   onLessonPublish: (l: CommunityLesson) => void
   onLessonDelete:  (l: CommunityLesson) => void
   onManageAccess: () => void
+  // module drag
+  modIdx: number
+  isDraggingMod: boolean
+  onModDragStart: () => void
+  onModDragOver: (e: React.DragEvent) => void
+  onModDragEnd: () => void
+  // lesson drag
+  dragLsnIdx: number | null
+  onLsnDragStart: (idx: number) => void
+  onLsnDragOver: (e: React.DragEvent, idx: number) => void
+  onLsnDragEnd: () => void
 }) {
+  const [pendingDeleteMod, setPendingDeleteMod] = useState(false)
+  const [pendingDeleteLsn, setPendingDeleteLsn] = useState<string | null>(null)
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div
+      draggable
+      onDragStart={onModDragStart}
+      onDragOver={onModDragOver}
+      onDragEnd={onModDragEnd}
+      className={clsx('bg-white rounded-2xl border shadow-sm overflow-hidden transition-opacity',
+        isDraggingMod ? 'opacity-50 border-brand-300' : 'border-gray-100')}
+    >
       {/* Module header */}
-      <div className="flex items-center gap-3 px-5 py-4">
-        <button onClick={onToggle} className="flex-1 flex items-center gap-3 text-left">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
-            <BookOpen size={16} className="text-white" />
-          </div>
+      <div className="flex items-center gap-2 px-3 py-4">
+        {/* Drag handle */}
+        <div className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 transition-colors flex-shrink-0 px-1">
+          <GripVertical size={16} />
+        </div>
+
+        {/* Cover image or gradient icon */}
+        <button onClick={onToggle} className="flex-1 flex items-center gap-3 text-left min-w-0">
+          {mod.cover_url ? (
+            <img src={mod.cover_url} alt="" className="w-9 h-9 rounded-xl object-cover flex-shrink-0" />
+          ) : (
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+              <BookOpen size={16} className="text-white" />
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-800 truncate">{mod.title}</p>
             {mod.description && <p className="text-xs text-gray-400 truncate mt-0.5">{mod.description}</p>}
@@ -1241,10 +1463,22 @@ function ModuleCard({
               mod.published ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-gray-100 text-gray-500 hover:bg-gray-200')}>
             {mod.published ? <><Globe size={12} /> Live</> : <><Lock size={12} /> Draft</>}
           </button>
-          <button onClick={onDelete}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
-            <Trash2 size={14} />
-          </button>
+
+          {/* Module delete with confirmation */}
+          {pendingDeleteMod ? (
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] text-red-600 font-semibold">Delete?</span>
+              <button onClick={() => { onDelete(); setPendingDeleteMod(false) }}
+                className="px-2 py-1 rounded-lg bg-red-500 text-white text-[10px] font-semibold hover:bg-red-600">Yes</button>
+              <button onClick={() => setPendingDeleteMod(false)}
+                className="px-2 py-1 rounded-lg border border-gray-200 text-[10px] text-gray-600 hover:bg-gray-50">No</button>
+            </div>
+          ) : (
+            <button onClick={() => setPendingDeleteMod(true)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -1260,7 +1494,19 @@ function ModuleCard({
               ) : (
                 <div className="divide-y divide-gray-50">
                   {lessons.map((lesson, i) => (
-                    <div key={lesson.id} className="flex items-center gap-3 px-5 py-3">
+                    <div
+                      key={lesson.id}
+                      draggable
+                      onDragStart={() => onLsnDragStart(i)}
+                      onDragOver={(e) => onLsnDragOver(e, i)}
+                      onDragEnd={onLsnDragEnd}
+                      className={clsx('flex items-center gap-2 px-4 py-3 transition-opacity',
+                        dragLsnIdx === i ? 'opacity-40' : '')}
+                    >
+                      {/* Lesson drag handle */}
+                      <div className="cursor-grab active:cursor-grabbing text-gray-200 hover:text-gray-400 transition-colors flex-shrink-0">
+                        <GripVertical size={14} />
+                      </div>
                       <span className="text-xs text-gray-300 w-5 text-center font-bold">{i + 1}</span>
                       <span className={clsx('flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0', contentTypeBg(lesson.content_type))}>
                         {contentTypeIcon(lesson.content_type)} {lesson.content_type}
@@ -1282,10 +1528,22 @@ function ModuleCard({
                         className={clsx('p-1.5 rounded-lg transition-colors', lesson.published ? 'text-emerald-500 hover:bg-emerald-50' : 'text-gray-300 hover:bg-gray-100')}>
                         {lesson.published ? <Eye size={14} /> : <EyeOff size={14} />}
                       </button>
-                      <button onClick={() => onLessonDelete(lesson)}
-                        className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
+
+                      {/* Lesson delete with confirmation */}
+                      {pendingDeleteLsn === lesson.id ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-red-600 font-semibold">Delete?</span>
+                          <button onClick={() => { onLessonDelete(lesson); setPendingDeleteLsn(null) }}
+                            className="px-2 py-1 rounded-lg bg-red-500 text-white text-[10px] font-semibold hover:bg-red-600">Yes</button>
+                          <button onClick={() => setPendingDeleteLsn(null)}
+                            className="px-2 py-1 rounded-lg border border-gray-200 text-[10px] text-gray-600 hover:bg-gray-50">No</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setPendingDeleteLsn(lesson.id)}
+                          className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
