@@ -3050,7 +3050,7 @@ function BottomTabBar({
   const moreUnread = hasUnreadMessages && activeSection !== 'messages'
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#09091a]/95 backdrop-blur-xl border-t border-white/10">
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#09091a]/95 backdrop-blur-xl border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
       <div className="flex">
         {tabs.map(({ label, Icon, section, unread }) => {
           const active = !moreActive && activeSection === section
@@ -3058,7 +3058,7 @@ function BottomTabBar({
             <button
               key={label}
               onClick={() => onTab(section)}
-              className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
+              className="flex-1 flex flex-col items-center gap-1 py-3 transition-colors"
             >
               <div className="relative">
                 <Icon size={22} className={active ? 'text-brand-400' : 'text-white/35'} />

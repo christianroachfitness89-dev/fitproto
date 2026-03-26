@@ -47,7 +47,7 @@ export default function AppLayout() {
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
           />
-          <div className="relative z-50 h-full w-64">
+          <div className="relative z-50 h-full w-72 max-w-[85vw]">
             <Sidebar mobile onClose={() => setSidebarOpen(false)} />
           </div>
         </div>

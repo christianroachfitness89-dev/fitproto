@@ -17,7 +17,7 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
   const unreadCount = notifications.filter(n => !n.read).length
 
   return (
-    <header className="h-16 glass border-b border-white/60 flex items-center px-6 gap-4 sticky top-0 z-20">
+    <header className="h-16 glass border-b border-white/60 flex items-center px-4 sm:px-6 gap-3 sm:gap-4 sticky top-0 z-20">
       <MobileMenuButton onClick={onMenuClick} />
 
       <h1 className="text-base font-semibold text-gray-800 flex-1 lg:flex-none tracking-tight">{title}</h1>
@@ -51,7 +51,7 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-card-lg border border-gray-100 overflow-hidden z-50">
+            <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-card-lg border border-gray-100 overflow-hidden z-50">
               <div className="px-4 py-3.5 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="font-semibold text-gray-800 text-sm">Notifications</h3>
                 <div className="flex items-center gap-2">

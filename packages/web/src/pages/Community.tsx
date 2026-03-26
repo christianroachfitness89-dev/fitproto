@@ -2400,7 +2400,7 @@ export default function Community() {
   const activeCommunity = communities.find(c => c.id === communityId)
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       {/* Header */}
       <div className="mb-5">
         <div className="flex items-center gap-3 mb-1">
@@ -2413,8 +2413,8 @@ export default function Community() {
       </div>
 
       {/* Community selector */}
-      <div className="flex items-center gap-2 flex-wrap mb-5">
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 flex-wrap">
+      <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 flex-shrink-0">
           <button
             onClick={() => handleSetCommunityId(null)}
             className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all',
@@ -2468,7 +2468,7 @@ export default function Community() {
       )}
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit mb-6 flex-wrap">
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 overflow-x-auto w-full sm:w-fit">
         {([
           { id: 'feed'    as const, label: 'Feed',    Icon: MessageCircle, show: true },
           { id: 'courses' as const, label: 'Courses', Icon: BookOpen,      show: !!communityId },

@@ -102,11 +102,11 @@ export default function Dashboard() {
   const firstName = profile?.full_name?.split(' ')[0] ?? 'Coach'
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-5 sm:space-y-6">
       {/* Welcome */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">{greeting}, {firstName} 👋</h2>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight truncate">{greeting}, {firstName} 👋</h2>
           <p className="text-gray-500 text-sm mt-1">Here's what's happening with your clients today.</p>
         </div>
         <Link
@@ -119,7 +119,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           label="Total Clients"
           value={loadingClients ? '—' : clients.length}

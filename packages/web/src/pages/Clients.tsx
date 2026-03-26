@@ -246,11 +246,11 @@ export default function Clients() {
   })
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-4">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-4">
       {showAddModal && <AddClientModal onClose={() => setShowAddModal(false)} />}
 
       {/* Page header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <h2 className="text-xl font-bold text-gray-900">
           All Clients{' '}
           <span className="text-gray-400 font-normal text-base">
@@ -315,7 +315,7 @@ export default function Clients() {
       )}
 
       {/* Search */}
-      <div className="relative max-w-sm">
+      <div className="relative w-full sm:max-w-sm">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           type="text"

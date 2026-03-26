@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   Search, Send, MoreHorizontal, MessageSquare,
-  ExternalLink, Check, CheckCheck, Loader2,
+  ExternalLink, Check, CheckCheck, Loader2, ArrowLeft,
 } from 'lucide-react'
 import clsx from 'clsx'
 import {
@@ -190,10 +190,15 @@ export default function Inbox() {
   const grouped = groupByDate(messages)
 
   return (
-    <div className="flex bg-white" style={{ height: 'calc(100vh - 64px)' }}>
+    <div className="flex bg-white h-[calc(100vh-64px)]">
 
       {/* ── Sidebar ─────────────────────────────────────────── */}
-      <div className="w-[300px] flex-shrink-0 border-r border-gray-100 flex flex-col">
+      <div className={clsx(
+        'flex-shrink-0 border-r border-gray-100 flex flex-col',
+        'w-full sm:w-[300px]',
+        // On mobile: hide sidebar when a conversation is open
+        selectedId ? 'hidden sm:flex' : 'flex',
+      )}>
         {/* Header */}
         <div className="px-4 pt-5 pb-3 border-b border-gray-100">
           <div className="flex items-center justify-between mb-3">
@@ -250,7 +255,14 @@ export default function Inbox() {
       {selectedConvo ? (
         <div className="flex-1 flex flex-col min-w-0 bg-gray-50">
           {/* Header */}
-          <div className="bg-white border-b border-gray-100 px-6 py-3.5 flex items-center gap-3 flex-shrink-0">
+          <div className="bg-white border-b border-gray-100 px-4 sm:px-6 py-3.5 flex items-center gap-3 flex-shrink-0">
+            {/* Mobile back button */}
+            <button
+              onClick={() => setSelectedId(null)}
+              className="sm:hidden p-1.5 -ml-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
+            >
+              <ArrowLeft size={18} />
+            </button>
             <div className="w-9 h-9 rounded-full bg-brand-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
               {initials(selectedConvo.clients.name)}
             </div>
@@ -272,7 +284,7 @@ export default function Inbox() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-1">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-1">
             {loadingMsgs ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 size={24} className="text-gray-300 animate-spin" />
@@ -309,7 +321,7 @@ export default function Inbox() {
           </div>
 
           {/* Input */}
-          <div className="bg-white border-t border-gray-100 px-6 py-4 flex-shrink-0">
+          <div className="bg-white border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
             <div className="flex items-end gap-3 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-500/15 transition-all">
               <input
                 ref={inputRef}
