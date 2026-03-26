@@ -228,6 +228,20 @@ export interface DbCheckIn {
   created_at: string
 }
 
+export interface DbNutritionPlan {
+  id: string
+  org_id: string
+  client_id: string
+  mfp_username: string | null
+  calories_target: number | null
+  protein_g: number | null
+  carbs_g: number | null
+  fat_g: number | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface DbNotification {
   id: string
   org_id: string

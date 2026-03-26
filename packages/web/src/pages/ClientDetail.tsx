@@ -29,6 +29,7 @@ import {
   useWorkouts, useWorkoutDetail, useProgramDetail,
   usePrograms, useClientProgramAssignment, useAssignProgram, useUnassignProgram,
 } from '@/hooks/useWorkouts'
+import { useNutritionPlan, useUpsertNutritionPlan } from '@/hooks/useNutrition'
 import { useUnitSystem, weightLabel } from '@/lib/units'
 import { playRestEndChime } from '@/lib/sound'
 import type { DbClient, DbTask, DbClientWorkoutWithWorkout, PortalSection } from '@/lib/database.types'
@@ -2318,6 +2319,140 @@ function MetricsTab({ clientId }: { clientId: string }) {
   )
 }
 
+// ─── Nutrition Tab ─────────────────────────────────────────────
+function NutritionTab({ clientId, orgId }: { clientId: string; orgId: string }) {
+  const { data: plan, isLoading } = useNutritionPlan(clientId)
+  const upsert = useUpsertNutritionPlan()
+
+  const [mfpUsername,     setMfpUsername]     = useState(plan?.mfp_username     ?? '')
+  const [caloriesTarget,  setCaloriesTarget]  = useState(plan?.calories_target?.toString() ?? '')
+  const [proteinG,        setProteinG]        = useState(plan?.protein_g?.toString()       ?? '')
+  const [carbsG,          setCarbsG]          = useState(plan?.carbs_g?.toString()         ?? '')
+  const [fatG,            setFatG]            = useState(plan?.fat_g?.toString()           ?? '')
+  const [notes,           setNotes]           = useState(plan?.notes            ?? '')
+  const [saved,           setSaved]           = useState(false)
+
+  // Sync form when plan loads
+  useEffect(() => {
+    if (plan) {
+      setMfpUsername(plan.mfp_username ?? '')
+      setCaloriesTarget(plan.calories_target?.toString() ?? '')
+      setProteinG(plan.protein_g?.toString() ?? '')
+      setCarbsG(plan.carbs_g?.toString() ?? '')
+      setFatG(plan.fat_g?.toString() ?? '')
+      setNotes(plan.notes ?? '')
+    }
+  }, [plan])
+
+  async function handleSave() {
+    await upsert.mutateAsync({
+      client_id:       clientId,
+      org_id:          orgId,
+      mfp_username:    mfpUsername.trim()   || null,
+      calories_target: caloriesTarget ? parseInt(caloriesTarget) : null,
+      protein_g:       proteinG       ? parseInt(proteinG)       : null,
+      carbs_g:         carbsG         ? parseInt(carbsG)         : null,
+      fat_g:           fatG           ? parseInt(fatG)           : null,
+      notes:           notes.trim()   || null,
+    })
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const diaryUrl = mfpUsername.trim()
+    ? `https://www.myfitnesspal.com/food/diary/${mfpUsername.trim()}`
+    : null
+
+  if (isLoading) {
+    return <div className="py-16 text-center"><Loader2 size={24} className="animate-spin text-gray-400 mx-auto" /></div>
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* MFP link preview */}
+      {diaryUrl && (
+        <a
+          href={diaryUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 font-medium hover:bg-rose-100 transition-colors"
+        >
+          <ExternalLink size={18} />
+          <span>Client's MFP Diary</span>
+          <span className="ml-auto text-xs text-rose-400 truncate max-w-[200px]">{diaryUrl}</span>
+        </a>
+      )}
+
+      {/* Form */}
+      <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100">
+        {/* MFP Username */}
+        <div className="p-5 space-y-2">
+          <label className="text-sm font-semibold text-gray-700">MyFitnessPal Username</label>
+          <input
+            type="text"
+            value={mfpUsername}
+            onChange={e => setMfpUsername(e.target.value)}
+            placeholder="e.g. john_doe"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+          />
+          {mfpUsername.trim() && (
+            <p className="text-xs text-gray-400">
+              Diary URL: <span className="text-gray-600">https://www.myfitnesspal.com/food/diary/{mfpUsername.trim()}</span>
+            </p>
+          )}
+        </div>
+
+        {/* Daily Targets */}
+        <div className="p-5 space-y-3">
+          <p className="text-sm font-semibold text-gray-700">Daily Targets</p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: 'Calories (kcal)', value: caloriesTarget, onChange: setCaloriesTarget },
+              { label: 'Protein (g)',     value: proteinG,       onChange: setProteinG       },
+              { label: 'Carbs (g)',       value: carbsG,         onChange: setCarbsG         },
+              { label: 'Fat (g)',         value: fatG,           onChange: setFatG           },
+            ].map(field => (
+              <div key={field.label} className="space-y-1">
+                <label className="text-xs text-gray-500">{field.label}</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={field.value}
+                  onChange={e => field.onChange(e.target.value)}
+                  placeholder="—"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div className="p-5 space-y-2">
+          <label className="text-sm font-semibold text-gray-700">Nutrition Notes</label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            rows={5}
+            placeholder="Meal plan, food guidance, dietary restrictions..."
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 resize-none"
+          />
+        </div>
+      </div>
+
+      {/* Save */}
+      <button
+        onClick={handleSave}
+        disabled={upsert.isPending}
+        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors"
+      >
+        {upsert.isPending ? <Loader2 size={16} className="animate-spin" /> : saved ? <Check size={16} /> : null}
+        {saved ? 'Saved!' : 'Save Nutrition Plan'}
+      </button>
+    </div>
+  )
+}
+
 // ─── Placeholder tab ──────────────────────────────────────────
 function ComingSoon({ label }: { label: string }) {
   return (
@@ -2734,7 +2869,7 @@ export default function ClientDetail() {
           {mountedTabs.has('plan')      && <div className={activeTab !== 'plan'      ? 'hidden' : ''}><PlanTab clientId={client.id} /></div>}
           {mountedTabs.has('workouts')  && <div className={activeTab !== 'workouts'  ? 'hidden' : ''}><WorkoutsTab clientId={client.id} /></div>}
           {mountedTabs.has('history')   && <div className={activeTab !== 'history'   ? 'hidden' : ''}><HistoryTab clientId={client.id} /></div>}
-          {mountedTabs.has('nutrition') && <div className={activeTab !== 'nutrition' ? 'hidden' : ''}><ComingSoon label="Nutrition plans" /></div>}
+          {mountedTabs.has('nutrition') && <div className={activeTab !== 'nutrition' ? 'hidden' : ''}><NutritionTab clientId={client.id} orgId={client.org_id} /></div>}
           {mountedTabs.has('metrics')   && <div className={activeTab !== 'metrics'   ? 'hidden' : ''}><MetricsTab clientId={client.id} /></div>}
           {mountedTabs.has('notes')     && <div className={activeTab !== 'notes'     ? 'hidden' : ''}><ComingSoon label="Coach notes" /></div>}
         </div>

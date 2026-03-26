@@ -2902,10 +2902,39 @@ function MetricsView({ clientId }: { clientId: string }) {
   )
 }
 
-// ─── Nutrition placeholder view ────────────────────────────────
-function NutritionView() {
+// ─── Nutrition view ─────────────────────────────────────────────
+function NutritionView({ clientId }: { clientId: string }) {
+  const [plan, setPlan] = useState<{
+    mfp_username?: string | null
+    calories_target?: number | null
+    protein_g?: number | null
+    carbs_g?: number | null
+    fat_g?: number | null
+    notes?: string | null
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      const { data } = await supabase.rpc('get_portal_nutrition', { p_client_id: clientId })
+      if (!cancelled) {
+        setPlan(data && Object.keys(data).length > 0 ? data : null)
+        setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [clientId])
+
+  const hasMacros = plan && (
+    plan.calories_target != null || plan.protein_g != null ||
+    plan.carbs_g != null || plan.fat_g != null
+  )
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]">
+      {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-14 pb-5 border-b border-white/8">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center shadow-lg shadow-rose-500/30">
           <Utensils size={18} className="text-white" />
@@ -2915,13 +2944,65 @@ function NutritionView() {
           <p className="text-white/35 text-xs">Meal plans & guidance</p>
         </div>
       </div>
-      <div className="flex items-center justify-center min-h-[60vh] px-6 pb-28">
-        <EmptyState
-          icon={<Utensils size={28} className="text-rose-400/60" />}
-          title="Coming soon"
-          subtitle="Your nutrition plans and meal guidance will appear here once your coach sets it up."
-          gradient="from-rose-500/10 to-pink-500/10"
-        />
+
+      <div className="px-4 pt-5 pb-28 space-y-4">
+        {loading ? (
+          <div className="flex justify-center pt-16">
+            <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+          </div>
+        ) : !plan ? (
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <EmptyState
+              icon={<Utensils size={28} className="text-rose-400/60" />}
+              title="No nutrition plan yet"
+              subtitle="Your coach hasn't set up nutrition guidance yet."
+              gradient="from-rose-500/10 to-pink-500/10"
+            />
+          </div>
+        ) : (
+          <>
+            {/* Coach notes */}
+            {plan.notes && (
+              <div className="rounded-2xl bg-white/6 border border-white/10 p-5">
+                <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-2">Coach Notes</p>
+                <p className="text-white text-sm leading-relaxed whitespace-pre-wrap">{plan.notes}</p>
+              </div>
+            )}
+
+            {/* Macro targets */}
+            {hasMacros && (
+              <div className="rounded-2xl bg-white/6 border border-white/10 p-5">
+                <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-3">Daily Targets</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: 'Calories', value: plan.calories_target, unit: 'kcal', color: 'from-orange-500 to-amber-400' },
+                    { label: 'Protein',  value: plan.protein_g,       unit: 'g',    color: 'from-rose-500 to-pink-400'   },
+                    { label: 'Carbs',    value: plan.carbs_g,         unit: 'g',    color: 'from-blue-500 to-cyan-400'   },
+                    { label: 'Fat',      value: plan.fat_g,           unit: 'g',    color: 'from-violet-500 to-purple-400' },
+                  ].map(m => m.value != null && (
+                    <div key={m.label} className="rounded-xl bg-white/5 border border-white/8 px-4 py-3 flex flex-col gap-0.5">
+                      <span className="text-white/45 text-xs">{m.label}</span>
+                      <span className="text-white font-bold text-lg leading-none">{m.value}<span className="text-white/40 text-xs font-normal ml-1">{m.unit}</span></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* MFP button */}
+            {plan.mfp_username && (
+              <a
+                href={`https://www.myfitnesspal.com/food/diary/${plan.mfp_username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold text-sm shadow-lg shadow-rose-500/30 active:scale-95 transition-transform"
+              >
+                <ExternalLink size={16} />
+                Open MyFitnessPal Diary
+              </a>
+            )}
+          </>
+        )}
       </div>
     </div>
   )
@@ -3781,7 +3862,7 @@ export default function ClientPortal() {
       )}
       {mountedSections.has('nutrition') && (
         <div className={activeSection !== 'nutrition' ? 'hidden' : ''}>
-          <NutritionView />
+          <NutritionView clientId={clientId!} />
         </div>
       )}
       {mountedSections.has('messages') && (
