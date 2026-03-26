@@ -12,6 +12,7 @@ export interface DbHabit {
   frequency: 'daily' | 'weekdays' | 'weekends' | 'weekly'
   active: boolean
   is_template: boolean
+  metric_definition_id: string | null
   created_at: string
 }
 
@@ -87,17 +88,19 @@ export function useCreateHabit() {
       emoji?: string
       frequency?: DbHabit['frequency']
       is_template?: boolean
+      metric_definition_id?: string | null
     }) => {
       const { data, error } = await supabase
         .from('habits')
         .insert({
-          org_id:      profile!.org_id,
-          client_id:   input.client_id ?? null,
-          name:        input.name.trim(),
-          description: input.description?.trim() || null,
-          emoji:       input.emoji ?? '✅',
-          frequency:   input.frequency ?? 'daily',
-          is_template: input.is_template ?? false,
+          org_id:               profile!.org_id,
+          client_id:            input.client_id ?? null,
+          name:                 input.name.trim(),
+          description:          input.description?.trim() || null,
+          emoji:                input.emoji ?? '✅',
+          frequency:            input.frequency ?? 'daily',
+          is_template:          input.is_template ?? false,
+          metric_definition_id: input.metric_definition_id ?? null,
         })
         .select()
         .single()
@@ -124,13 +127,14 @@ export function useAssignHabitTemplate() {
       const { data, error } = await supabase
         .from('habits')
         .insert({
-          org_id:      profile!.org_id,
-          client_id:   clientId,
-          name:        template.name,
-          description: template.description,
-          emoji:       template.emoji,
-          frequency:   template.frequency,
-          is_template: false,
+          org_id:               profile!.org_id,
+          client_id:            clientId,
+          name:                 template.name,
+          description:          template.description,
+          emoji:                template.emoji,
+          frequency:            template.frequency,
+          is_template:          false,
+          metric_definition_id: template.metric_definition_id ?? null,
         })
         .select()
         .single()

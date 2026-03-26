@@ -10,6 +10,7 @@ import {
   type DbHabit,
 } from '@/hooks/useHabits'
 import { useClients } from '@/hooks/useClients'
+import { useMetricDefinitions } from '@/hooks/useMetrics'
 import clsx from 'clsx'
 
 type Tab = 'templates' | 'assigned'
@@ -102,11 +103,14 @@ export default function HabitsLibrary() {
   const [assigningTemplate, setAssigningTemplate] = useState<DbHabit | null>(null)
 
   // Create form
+  const { data: metricDefs = [] } = useMetricDefinitions()
+
   const [name, setName] = useState('')
   const [emoji, setEmoji] = useState('✅')
   const [description, setDescription] = useState('')
   const [frequency, setFrequency] = useState<DbHabit['frequency']>('daily')
   const [assignTo, setAssignTo] = useState('')
+  const [metricDefId, setMetricDefId] = useState('')
   const [creating, setCreating] = useState(false)
 
   if (!profile?.org_id) return <div className="flex items-center justify-center h-64"><Loader2 size={24} className="animate-spin text-brand-500" /></div>
@@ -120,14 +124,15 @@ export default function HabitsLibrary() {
     setCreating(true)
     try {
       await createHabit.mutateAsync({
-        client_id: isTemplate ? null : assignTo,
-        name: name.trim(),
-        description: description.trim() || undefined,
+        client_id:            isTemplate ? null : assignTo,
+        name:                 name.trim(),
+        description:          description.trim() || undefined,
         emoji,
         frequency,
-        is_template: isTemplate,
+        is_template:          isTemplate,
+        metric_definition_id: metricDefId || null,
       })
-      setName(''); setDescription(''); setEmoji('✅'); setFrequency('daily'); setAssignTo('')
+      setName(''); setDescription(''); setEmoji('✅'); setFrequency('daily'); setAssignTo(''); setMetricDefId('')
     } finally {
       setCreating(false)
     }
@@ -266,6 +271,16 @@ export default function HabitsLibrary() {
               <option key={f} value={f}>{FREQ_LABELS[f]}</option>
             ))}
           </select>
+          {metricDefs.length > 0 && (
+            <select
+              value={metricDefId}
+              onChange={e => setMetricDefId(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 bg-white"
+            >
+              <option value="">+ Link metric (optional)</option>
+              {metricDefs.map(d => <option key={d.id} value={d.id}>{d.emoji} {d.name}{d.unit ? ` (${d.unit})` : ''}</option>)}
+            </select>
+          )}
           <button
             type="submit"
             disabled={!name.trim() || (!isTemplate && !assignTo) || creating}
@@ -307,10 +322,14 @@ export default function HabitsLibrary() {
                   <span className="text-xl flex-shrink-0">{t.emoji}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{t.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-50 text-violet-600">
                         {FREQ_LABELS[t.frequency]}
                       </span>
+                      {t.metric_definition_id && metricDefs.find(d => d.id === t.metric_definition_id) && (() => {
+                        const d = metricDefs.find(m => m.id === t.metric_definition_id)!
+                        return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">{d.emoji} {d.name}</span>
+                      })()}
                       {t.description && (
                         <span className="text-xs text-gray-400 truncate max-w-[140px]">{t.description}</span>
                       )}
@@ -390,6 +409,10 @@ export default function HabitsLibrary() {
                       {(h as any).clients?.name && (
                         <span className="text-xs text-gray-400">{(h as any).clients.name}</span>
                       )}
+                      {h.metric_definition_id && metricDefs.find(d => d.id === h.metric_definition_id) && (() => {
+                        const d = metricDefs.find(m => m.id === h.metric_definition_id)!
+                        return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">{d.emoji} {d.name}</span>
+                      })()}
                     </div>
                   </div>
                   <button

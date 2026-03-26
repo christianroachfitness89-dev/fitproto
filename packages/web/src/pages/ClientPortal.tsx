@@ -135,6 +135,10 @@ interface PortalHabit {
   frequency: string
   completed_today: boolean
   streak: number
+  metric_definition_id: string | null
+  metric_name: string | null
+  metric_unit: string | null
+  metric_emoji: string | null
 }
 
 interface PortalTask {
@@ -143,6 +147,10 @@ interface PortalTask {
   type: string | null
   due_date: string | null
   completed: boolean
+  metric_definition_id: string | null
+  metric_name: string | null
+  metric_unit: string | null
+  metric_emoji: string | null
 }
 
 interface PortalMetricEntry {
@@ -1670,7 +1678,10 @@ function CommunityView({ clientId }: { clientId: string }) {
 
 // ─── Plan / Calendar view ──────────────────────────────────────
 type PlanEventKind = 'program' | 'workout' | 'task' | 'habit'
-interface PlanEvent { kind: PlanEventKind; id: string; label: string; status?: string; emoji?: string }
+interface PlanEvent {
+  kind: PlanEventKind; id: string; label: string; status?: string; emoji?: string
+  metricDefId?: string; metricName?: string; metricUnit?: string; metricEmoji?: string
+}
 
 const PLAN_MONTHS = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December']
@@ -1729,6 +1740,9 @@ function PlanView({
   const [moving, setMoving]       = useState(false)
   // Optimistic task done set
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set())
+  // Metric prompt for tasks
+  const [metricTask, setMetricTask] = useState<PlanEvent | null>(null)
+  const [taskMetricValue, setTaskMetricValue] = useState('')
   // Habit metadata (includes created_at for weekly day calculation)
   const [habitMeta, setHabitMeta] = useState<HabitMeta[]>([])
   // Completions: Set of "habitId|dateKey"
@@ -1788,6 +1802,10 @@ function PlanView({
       if (t.due_date) push(t.due_date.slice(0,10), {
         kind: 'task', id: t.id, label: t.title,
         status: (doneTasks.has(t.id) || t.completed) ? 'done' : undefined,
+        metricDefId: t.metric_definition_id ?? undefined,
+        metricName:  t.metric_name ?? undefined,
+        metricUnit:  t.metric_unit ?? undefined,
+        metricEmoji: t.metric_emoji ?? undefined,
       })
     }
     // Habits — generate events for every applicable day in the displayed month
@@ -1833,19 +1851,41 @@ function PlanView({
     habit:   'Habit',
   }
 
-  async function handleToggleTask(taskId: string) {
+  async function handleToggleTask(taskId: string, metricVal?: number) {
     setDoneTasks(prev => {
       const next = new Set(prev)
       next.has(taskId) ? next.delete(taskId) : next.add(taskId)
       return next
     })
     try {
-      await supabase.rpc('toggle_portal_task', { p_client_id: clientId, p_task_id: taskId })
+      await supabase.rpc('toggle_portal_task', {
+        p_client_id:    clientId,
+        p_task_id:      taskId,
+        p_metric_value: metricVal ?? null,
+      })
       onTaskToggled(taskId)
     } catch {
-      // revert optimistic update on failure
       setDoneTasks(prev => { const next = new Set(prev); next.delete(taskId); return next })
     }
+  }
+
+  function handleTaskTap(ev: PlanEvent) {
+    const isDone = ev.status === 'done'
+    // If task has a metric and we're completing (not un-completing), prompt for value
+    if (ev.metricDefId && !isDone) {
+      setMetricTask(ev)
+      setTaskMetricValue('')
+    } else {
+      handleToggleTask(ev.id)
+    }
+  }
+
+  async function submitTaskMetric() {
+    if (!metricTask) return
+    const val = taskMetricValue ? parseFloat(taskMetricValue) : undefined
+    await handleToggleTask(metricTask.id, val)
+    setMetricTask(null)
+    setTaskMetricValue('')
   }
 
   // ev.id is "habit:habitId:dateKey"
@@ -1889,6 +1929,45 @@ function PlanView({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] pb-28">
+
+      {/* ── Task metric input sheet ── */}
+      {metricTask && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMetricTask(null)} />
+          <div className="relative bg-[#1a1a35] border-t border-white/10 rounded-t-3xl px-5 pt-5 pb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 size={18} className="text-amber-400" />
+              </div>
+              <div>
+                <p className="text-white font-bold">{metricTask.label}</p>
+                <p className="text-white/40 text-xs">Log {metricTask.metricEmoji} {metricTask.metricName}</p>
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2 bg-white/8 rounded-2xl px-4 py-3 mb-4">
+              <input
+                type="number" inputMode="decimal" step="any"
+                value={taskMetricValue} onChange={e => setTaskMetricValue(e.target.value)}
+                placeholder="0" autoFocus
+                className="flex-1 bg-transparent text-white text-3xl font-bold outline-none placeholder-white/20 [color-scheme:dark]"
+              />
+              {metricTask.metricUnit && (
+                <span className="text-white/40 text-lg">{metricTask.metricUnit}</span>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { handleToggleTask(metricTask.id); setMetricTask(null) }}
+                className="flex-1 py-3 rounded-2xl bg-white/8 text-white/50 font-semibold text-sm">
+                Skip metric
+              </button>
+              <button onClick={submitTaskMetric}
+                className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-sm">
+                Complete + Log
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Move-mode banner ── */}
       {movingId && (
@@ -2024,7 +2103,7 @@ function PlanView({
                   {/* Task checkbox / habit toggle / event dot */}
                   {ev.kind === 'task' ? (
                     <button
-                      onClick={() => handleToggleTask(ev.id)}
+                      onClick={() => handleTaskTap(ev)}
                       className={clsx(
                         'w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all active:scale-90',
                         isDone
@@ -2054,7 +2133,14 @@ function PlanView({
                       'text-sm font-semibold leading-tight',
                       isDone ? 'text-white/30 line-through' : 'text-white/85',
                     )}>{ev.label}</p>
-                    <p className="text-[10px] text-white/30 mt-0.5">{kindLabel[ev.kind]}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <p className="text-[10px] text-white/30">{kindLabel[ev.kind]}</p>
+                      {ev.metricName && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white/8 text-white/40">
+                          {ev.metricEmoji} {ev.metricName}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Workout move handle (only assigned workouts, not program slots) */}
@@ -3003,8 +3089,10 @@ function MessagesView({ clientId, onUnreadChange }: {
 
 // ─── Habits View ───────────────────────────────────────────────
 function HabitsView({ clientId }: { clientId: string }) {
-  const [habits, setHabits]   = useState<PortalHabit[]>([])
-  const [loading, setLoading] = useState(true)
+  const [habits, setHabits]           = useState<PortalHabit[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [metricHabit, setMetricHabit] = useState<PortalHabit | null>(null)
+  const [metricValue, setMetricValue] = useState('')
   const today = new Date().toISOString().slice(0, 10)
 
   useEffect(() => {
@@ -3012,12 +3100,34 @@ function HabitsView({ clientId }: { clientId: string }) {
       .then(({ data }) => { setHabits((data as PortalHabit[]) ?? []); setLoading(false) })
   }, [clientId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function toggle(habit: PortalHabit) {
-    // Optimistic update
+  async function toggle(habit: PortalHabit, metricVal?: number) {
     setHabits(prev => prev.map(h => h.id === habit.id
       ? { ...h, completed_today: !h.completed_today, streak: h.completed_today ? Math.max(0, h.streak - 1) : h.streak + 1 }
       : h))
-    await supabase.rpc('toggle_habit_completion', { p_client_id: clientId, p_habit_id: habit.id, p_date: today })
+    await supabase.rpc('toggle_habit_completion', {
+      p_client_id:    clientId,
+      p_habit_id:     habit.id,
+      p_date:         today,
+      p_metric_value: metricVal ?? null,
+    })
+  }
+
+  function handleHabitTap(habit: PortalHabit) {
+    // If habit has a metric AND we're completing (not un-completing), show input sheet
+    if (habit.metric_definition_id && !habit.completed_today) {
+      setMetricHabit(habit)
+      setMetricValue('')
+    } else {
+      toggle(habit)
+    }
+  }
+
+  async function submitMetric() {
+    if (!metricHabit) return
+    const val = metricValue ? parseFloat(metricValue) : undefined
+    await toggle(metricHabit, val)
+    setMetricHabit(null)
+    setMetricValue('')
   }
 
   const done  = habits.filter(h => h.completed_today).length
@@ -3025,6 +3135,50 @@ function HabitsView({ clientId }: { clientId: string }) {
 
   return (
     <div className="fixed inset-0 z-30 bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] flex flex-col">
+
+      {/* Metric input sheet */}
+      {metricHabit && (
+        <div className="absolute inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMetricHabit(null)} />
+          <div className="relative bg-[#1a1a35] border-t border-white/10 rounded-t-3xl px-5 pt-5 pb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">{metricHabit.emoji}</span>
+              <div>
+                <p className="text-white font-bold">{metricHabit.name}</p>
+                <p className="text-white/40 text-xs">Log {metricHabit.metric_emoji} {metricHabit.metric_name}</p>
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2 bg-white/8 rounded-2xl px-4 py-3 mb-4">
+              <input
+                type="number"
+                inputMode="decimal"
+                step="any"
+                value={metricValue}
+                onChange={e => setMetricValue(e.target.value)}
+                placeholder="0"
+                autoFocus
+                className="flex-1 bg-transparent text-white text-3xl font-bold outline-none placeholder-white/20 [color-scheme:dark]"
+              />
+              {metricHabit.metric_unit && (
+                <span className="text-white/40 text-lg">{metricHabit.metric_unit}</span>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { toggle(metricHabit); setMetricHabit(null) }}
+                className="flex-1 py-3 rounded-2xl bg-white/8 text-white/50 font-semibold text-sm">
+                Skip metric
+              </button>
+              <button
+                onClick={submitMetric}
+                className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-sm">
+                Complete + Log
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="px-5 pt-14 pb-5 flex-shrink-0">
         <p className="text-white/40 text-[11px] font-bold uppercase tracking-[0.2em] mb-1">Daily Habits</p>
@@ -3052,7 +3206,7 @@ function HabitsView({ clientId }: { clientId: string }) {
             <p className="text-white/25 text-sm mt-1">Ask your coach to set up your daily habits.</p>
           </div>
         ) : habits.map(h => (
-          <button key={h.id} onClick={() => toggle(h)}
+          <button key={h.id} onClick={() => handleHabitTap(h)}
             className={clsx(
               'w-full flex items-center gap-4 p-4 rounded-2xl border text-left transition-all active:scale-[0.98]',
               h.completed_today
@@ -3070,7 +3224,14 @@ function HabitsView({ clientId }: { clientId: string }) {
                 h.completed_today ? 'text-emerald-300 line-through decoration-emerald-400/50' : 'text-white')}>
                 {h.name}
               </p>
-              <p className="text-xs mt-0.5 text-white/30 capitalize">{h.frequency}</p>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <p className="text-xs text-white/30 capitalize">{h.frequency}</p>
+                {h.metric_name && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-white/10 text-white/50">
+                    {h.metric_emoji} {h.metric_name}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex flex-col items-end gap-1 flex-shrink-0">
               {h.streak > 0 && (

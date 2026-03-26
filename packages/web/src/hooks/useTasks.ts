@@ -58,17 +58,19 @@ export function useCreateTask() {
       type?: DbTask['type']
       due_date?: string
       is_template?: boolean
+      metric_definition_id?: string | null
     }) => {
       const { data, error } = await supabase
         .from('tasks')
         .insert({
-          org_id:      profile!.org_id,
-          assigned_to: profile!.id,
-          title:       input.title,
-          client_id:   input.client_id ?? null,
-          type:        input.type ?? 'general',
-          due_date:    input.due_date ?? null,
-          is_template: input.is_template ?? false,
+          org_id:               profile!.org_id,
+          assigned_to:          profile!.id,
+          title:                input.title,
+          client_id:            input.client_id ?? null,
+          type:                 input.type ?? 'general',
+          due_date:             input.due_date ?? null,
+          is_template:          input.is_template ?? false,
+          metric_definition_id: input.metric_definition_id ?? null,
         } as any)
         .select()
         .single()
@@ -95,13 +97,14 @@ export function useAssignTaskTemplate() {
       const { data, error } = await supabase
         .from('tasks')
         .insert({
-          org_id:      profile!.org_id,
-          assigned_to: profile!.id,
-          title:       template.title,
-          client_id:   clientId,
-          type:        template.type,
-          due_date:    dueDate ?? null,
-          is_template: false,
+          org_id:               profile!.org_id,
+          assigned_to:          profile!.id,
+          title:                template.title,
+          client_id:            clientId,
+          type:                 template.type,
+          due_date:             dueDate ?? null,
+          is_template:          false,
+          metric_definition_id: template.metric_definition_id ?? null,
         } as any)
         .select()
         .single()

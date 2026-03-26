@@ -9,6 +9,7 @@ import {
   useCreateTask, useToggleTask, useDeleteTask, useAssignTaskTemplate,
 } from '@/hooks/useTasks'
 import { useClients } from '@/hooks/useClients'
+import { useMetricDefinitions } from '@/hooks/useMetrics'
 import type { DbTask } from '@/lib/database.types'
 import clsx from 'clsx'
 
@@ -109,9 +110,11 @@ export default function TasksLibrary() {
 
   // Create form
   const [title, setTitle] = useState('')
+  const { data: metricDefs = [] } = useMetricDefinitions()
   const [taskType, setTaskType] = useState<DbTask['type']>('general')
   const [dueDate, setDueDate] = useState('')
   const [assignTo, setAssignTo] = useState('')
+  const [metricDefId, setMetricDefId] = useState('')
   const [creating, setCreating] = useState(false)
 
   if (!profile?.org_id) return <div className="flex items-center justify-center h-64"><Loader2 size={24} className="animate-spin text-brand-500" /></div>
@@ -125,13 +128,14 @@ export default function TasksLibrary() {
     setCreating(true)
     try {
       await createTask.mutateAsync({
-        title: title.trim(),
-        client_id: isTemplate ? undefined : assignTo,
-        type: taskType,
-        due_date: dueDate || undefined,
-        is_template: isTemplate,
+        title:                title.trim(),
+        client_id:            isTemplate ? undefined : assignTo,
+        type:                 taskType,
+        due_date:             dueDate || undefined,
+        is_template:          isTemplate,
+        metric_definition_id: metricDefId || null,
       })
-      setTitle(''); setDueDate(''); setAssignTo(''); setTaskType('general')
+      setTitle(''); setDueDate(''); setAssignTo(''); setTaskType('general'); setMetricDefId('')
     } finally {
       setCreating(false)
     }
@@ -253,6 +257,16 @@ export default function TasksLibrary() {
               className="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
             />
           )}
+          {metricDefs.length > 0 && (
+            <select
+              value={metricDefId}
+              onChange={e => setMetricDefId(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 bg-white"
+            >
+              <option value="">+ Link metric (optional)</option>
+              {metricDefs.map(d => <option key={d.id} value={d.id}>{d.emoji} {d.name}{d.unit ? ` (${d.unit})` : ''}</option>)}
+            </select>
+          )}
           <button
             type="submit"
             disabled={!title.trim() || (!isTemplate && !assignTo) || creating}
@@ -296,9 +310,15 @@ export default function TasksLibrary() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{t.title}</p>
-                    <span className={clsx('text-[10px] font-semibold px-1.5 py-0.5 rounded capitalize mt-0.5 inline-block', typeColor(t.type))}>
-                      {t.type.replace('_', ' ')}
-                    </span>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <span className={clsx('text-[10px] font-semibold px-1.5 py-0.5 rounded capitalize', typeColor(t.type))}>
+                        {t.type.replace('_', ' ')}
+                      </span>
+                      {t.metric_definition_id && metricDefs.find(d => d.id === t.metric_definition_id) && (() => {
+                        const d = metricDefs.find(m => m.id === t.metric_definition_id)!
+                        return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">{d.emoji} {d.name}</span>
+                      })()}
+                    </div>
                   </div>
                   <button
                     onClick={() => setAssigningTemplate(t)}

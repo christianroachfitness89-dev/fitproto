@@ -184,6 +184,8 @@ export interface DbTask {
   type: TaskType
   due_date: string | null
   completed: boolean
+  is_template: boolean
+  metric_definition_id: string | null
   created_at: string
 }
 
