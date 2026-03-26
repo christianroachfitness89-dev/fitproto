@@ -1669,8 +1669,8 @@ function CommunityView({ clientId }: { clientId: string }) {
 }
 
 // ─── Plan / Calendar view ──────────────────────────────────────
-type PlanEventKind = 'program' | 'workout' | 'task'
-interface PlanEvent { kind: PlanEventKind; id: string; label: string; status?: string }
+type PlanEventKind = 'program' | 'workout' | 'task' | 'habit'
+interface PlanEvent { kind: PlanEventKind; id: string; label: string; status?: string; emoji?: string }
 
 const PLAN_MONTHS = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December']
@@ -1694,11 +1694,27 @@ function planCalendarWeeks(month: Date): Date[][] {
   )
 }
 
+interface HabitMeta { id: string; name: string; emoji: string; frequency: string; created_at: string }
+
+function habitAppliesToDay(frequency: string, createdAt: string, d: Date): boolean {
+  const dow = d.getDay() // 0=Sun,1=Mon,...,6=Sat
+  if (frequency === 'daily') return true
+  if (frequency === 'weekdays') return dow >= 1 && dow <= 5
+  if (frequency === 'weekends') return dow === 0 || dow === 6
+  if (frequency === 'weekly') {
+    // same weekday as when the habit was created
+    const created = new Date(createdAt)
+    return dow === created.getDay()
+  }
+  return false
+}
+
 function PlanView({
-  data, tasks, clientId, onRescheduleWorkout, onTaskToggled,
+  data, tasks, habits: habitsSummary, clientId, onRescheduleWorkout, onTaskToggled,
 }: {
   data: PortalData
   tasks: PortalTask[]
+  habits: PortalHabit[]
   clientId: string
   onRescheduleWorkout: (workoutId: string, newDate: string) => void
   onTaskToggled: (taskId: string) => void
@@ -1713,8 +1729,41 @@ function PlanView({
   const [moving, setMoving]       = useState(false)
   // Optimistic task done set
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set())
+  // Habit metadata (includes created_at for weekly day calculation)
+  const [habitMeta, setHabitMeta] = useState<HabitMeta[]>([])
+  // Completions: Set of "habitId|dateKey"
+  const [completedHabits, setCompletedHabits] = useState<Set<string>>(new Set())
+  // Optimistic habit toggles for selected day
+  const [toggledHabits, setToggledHabits] = useState<Set<string>>(new Set())
 
-  // Build event map — reacts to doneTasks so chips update instantly
+  // Load habit metadata once
+  useEffect(() => {
+    supabase.rpc('get_client_habits_metadata', { p_client_id: clientId })
+      .then(({ data }) => { if (data) setHabitMeta(data as HabitMeta[]) })
+  }, [clientId])
+
+  // Load completions whenever month changes
+  useEffect(() => {
+    const start = new Date(month.getFullYear(), month.getMonth(), 1)
+    const end   = new Date(month.getFullYear(), month.getMonth() + 1, 0)
+    const startStr = planIsoKey(start)
+    const endStr   = planIsoKey(end)
+    supabase.rpc('get_habit_completions_range', {
+      p_client_id: clientId,
+      p_start_date: startStr,
+      p_end_date: endStr,
+    }).then(({ data }) => {
+      if (data) {
+        setCompletedHabits(new Set(
+          (data as { habit_id: string; completed_date: string }[])
+            .map(r => `${r.habit_id}|${r.completed_date}`)
+        ))
+      }
+    })
+    setToggledHabits(new Set())
+  }, [clientId, month])
+
+  // Build event map — reacts to doneTasks and completedHabits
   const eventMap = useMemo(() => {
     const map = new Map<string, PlanEvent[]>()
     function push(key: string, ev: PlanEvent) {
@@ -1741,8 +1790,26 @@ function PlanView({
         status: (doneTasks.has(t.id) || t.completed) ? 'done' : undefined,
       })
     }
+    // Habits — generate events for every applicable day in the displayed month
+    const weeks = planCalendarWeeks(month)
+    const allDays = weeks.flat()
+    for (const h of habitMeta) {
+      for (const day of allDays) {
+        if (!habitAppliesToDay(h.frequency, h.created_at, day)) continue
+        const key = planIsoKey(day)
+        const togKey = `${h.id}|${key}`
+        const isDone = completedHabits.has(togKey) !== toggledHabits.has(togKey)
+        push(key, {
+          kind: 'habit',
+          id: `habit:${h.id}:${key}`,
+          label: h.name,
+          emoji: h.emoji,
+          status: isDone ? 'done' : undefined,
+        })
+      }
+    }
     return map
-  }, [data, tasks, doneTasks])
+  }, [data, tasks, doneTasks, habitMeta, completedHabits, toggledHabits, month])
 
   const weeks     = planCalendarWeeks(month)
   const selEvents = eventMap.get(selKey) ?? []
@@ -1751,16 +1818,19 @@ function PlanView({
     program: 'bg-violet-500/30 text-violet-200',
     workout: 'bg-brand-500/30 text-brand-200',
     task:    'bg-amber-500/30 text-amber-200',
+    habit:   'bg-emerald-500/30 text-emerald-200',
   }
   const kindDot: Record<PlanEventKind, string> = {
     program: 'bg-violet-400',
     workout: 'bg-brand-400',
     task:    'bg-amber-400',
+    habit:   'bg-emerald-400',
   }
   const kindLabel: Record<PlanEventKind, string> = {
     program: 'Program session',
     workout: 'Assigned workout',
     task:    'Task',
+    habit:   'Habit',
   }
 
   async function handleToggleTask(taskId: string) {
@@ -1776,6 +1846,22 @@ function PlanView({
       // revert optimistic update on failure
       setDoneTasks(prev => { const next = new Set(prev); next.delete(taskId); return next })
     }
+  }
+
+  // ev.id is "habit:habitId:dateKey"
+  async function handleToggleHabit(evId: string) {
+    const [, habitId, dateKey] = evId.split(':')
+    const togKey = `${habitId}|${dateKey}`
+    setToggledHabits(prev => {
+      const next = new Set(prev)
+      next.has(togKey) ? next.delete(togKey) : next.add(togKey)
+      return next
+    })
+    await supabase.rpc('toggle_habit_completion', {
+      p_client_id: clientId,
+      p_habit_id: habitId,
+      p_date: dateKey,
+    })
   }
 
   async function handleDrop(targetKey: string) {
@@ -1829,7 +1915,7 @@ function PlanView({
         </div>
         <div>
           <p className="text-white font-bold text-base">My Plan</p>
-          <p className="text-white/35 text-xs">Workouts, sessions &amp; tasks</p>
+          <p className="text-white/35 text-xs">Workouts, tasks &amp; habits</p>
         </div>
       </div>
 
@@ -1935,7 +2021,7 @@ function PlanView({
                   isMoving && 'bg-brand-500/15',
                 )}>
 
-                  {/* Task checkbox / event dot */}
+                  {/* Task checkbox / habit toggle / event dot */}
                   {ev.kind === 'task' ? (
                     <button
                       onClick={() => handleToggleTask(ev.id)}
@@ -1946,6 +2032,17 @@ function PlanView({
                           : 'border-amber-400/60 hover:border-amber-400',
                       )}>
                       {isDone && <CheckCircle2 size={13} className="text-white" />}
+                    </button>
+                  ) : ev.kind === 'habit' ? (
+                    <button
+                      onClick={() => handleToggleHabit(ev.id)}
+                      className={clsx(
+                        'w-7 h-7 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-base transition-all active:scale-90',
+                        isDone
+                          ? 'bg-emerald-500/20 border-emerald-400/60'
+                          : 'border-white/15 hover:border-emerald-400/50',
+                      )}>
+                      <span className={clsx('transition-all', isDone && 'opacity-50 scale-90')}>{ev.emoji}</span>
                     </button>
                   ) : (
                     <div className={clsx('w-2 h-2 rounded-full flex-shrink-0 mt-0.5', kindDot[ev.kind])} />
@@ -1985,12 +2082,12 @@ function PlanView({
       </div>
 
       {/* Legend */}
-      <div className="mx-3 mt-3 flex items-center gap-4 px-4 py-3 rounded-2xl bg-white/4">
-        {(['program','workout','task'] as PlanEventKind[]).map(k => (
+      <div className="mx-3 mt-3 flex items-center gap-4 px-4 py-3 rounded-2xl bg-white/4 flex-wrap">
+        {(['program','workout','task','habit'] as PlanEventKind[]).map(k => (
           <div key={k} className="flex items-center gap-1.5">
             <div className={clsx('w-2 h-2 rounded-full', kindDot[k])} />
-            <span className="text-[10px] text-white/35">
-              {k === 'program' ? 'Program' : k === 'workout' ? 'Workout' : 'Task'}
+            <span className="text-[10px] text-white/35 capitalize">
+              {k === 'program' ? 'Program' : k === 'workout' ? 'Workout' : k === 'task' ? 'Task' : 'Habit'}
             </span>
           </div>
         ))}
@@ -3453,6 +3550,7 @@ export default function ClientPortal() {
         <PlanView
           data={data}
           tasks={tasks}
+          habits={habits}
           clientId={clientId!}
           onRescheduleWorkout={(workoutId, newDate) => {
             setData(prev => prev ? {
