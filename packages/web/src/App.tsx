@@ -15,6 +15,7 @@ import Community from './pages/Community'
 import CourseBuilder from './pages/CourseBuilder'
 import TasksLibrary from './pages/TasksLibrary'
 import HabitsLibrary from './pages/HabitsLibrary'
+import MetricsLibrary from './pages/MetricsLibrary'
 import Placeholder from './pages/Placeholder'
 import ClientPortal from './pages/ClientPortal'
 
@@ -130,6 +131,7 @@ export default function App() {
               <Route path="library/courses" element={<CourseBuilder />} />
               <Route path="library/tasks" element={<TasksLibrary />} />
               <Route path="library/habits" element={<HabitsLibrary />} />
+              <Route path="library/metrics" element={<MetricsLibrary />} />
               <Route path="library/workouts/:id" element={<WorkoutBuilder />} />
               <Route path="library/programs/:id" element={<ProgramBuilder />} />
               <Route path="library/:section" element={<Library />} />

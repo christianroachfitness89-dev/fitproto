@@ -113,12 +113,12 @@ const libraryItems: LibraryItem[] = [
   { label: 'Courses', href: '/library/courses', icon: <BookOpen size={14} /> },
   { label: 'Tasks', href: '/library/tasks', icon: <CheckSquare size={14} /> },
   { label: 'Habits', href: '/library/habits', icon: <Repeat2 size={14} /> },
+  { label: 'Metric Groups', href: '/library/metrics', icon: <BarChart3 size={14} /> },
 ]
 
 const libraryPlaceholders: LibraryItem[] = [
   { label: 'Forms & Questionnaires', href: '', icon: <BookOpen size={14} /> },
   { label: 'Meal Plan Templates', href: '', icon: <Utensils size={14} /> },
-  { label: 'Metric Groups', href: '', icon: <BarChart3 size={14} /> },
 ]
 
 function SoonBadge() {

@@ -7,13 +7,19 @@ import {
   ClipboardList, ChevronLeft, ChevronRight, ClipboardCheck,
   SkipForward, ExternalLink, Copy, History, BarChart2, Utensils, Lock,
   ChevronUp, Scale, Zap, TrendingUp, Search, ListChecks,
-  BookOpen, Check, UserCheck, Globe,
+  BookOpen, Check, UserCheck, Globe, Moon, Repeat2, LineChart,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { supabase } from '@/lib/supabase'
 import { useClient, useUpdateClient } from '@/hooks/useClients'
 import { useTasks, useCreateTask, useToggleTask } from '@/hooks/useTasks'
 import { useHabits, useCreateHabit, useDeleteHabit } from '@/hooks/useHabits'
+import {
+  useCheckIns, useCreateCheckIn, useDeleteCheckIn,
+  useMetricDefinitions, useCustomMetricValues,
+  useLogCustomMetricValue, useDeleteCustomMetricValue,
+} from '@/hooks/useMetrics'
+import type { DbMetricDefinition } from '@/hooks/useMetrics'
 import {
   useClientWorkouts, useAssignWorkout, useUpdateClientWorkoutStatus,
   useRemoveClientWorkout, useLogWorkoutSession,
@@ -1946,6 +1952,375 @@ function HistoryTab({ clientId }: { clientId: string }) {
   )
 }
 
+// ─── Metrics Tab ──────────────────────────────────────────────
+type CheckInMetricKey = 'weight_kg' | 'body_fat_pct' | 'energy_level' | 'sleep_hours'
+const CHECKIN_METRICS: { key: CheckInMetricKey; label: string; unit: string; icon: React.ReactNode; color: string }[] = [
+  { key: 'weight_kg',    label: 'Weight',   unit: 'kg',  icon: <Scale size={14} />,     color: 'text-emerald-600' },
+  { key: 'body_fat_pct', label: 'Body Fat', unit: '%',   icon: <TrendingUp size={14} />, color: 'text-teal-600' },
+  { key: 'energy_level', label: 'Energy',   unit: '/10', icon: <Zap size={14} />,        color: 'text-amber-600' },
+  { key: 'sleep_hours',  label: 'Sleep',    unit: 'h',   icon: <Moon size={14} />,       color: 'text-violet-600' },
+]
+
+function LogCheckInModal({ clientId, onClose, onSaved }: { clientId: string; onClose: () => void; onSaved: () => void }) {
+  const createCheckIn = useCreateCheckIn()
+  const [weight, setWeight]   = useState('')
+  const [fat, setFat]         = useState('')
+  const [energy, setEnergy]   = useState<number | null>(null)
+  const [sleep, setSleep]     = useState('')
+  const [notes, setNotes]     = useState('')
+  const [date, setDate]       = useState(new Date().toISOString().slice(0, 10))
+  const [saving, setSaving]   = useState(false)
+  const [err, setErr]         = useState<string | null>(null)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true); setErr(null)
+    try {
+      await createCheckIn.mutateAsync({
+        client_id:    clientId,
+        weight_kg:    weight  ? parseFloat(weight)  : null,
+        body_fat_pct: fat     ? parseFloat(fat)     : null,
+        energy_level: energy,
+        sleep_hours:  sleep   ? parseFloat(sleep)   : null,
+        notes:        notes   || null,
+        checked_in_at: date,
+      })
+      onSaved()
+    } catch (e: any) {
+      setErr(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 overflow-y-auto max-h-[90vh]">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-bold text-gray-900 text-lg">Log Check-in</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><X size={18} /></button>
+        </div>
+        {err && <p className="mb-3 text-xs text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{err}</p>}
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Date</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1"><Scale size={11} />Weight (kg)</label>
+              <input type="number" step="0.1" min="0" value={weight} onChange={e => setWeight(e.target.value)}
+                placeholder="–" className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1"><TrendingUp size={11} />Body Fat (%)</label>
+              <input type="number" step="0.1" min="0" max="100" value={fat} onChange={e => setFat(e.target.value)}
+                placeholder="–" className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1"><Moon size={11} />Sleep (hrs)</label>
+              <input type="number" step="0.5" min="0" max="24" value={sleep} onChange={e => setSleep(e.target.value)}
+                placeholder="–" className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1"><Zap size={11} />Energy (1–10)</label>
+              <div className="flex gap-1 flex-wrap">
+                {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                  <button key={n} type="button" onClick={() => setEnergy(energy === n ? null : n)}
+                    className={clsx('w-7 h-7 text-xs font-bold rounded-lg border transition-all',
+                      energy === n ? 'bg-amber-500 border-amber-500 text-white' : 'border-gray-200 text-gray-500 hover:border-amber-300')}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Notes</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
+              placeholder="Any notes for this check-in…"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 resize-none" />
+          </div>
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
+            <button type="submit" disabled={saving}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 transition-all">
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function LogCustomMetricModal({
+  clientId,
+  definitions,
+  onClose,
+  onSaved,
+}: { clientId: string; definitions: DbMetricDefinition[]; onClose: () => void; onSaved: () => void }) {
+  const logValue = useLogCustomMetricValue()
+  const [defId, setDefId]   = useState(definitions[0]?.id ?? '')
+  const [value, setValue]   = useState('')
+  const [date, setDate]     = useState(new Date().toISOString().slice(0, 10))
+  const [saving, setSaving] = useState(false)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!defId || !value) return
+    setSaving(true)
+    try {
+      await logValue.mutateAsync({ client_id: clientId, definition_id: defId, value: parseFloat(value), logged_at: date })
+      onSaved()
+    } finally { setSaving(false) }
+  }
+
+  const selectedDef = definitions.find(d => d.id === defId)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-gray-900">Log Custom Metric</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><X size={18} /></button>
+        </div>
+        <form onSubmit={submit} className="space-y-3">
+          <select value={defId} onChange={e => setDefId(e.target.value)} required
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 bg-white">
+            {definitions.map(d => <option key={d.id} value={d.id}>{d.emoji} {d.name}{d.unit ? ` (${d.unit})` : ''}</option>)}
+          </select>
+          <div className="flex gap-2">
+            <input type="number" step="any" value={value} onChange={e => setValue(e.target.value)} required
+              placeholder={`Value${selectedDef?.unit ? ` in ${selectedDef.unit}` : ''}…`}
+              className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+            <input type="date" value={date} onChange={e => setDate(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+          </div>
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
+            <button type="submit" disabled={!defId || !value || saving}
+              className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl disabled:opacity-50 transition-all">
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}Log
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function MiniSparkline({ values, color }: { values: number[]; color: string }) {
+  if (values.length < 2) return null
+  const min = Math.min(...values), max = Math.max(...values), range = max - min || 1
+  const W = 80, H = 28, pad = 3
+  const pts = values.map((v, i) => ({
+    x: pad + (i / (values.length - 1)) * (W - pad * 2),
+    y: H - pad - ((v - min) / range) * (H - pad * 2),
+  }))
+  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-20 h-7">
+      <path d={d} stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function MetricsTab({ clientId }: { clientId: string }) {
+  const { data: checkIns = [], isLoading: ciLoading } = useCheckIns(clientId)
+  const { data: customValues = [], isLoading: cvLoading } = useCustomMetricValues(clientId)
+  const { data: definitions = [] } = useMetricDefinitions()
+  const deleteCheckIn = useDeleteCheckIn()
+  const deleteCustom  = useDeleteCustomMetricValue()
+
+  const [showLogCI, setShowLogCI]     = useState(false)
+  const [showLogCustom, setShowLogCustom] = useState(false)
+  const [expandedCI, setExpandedCI]   = useState(false)
+
+  const latest = checkIns[0]
+
+  // Group custom values by definition
+  const customByDef = useMemo(() => {
+    const map = new Map<string, typeof customValues>()
+    for (const v of customValues) {
+      const key = v.definition_id
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(v)
+    }
+    return map
+  }, [customValues])
+
+  if (ciLoading || cvLoading) {
+    return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-brand-500" /></div>
+  }
+
+  return (
+    <div className="space-y-6">
+      {showLogCI && (
+        <LogCheckInModal clientId={clientId} onClose={() => setShowLogCI(false)} onSaved={() => setShowLogCI(false)} />
+      )}
+      {showLogCustom && definitions.length > 0 && (
+        <LogCustomMetricModal
+          clientId={clientId}
+          definitions={definitions}
+          onClose={() => setShowLogCustom(false)}
+          onSaved={() => setShowLogCustom(false)}
+        />
+      )}
+
+      {/* ── Built-in check-ins ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <LineChart size={16} className="text-emerald-500" />
+            <h3 className="font-semibold text-gray-900">Check-ins</h3>
+            {checkIns.length > 0 && (
+              <span className="text-xs text-gray-400">{checkIns.length} logged</span>
+            )}
+          </div>
+          <button onClick={() => setShowLogCI(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-all">
+            <Plus size={12} />Log Check-in
+          </button>
+        </div>
+
+        {checkIns.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">No check-ins yet. Log one to start tracking progress.</p>
+        ) : (
+          <>
+            {/* Latest snapshot */}
+            {latest && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                {CHECKIN_METRICS.map(m => {
+                  const val = latest[m.key]
+                  if (val == null) return null
+                  const history = [...checkIns].reverse().map(c => c[m.key]).filter((v): v is number => v != null)
+                  return (
+                    <div key={m.key} className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                      <div className={clsx('flex items-center gap-1.5 mb-1', m.color)}>
+                        {m.icon}
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{m.label}</span>
+                      </div>
+                      <p className="text-lg font-bold text-gray-900">{val}<span className="text-xs text-gray-400 font-normal ml-0.5">{m.unit}</span></p>
+                      <MiniSparkline values={history} color="#10b981" />
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* History list */}
+            <div>
+              <button onClick={() => setExpandedCI(v => !v)}
+                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors mb-2">
+                <ChevronDown size={13} className={clsx('transition-transform', expandedCI && 'rotate-180')} />
+                {expandedCI ? 'Hide' : 'Show'} history
+              </button>
+              {expandedCI && (
+                <div className="space-y-1">
+                  {checkIns.map(ci => (
+                    <div key={ci.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors group">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-700">
+                          {new Date(ci.checked_in_at).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                        <div className="flex gap-3 mt-0.5 flex-wrap">
+                          {ci.weight_kg != null && <span className="text-[10px] text-gray-400">{ci.weight_kg}kg</span>}
+                          {ci.body_fat_pct != null && <span className="text-[10px] text-gray-400">{ci.body_fat_pct}% bf</span>}
+                          {ci.energy_level != null && <span className="text-[10px] text-gray-400">⚡{ci.energy_level}/10</span>}
+                          {ci.sleep_hours != null && <span className="text-[10px] text-gray-400">😴{ci.sleep_hours}h</span>}
+                          {ci.notes && <span className="text-[10px] text-gray-400 italic truncate max-w-[140px]">"{ci.notes}"</span>}
+                        </div>
+                      </div>
+                      <button onClick={() => deleteCheckIn.mutate({ id: ci.id, clientId })}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-300 hover:text-rose-500 hover:bg-rose-50 transition-all">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Custom metrics ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Repeat2 size={16} className="text-brand-500" />
+            <h3 className="font-semibold text-gray-900">Custom Metrics</h3>
+          </div>
+          {definitions.length > 0 && (
+            <button onClick={() => setShowLogCustom(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-lg hover:from-brand-700 hover:to-violet-700 transition-all">
+              <Plus size={12} />Log Value
+            </button>
+          )}
+        </div>
+
+        {definitions.length === 0 ? (
+          <div className="text-center py-6">
+            <p className="text-sm text-gray-400">No custom metrics defined yet.</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Go to <span className="font-medium text-brand-500">Library → Metrics</span> to define trackable metrics for your clients.
+            </p>
+          </div>
+        ) : customValues.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">No custom values logged yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {definitions.filter(d => customByDef.has(d.id)).map(def => {
+              const vals = [...(customByDef.get(def.id) ?? [])].reverse()
+              const latest = vals[vals.length - 1]
+              const sparkVals = vals.map(v => v.value)
+              const trend = vals.length > 1 ? vals[vals.length - 1].value - vals[0].value : null
+              return (
+                <div key={def.id} className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{def.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-gray-800">{def.name}</p>
+                        {trend != null && (
+                          <span className={clsx('text-[10px] font-semibold', trend > 0 ? 'text-emerald-500' : trend < 0 ? 'text-rose-500' : 'text-gray-400')}>
+                            {trend > 0 ? '+' : ''}{trend.toFixed(1)}{def.unit}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400">{vals.length} entries · latest: <strong>{latest.value}{def.unit}</strong></p>
+                    </div>
+                    <MiniSparkline values={sparkVals} color="#6366f1" />
+                  </div>
+                  {/* Recent entries */}
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {[...customByDef.get(def.id)!].slice(0, 6).map(v => (
+                      <div key={v.id} className="group flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2 py-1 text-[10px]">
+                        <span className="text-gray-500">{new Date(v.logged_at).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
+                        <span className="font-bold text-gray-700">{v.value}{def.unit}</span>
+                        <button onClick={() => deleteCustom.mutate({ id: v.id, clientId })}
+                          className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-rose-500 transition-all ml-0.5">
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Placeholder tab ──────────────────────────────────────────
 function ComingSoon({ label }: { label: string }) {
   return (
@@ -2362,7 +2737,7 @@ export default function ClientDetail() {
           {activeTab === 'workouts'  && <WorkoutsTab clientId={client.id} />}
           {activeTab === 'history'   && <HistoryTab clientId={client.id} />}
           {activeTab === 'nutrition' && <ComingSoon label="Nutrition plans" />}
-          {activeTab === 'metrics'   && <ComingSoon label="Client metrics" />}
+          {activeTab === 'metrics'   && <MetricsTab clientId={client.id} />}
           {activeTab === 'notes'     && <ComingSoon label="Coach notes" />}
         </div>
       </div>
