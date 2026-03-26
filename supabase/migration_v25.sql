@@ -1,21 +1,14 @@
 -- migration_v25: Custom metric definitions and values
 
--- Metric categories (use DO block since IF NOT EXISTS isn't supported for types)
-DO $$ BEGIN
-  CREATE TYPE metric_category AS ENUM (
-    'body_composition', 'performance', 'wellness', 'measurements', 'custom'
-  );
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
 -- Org-level metric definitions (the "types" of metrics coaches track)
 CREATE TABLE IF NOT EXISTS metric_definitions (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id      uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name        text NOT NULL,
-  unit        text NOT NULL DEFAULT '',          -- e.g. 'kg', 'cm', '/10', ''
+  unit        text NOT NULL DEFAULT '',
   emoji       text NOT NULL DEFAULT '📊',
-  category    metric_category NOT NULL DEFAULT 'custom',
+  category    text NOT NULL DEFAULT 'custom'
+              CHECK (category IN ('body_composition','performance','wellness','measurements','custom')),
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 
@@ -61,7 +54,7 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
     md.name,
     md.unit,
     md.emoji,
-    md.category::text,
+    md.category,
     cmv.value,
     cmv.logged_at
   FROM custom_metric_values cmv

@@ -5,6 +5,7 @@ import type { DbCheckIn } from '@/lib/database.types'
 
 // ─── Types ───────────────────────────────────────────────────
 export type MetricCategory = 'body_composition' | 'performance' | 'wellness' | 'measurements' | 'custom'
+// stored as text in DB with CHECK constraint (no enum type needed)
 
 export interface DbMetricDefinition {
   id: string
