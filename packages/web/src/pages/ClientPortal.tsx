@@ -1087,6 +1087,7 @@ function CommunityView({ clientId }: { clientId: string }) {
   const [openLesson, setOpenLesson]     = useState<CommunityLesson | null>(null)
   const [previewDoc, setPreviewDoc]     = useState(false)
   const [completingLesson, setCompletingLesson] = useState<string | null>(null)
+  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
 
   useEffect(() => {
     loadClientCommunities()
@@ -1130,12 +1131,14 @@ function CommunityView({ clientId }: { clientId: string }) {
   function handleCommunitySwitch(id: string | null) {
     setActiveCommunityId(id)
     setSubTab('feed')
+    setSelectedModuleId(null)
     loadSections(id)
     loadFeed(null, id)
   }
 
   function handleSubTab(t: 'feed' | 'courses') {
     setSubTab(t)
+    setSelectedModuleId(null)
     if (t === 'courses') loadCourses(activeCommunityId)
   }
 
