@@ -1,7 +1,7 @@
 // Database row types — mirrors the Supabase schema exactly
 
 export type ClientStatus = 'active' | 'inactive' | 'pending'
-export type UserRole = 'owner' | 'coach'
+export type UserRole = 'owner' | 'coach' | 'admin'
 export type SenderType = 'coach' | 'client'
 export type TaskType = 'check_in' | 'workout' | 'nutrition' | 'general'
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced'
@@ -24,7 +24,7 @@ export interface DbOrganization {
 
 export interface DbProfile {
   id: string
-  org_id: string
+  org_id: string | null
   full_name: string | null
   initials: string | null
   role: UserRole
@@ -240,6 +240,40 @@ export interface DbNutritionPlan {
   notes: string | null
   created_at: string
   updated_at: string
+}
+
+export interface DbGlobalTemplateExercise {
+  id: string
+  name: string
+  category: string | null
+  muscle_group: string | null
+  equipment: string | null
+  instructions: string | null
+  metric_type: ExerciseMetricType
+  difficulty: string | null
+  secondary_muscle: string | null
+  movement_pattern: string | null
+  body_region: string | null
+  mechanics: string | null
+  created_at: string
+}
+
+export interface DbGlobalTemplateMetric {
+  id: string
+  name: string
+  unit: string
+  emoji: string
+  category: string
+  created_at: string
+}
+
+export interface DbGlobalTemplateHabit {
+  id: string
+  name: string
+  description: string | null
+  emoji: string
+  frequency: string
+  created_at: string
 }
 
 export interface DbNotification {

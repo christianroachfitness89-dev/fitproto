@@ -18,6 +18,7 @@ import HabitsLibrary from './pages/HabitsLibrary'
 import MetricsLibrary from './pages/MetricsLibrary'
 import Placeholder from './pages/Placeholder'
 import ClientPortal from './pages/ClientPortal'
+import AdminPanel from './pages/AdminPanel'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,13 +72,27 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     )
   }
 
+  // Redirect admin users away from coach routes
+  if (profile.role === 'admin') return <Navigate to="/admin" replace />
+
+  return <>{children}</>
+}
+
+// ─── Guard: admin-only route ──────────────────────────────────
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading, profile, profileLoading } = useAuth()
+  if (loading || profileLoading) return <FullPageLoader />
+  if (!user) return <Navigate to="/login" replace />
+  if (!profile) return <FullPageLoader />
+  if (profile.role !== 'admin') return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
 
 // ─── Guard: redirect to /dashboard if already logged in ──────
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
+  const { user, loading, profile } = useAuth()
   if (loading) return <FullPageLoader />
+  if (user && profile?.role === 'admin') return <Navigate to="/admin" replace />
   if (user) return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
@@ -123,6 +138,8 @@ export default function App() {
         <HashRouter>
           <Routes>
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            {/* Developer admin — separate from coach UI */}
+            <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
             <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
@@ -147,8 +164,8 @@ export default function App() {
               <Route path="quick-start" element={<Placeholder title="Quick Start Guide" description="Everything you need to get started with FitProto." />} />
             </Route>
             {/* Client portal — public, no login required */}
-          <Route path="/portal/:clientId" element={<ClientPortal />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/portal/:clientId" element={<ClientPortal />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </HashRouter>
       </AuthProvider>
