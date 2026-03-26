@@ -1,9 +1,12 @@
 -- migration_v25: Custom metric definitions and values
 
--- Metric categories
-CREATE TYPE IF NOT EXISTS metric_category AS ENUM (
-  'body_composition', 'performance', 'wellness', 'measurements', 'custom'
-);
+-- Metric categories (use DO block since IF NOT EXISTS isn't supported for types)
+DO $$ BEGIN
+  CREATE TYPE metric_category AS ENUM (
+    'body_composition', 'performance', 'wellness', 'measurements', 'custom'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Org-level metric definitions (the "types" of metrics coaches track)
 CREATE TABLE IF NOT EXISTS metric_definitions (
