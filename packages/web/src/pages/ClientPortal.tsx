@@ -6,14 +6,14 @@ import {
   BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight, ChevronLeft,
   X, Home, MoreHorizontal, MessageCircle, Settings, Send, GripVertical,
   Users2, Heart, BookOpen, Video, Headphones, FileText, AlignLeft, ExternalLink,
-  Download, Eye, EyeOff,
+  Download, Eye, EyeOff, Check, Repeat2,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { playRestEndChime } from '@/lib/sound'
 import clsx from 'clsx'
 
 // ─── Types ─────────────────────────────────────────────────────
-type ActiveSection = 'workouts' | 'history' | 'metrics' | 'nutrition' | 'messages' | 'plan' | 'community' | null
+type ActiveSection = 'workouts' | 'history' | 'metrics' | 'nutrition' | 'messages' | 'plan' | 'community' | 'habits' | null
 
 interface PortalMessage {
   id: string
@@ -125,6 +125,16 @@ interface PortalSessionDetail {
   completed_at: string
   notes: string | null
   exercises: PortalSessionExercise[]
+}
+
+interface PortalHabit {
+  id: string
+  name: string
+  description: string | null
+  emoji: string
+  frequency: string
+  completed_today: boolean
+  streak: number
 }
 
 interface PortalTask {
@@ -2894,6 +2904,95 @@ function MessagesView({ clientId, onUnreadChange }: {
   )
 }
 
+// ─── Habits View ───────────────────────────────────────────────
+function HabitsView({ clientId }: { clientId: string }) {
+  const [habits, setHabits]   = useState<PortalHabit[]>([])
+  const [loading, setLoading] = useState(true)
+  const today = new Date().toISOString().slice(0, 10)
+
+  useEffect(() => {
+    supabase.rpc('get_client_habits', { p_client_id: clientId, p_date: today })
+      .then(({ data }) => { setHabits((data as PortalHabit[]) ?? []); setLoading(false) })
+  }, [clientId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function toggle(habit: PortalHabit) {
+    // Optimistic update
+    setHabits(prev => prev.map(h => h.id === habit.id
+      ? { ...h, completed_today: !h.completed_today, streak: h.completed_today ? Math.max(0, h.streak - 1) : h.streak + 1 }
+      : h))
+    await supabase.rpc('toggle_habit_completion', { p_client_id: clientId, p_habit_id: habit.id, p_date: today })
+  }
+
+  const done  = habits.filter(h => h.completed_today).length
+  const total = habits.length
+
+  return (
+    <div className="fixed inset-0 z-30 bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] flex flex-col">
+      {/* Header */}
+      <div className="px-5 pt-14 pb-5 flex-shrink-0">
+        <p className="text-white/40 text-[11px] font-bold uppercase tracking-[0.2em] mb-1">Daily Habits</p>
+        <h1 className="text-[26px] font-extrabold text-white tracking-tight">
+          {total === 0 ? 'No habits yet' : done === total ? 'All done! 🎉' : `${done} of ${total} done`}
+        </h1>
+        {total > 0 && (
+          <div className="mt-3 h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-full bg-emerald-400 rounded-full transition-all duration-500"
+              style={{ width: `${(done / total) * 100}%` }} />
+          </div>
+        )}
+      </div>
+
+      {/* Habits list */}
+      <div className="flex-1 overflow-y-auto px-4 pb-32 space-y-2.5">
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : habits.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-white/30 text-4xl mb-3">✅</p>
+            <p className="text-white/50 font-semibold">No habits assigned yet</p>
+            <p className="text-white/25 text-sm mt-1">Ask your coach to set up your daily habits.</p>
+          </div>
+        ) : habits.map(h => (
+          <button key={h.id} onClick={() => toggle(h)}
+            className={clsx(
+              'w-full flex items-center gap-4 p-4 rounded-2xl border text-left transition-all active:scale-[0.98]',
+              h.completed_today
+                ? 'bg-emerald-500/15 border-emerald-500/30'
+                : 'bg-white/5 border-white/10 hover:bg-white/8',
+            )}>
+            <div className={clsx(
+              'w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 transition-all',
+              h.completed_today ? 'bg-emerald-500/25' : 'bg-white/8',
+            )}>
+              {h.emoji}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={clsx('font-bold text-[15px] leading-tight',
+                h.completed_today ? 'text-emerald-300 line-through decoration-emerald-400/50' : 'text-white')}>
+                {h.name}
+              </p>
+              <p className="text-xs mt-0.5 text-white/30 capitalize">{h.frequency}</p>
+            </div>
+            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+              {h.streak > 0 && (
+                <span className="text-xs font-bold text-amber-400">🔥 {h.streak}</span>
+              )}
+              <div className={clsx(
+                'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all',
+                h.completed_today ? 'bg-emerald-500 border-emerald-500' : 'border-white/20',
+              )}>
+                {h.completed_today && <Check size={12} className="text-white" />}
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── More sheet (slide-up) ─────────────────────────────────────
 function MoreSheet({
   onClose, onNavigate, portalSections, hasUnreadMessages,
@@ -2904,6 +3003,18 @@ function MoreSheet({
   hasUnreadMessages: boolean
 }) {
   const items = [
+    {
+      section: 'habits' as const,
+      label: 'Habits',
+      desc: 'Daily habits & streaks',
+      icon: Repeat2,
+      gradient: 'from-emerald-500 to-teal-600',
+      glow: 'shadow-emerald-500/30',
+      bg: 'from-emerald-500/15 to-teal-600/10',
+      border: 'border-emerald-500/20',
+      alwaysUnlocked: true,
+      unread: false,
+    },
     {
       section: 'messages' as const,
       label: 'Messages',
@@ -3045,7 +3156,7 @@ function BottomTabBar({
   ]
 
   // "More" is active when the sheet is open or on a non-main-tab section
-  const moreActive = showMore || activeSection === 'nutrition' || activeSection === 'history' || activeSection === 'metrics' || activeSection === 'messages'
+  const moreActive = showMore || activeSection === 'nutrition' || activeSection === 'history' || activeSection === 'metrics' || activeSection === 'messages' || activeSection === 'habits'
   // Show unread badge on the More button when messages have unreads
   const moreUnread = hasUnreadMessages && activeSection !== 'messages'
 
@@ -3173,6 +3284,7 @@ export default function ClientPortal() {
   const [activeSection, setActiveSection]   = useState<ActiveSection>(null)
   const [showMore, setShowMore]             = useState(false)
   const [tasks, setTasks]                   = useState<PortalTask[]>([])
+  const [habits, setHabits]                 = useState<PortalHabit[]>([])
   const [loggingWorkout, setLoggingWorkout] = useState<PortalWorkout | null>(null)
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false)
 
@@ -3185,6 +3297,10 @@ export default function ClientPortal() {
     })
     supabase.rpc('get_portal_tasks', { p_client_id: clientId }).then(({ data: taskData }) => {
       if (taskData) setTasks(taskData as PortalTask[])
+    })
+    const today = new Date().toISOString().slice(0, 10)
+    supabase.rpc('get_client_habits', { p_client_id: clientId, p_date: today }).then(({ data: habitData }) => {
+      if (habitData) setHabits(habitData as PortalHabit[])
     })
   }, [clientId])
 
@@ -3368,6 +3484,9 @@ export default function ClientPortal() {
       {activeSection === 'messages' && (
         <MessagesView clientId={clientId!} onUnreadChange={setHasUnreadMessages} />
       )}
+      {activeSection === 'habits' && (
+        <HabitsView clientId={clientId!} />
+      )}
       {activeSection === 'community' && (
         <CommunityView clientId={clientId!} />
       )}
@@ -3491,6 +3610,43 @@ export default function ClientPortal() {
                     })}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* ── Today's habits quick-view ── */}
+            {habits.length > 0 && (
+              <div className="mx-4 mb-3">
+                <button onClick={() => goTo('habits')} className="w-full text-left">
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                      <h3 className="text-[15px] font-bold text-gray-900">Today's Habits</h3>
+                      <span className="text-xs font-bold text-emerald-600">
+                        {habits.filter(h => h.completed_today).length}/{habits.length} done
+                      </span>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="mx-4 mb-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-400 rounded-full transition-all"
+                        style={{ width: `${(habits.filter(h => h.completed_today).length / habits.length) * 100}%` }} />
+                    </div>
+                    <div className="flex gap-2 px-4 pb-3 flex-wrap">
+                      {habits.slice(0, 5).map(h => (
+                        <div key={h.id} className={clsx(
+                          'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold',
+                          h.completed_today ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-500',
+                        )}>
+                          <span>{h.emoji}</span>
+                          <span className={h.completed_today ? 'line-through' : ''}>{h.name}</span>
+                        </div>
+                      ))}
+                      {habits.length > 5 && (
+                        <div className="px-2.5 py-1.5 rounded-xl bg-gray-50 text-xs text-gray-400 font-semibold">
+                          +{habits.length - 5} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </button>
               </div>
             )}
 

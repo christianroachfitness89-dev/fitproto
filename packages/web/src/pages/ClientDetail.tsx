@@ -13,6 +13,7 @@ import clsx from 'clsx'
 import { supabase } from '@/lib/supabase'
 import { useClient, useUpdateClient } from '@/hooks/useClients'
 import { useTasks, useCreateTask, useToggleTask } from '@/hooks/useTasks'
+import { useHabits, useCreateHabit, useDeleteHabit } from '@/hooks/useHabits'
 import {
   useClientWorkouts, useAssignWorkout, useUpdateClientWorkoutStatus,
   useRemoveClientWorkout, useLogWorkoutSession,
@@ -1958,6 +1959,112 @@ function ComingSoon({ label }: { label: string }) {
   )
 }
 
+// ─── Habits Section ────────────────────────────────────────────
+
+const HABIT_EMOJIS = ['✅','💧','🥗','🏃','🧘','😴','💊','📖','🚶','🍎','🧘‍♀️','🎯','🔥','⚡','🌿']
+const HABIT_FREQS: { value: 'daily' | 'weekdays' | 'weekends' | 'weekly'; label: string }[] = [
+  { value: 'daily',    label: 'Every day' },
+  { value: 'weekdays', label: 'Weekdays' },
+  { value: 'weekends', label: 'Weekends' },
+  { value: 'weekly',   label: 'Weekly' },
+]
+
+function HabitsSection({ clientId }: { clientId: string }) {
+  const { data: habits = [], isLoading } = useHabits(clientId)
+  const createHabit = useCreateHabit()
+  const deleteHabit = useDeleteHabit()
+
+  const [showForm, setShowForm]         = useState(false)
+  const [name, setName]                 = useState('')
+  const [emoji, setEmoji]               = useState('✅')
+  const [frequency, setFrequency]       = useState<'daily' | 'weekdays' | 'weekends' | 'weekly'>('daily')
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+
+  async function handleCreate() {
+    if (!name.trim()) return
+    await createHabit.mutateAsync({ client_id: clientId, name, emoji, frequency })
+    setName(''); setEmoji('✅'); setFrequency('daily'); setShowForm(false)
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-gray-800">Habits</h3>
+        <button onClick={() => setShowForm(v => !v)}
+          className="flex items-center gap-1 text-xs text-brand-600 font-semibold hover:text-brand-700 transition-colors">
+          <Plus size={13} /> Add habit
+        </button>
+      </div>
+
+      {/* Create form */}
+      {showForm && (
+        <div className="mb-3 p-3 bg-brand-50 border border-brand-200 rounded-xl space-y-2.5">
+          <div className="flex flex-wrap gap-1">
+            {HABIT_EMOJIS.map(e => (
+              <button key={e} onClick={() => setEmoji(e)}
+                className={clsx('w-8 h-8 rounded-lg text-base flex items-center justify-center transition-all',
+                  emoji === e ? 'bg-brand-200 ring-2 ring-brand-400 scale-110' : 'hover:bg-brand-100')}>
+                {e}
+              </button>
+            ))}
+          </div>
+          <input autoFocus value={name} onChange={e => setName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleCreate()}
+            placeholder="Habit name (e.g. Drink 2L water)…"
+            className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+          <div className="flex gap-1 flex-wrap">
+            {HABIT_FREQS.map(f => (
+              <button key={f.value} onClick={() => setFrequency(f.value)}
+                className={clsx('px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors',
+                  frequency === f.value ? 'bg-brand-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50')}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleCreate} disabled={!name.trim() || createHabit.isPending}
+              className="px-3 py-1.5 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700 disabled:opacity-40 flex items-center gap-1.5">
+              {createHabit.isPending && <Loader2 size={12} className="animate-spin" />} Save
+            </button>
+            <button onClick={() => setShowForm(false)} className="px-3 py-1.5 text-gray-400 text-xs hover:text-gray-600">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center py-6"><Loader2 size={16} className="animate-spin text-gray-300" /></div>
+      ) : habits.length === 0 && !showForm ? (
+        <p className="text-sm text-gray-400 text-center py-4">No habits yet</p>
+      ) : (
+        <div className="space-y-1.5 max-h-64 overflow-y-auto">
+          {habits.map(h => (
+            <div key={h.id} className="flex items-center gap-2.5 p-2.5 bg-gray-50 rounded-xl group hover:bg-gray-100 transition-colors">
+              <span className="text-lg flex-shrink-0">{h.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-700 truncate">{h.name}</p>
+                <p className="text-xs text-gray-400 capitalize">{HABIT_FREQS.find(f => f.value === h.frequency)?.label}</p>
+              </div>
+              {pendingDelete === h.id ? (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button onClick={() => deleteHabit.mutate({ id: h.id, clientId })}
+                    className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded font-bold">Del</button>
+                  <button onClick={() => setPendingDelete(null)}
+                    className="text-[10px] text-gray-400 px-1.5 py-0.5 rounded font-bold">No</button>
+                </div>
+              ) : (
+                <button onClick={() => setPendingDelete(h.id)}
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-300 hover:text-red-400 transition-all flex-shrink-0">
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>()
@@ -2227,6 +2334,11 @@ export default function ClientDetail() {
                     <AddTaskRow clientId={client.id} />
                   </>
                 )}
+              </div>
+
+              {/* Habits */}
+              <div>
+                <HabitsSection clientId={client.id} />
               </div>
 
               {/* Portal Access — spans full width */}
