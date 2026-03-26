@@ -13,6 +13,8 @@ import ProgramBuilder from './pages/ProgramBuilder'
 import Inbox from './pages/Inbox'
 import Community from './pages/Community'
 import CourseBuilder from './pages/CourseBuilder'
+import TasksLibrary from './pages/TasksLibrary'
+import HabitsLibrary from './pages/HabitsLibrary'
 import Placeholder from './pages/Placeholder'
 import ClientPortal from './pages/ClientPortal'
 
@@ -126,6 +128,8 @@ export default function App() {
               <Route path="clients" element={<Clients />} />
               <Route path="clients/:id" element={<ClientDetail />} />
               <Route path="library/courses" element={<CourseBuilder />} />
+              <Route path="library/tasks" element={<TasksLibrary />} />
+              <Route path="library/habits" element={<HabitsLibrary />} />
               <Route path="library/workouts/:id" element={<WorkoutBuilder />} />
               <Route path="library/programs/:id" element={<ProgramBuilder />} />
               <Route path="library/:section" element={<Library />} />

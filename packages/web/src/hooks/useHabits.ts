@@ -14,6 +14,27 @@ export interface DbHabit {
   created_at: string
 }
 
+export interface DbHabitWithClient extends DbHabit {
+  clients: { name: string } | null
+}
+
+export function useAllHabits() {
+  const { profile } = useAuth()
+  return useQuery({
+    queryKey: ['habits', 'all', profile?.org_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('habits')
+        .select('*, clients(name)')
+        .eq('org_id', profile!.org_id!)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as DbHabitWithClient[]
+    },
+    enabled: !!profile?.org_id,
+  })
+}
+
 export function useHabits(clientId: string) {
   const { profile } = useAuth()
   return useQuery({

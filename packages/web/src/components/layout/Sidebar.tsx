@@ -6,7 +6,7 @@ import {
   ChevronDown, Dumbbell, LayoutDashboard,
   CheckSquare, ClipboardList, Utensils, BarChart3,
   HelpCircle, ShoppingBag, Gift, UserCog,
-  X, Menu, LogOut, Settings, Loader2, CheckCircle2,
+  X, Menu, LogOut, Settings, Loader2, CheckCircle2, Repeat2,
 } from 'lucide-react'
 import type React from 'react'
 import clsx from 'clsx'
@@ -111,10 +111,11 @@ const libraryItems: LibraryItem[] = [
   { label: 'Workouts', href: '/library/workouts', icon: <ClipboardList size={14} /> },
   { label: 'Programs', href: '/library/programs', icon: <BarChart3 size={14} /> },
   { label: 'Courses', href: '/library/courses', icon: <BookOpen size={14} /> },
+  { label: 'Tasks', href: '/library/tasks', icon: <CheckSquare size={14} /> },
+  { label: 'Habits', href: '/library/habits', icon: <Repeat2 size={14} /> },
 ]
 
 const libraryPlaceholders: LibraryItem[] = [
-  { label: 'Tasks', href: '', icon: <CheckSquare size={14} /> },
   { label: 'Forms & Questionnaires', href: '', icon: <BookOpen size={14} /> },
   { label: 'Meal Plan Templates', href: '', icon: <Utensils size={14} /> },
   { label: 'Metric Groups', href: '', icon: <BarChart3 size={14} /> },
