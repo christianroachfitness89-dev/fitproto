@@ -1218,334 +1218,363 @@ function CommunityView({ clientId }: { clientId: string }) {
     text:     'bg-white/10 text-white/50',
   }
 
+  const selectedModule = modules.find(m => m.id === selectedModuleId) ?? null
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] pb-28">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-14 pb-4 border-b border-white/8">
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-lg shadow-brand-500/30 flex-shrink-0">
-          <Users2 size={18} className="text-white" />
-        </div>
-        <div>
-          <p className="text-white font-bold text-base">Community</p>
-          <p className="text-white/35 text-xs">Feed &amp; education hub</p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#15152a] pb-28">
 
-      {/* Community selector tabs */}
-      {clientCommunities.length > 0 && (
-        <div className="mx-4 mt-4 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-          <button
-            onClick={() => handleCommunitySwitch(null)}
-            className={clsx(
-              'flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border',
-              activeCommunityId === null
-                ? 'bg-white/15 text-white border-white/20'
-                : 'text-white/50 hover:text-white/80 border-white/10',
-            )}>
-            🌐 General
-          </button>
-          {clientCommunities.map(c => (
-            <button key={c.id}
-              onClick={() => handleCommunitySwitch(c.id)}
-              className={clsx(
-                'flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border',
-                activeCommunityId === c.id
-                  ? 'bg-white/15 text-white border-white/20'
-                  : 'text-white/50 hover:text-white/80 border-white/10',
-              )}>
-              {c.emoji} {c.name}
+      {/* Sticky top nav */}
+      <div className="sticky top-0 z-20 bg-[#15152a]/95 backdrop-blur-xl">
+        {clientCommunities.length > 0 && (
+          <div className="flex gap-1.5 px-4 pt-14 pb-3 overflow-x-auto scrollbar-hide border-b border-white/6">
+            <button onClick={() => handleCommunitySwitch(null)}
+              className={clsx('flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border',
+                activeCommunityId === null ? 'bg-white/15 text-white border-white/20' : 'text-white/50 hover:text-white/80 border-white/10')}>
+              🌐 General
             </button>
-          ))}
-        </div>
-      )}
-
-      {/* Sub-tab bar */}
-      <div className="flex gap-1 mx-4 mt-4 bg-white/6 rounded-xl p-1">
-        {[
-          { id: 'feed' as const,    label: 'Feed',    Icon: MessageCircle },
-          { id: 'courses' as const, label: 'Courses', Icon: BookOpen },
-        ].map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            onClick={() => handleSubTab(id)}
-            className={clsx(
-              'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all',
-              subTab === id ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/60',
-            )}>
-            <Icon size={15} /> {label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── FEED ── */}
-      {subTab === 'feed' && (
-        <div className="px-4 mt-4 space-y-4">
-
-          {/* Section filter tabs */}
-          {sections.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              <button onClick={() => handleSectionFilter(null)}
-                className={clsx('flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
-                  activeSection === null
-                    ? 'bg-white/15 text-white border border-white/20'
-                    : 'text-white/50 hover:text-white/80 border border-white/10')}>
-                All
+            {clientCommunities.map(c => (
+              <button key={c.id} onClick={() => handleCommunitySwitch(c.id)}
+                className={clsx('flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border',
+                  activeCommunityId === c.id ? 'bg-white/15 text-white border-white/20' : 'text-white/50 hover:text-white/80 border-white/10')}>
+                {c.emoji} {c.name}
               </button>
-              {sections.map(s => (
-                <button key={s.id} onClick={() => handleSectionFilter(s.id)}
-                  className={clsx('flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
-                    activeSection === s.id
-                      ? 'bg-white/15 text-white border border-white/20'
-                      : 'text-white/50 hover:text-white/80 border border-white/10')}>
-                  {s.emoji} {s.name}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Client post composer */}
-          {!composing ? (
-            <button onClick={() => setComposing(true)}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/6 border border-white/10 hover:bg-white/10 transition-colors text-left">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                Me
-              </div>
-              <span className="text-white/35 text-sm">Share something with the community…</span>
+            ))}
+          </div>
+        )}
+        <div className={clsx('flex border-b border-white/8', clientCommunities.length === 0 && 'pt-14')}>
+          {([
+            { id: 'feed' as const,    label: 'Community' },
+            { id: 'courses' as const, label: 'Classroom'  },
+          ] as const).map(({ id, label }) => (
+            <button key={id} onClick={() => handleSubTab(id)}
+              className={clsx('px-6 py-3.5 text-sm font-semibold border-b-2 -mb-px transition-colors',
+                subTab === id ? 'border-white text-white' : 'border-transparent text-white/40 hover:text-white/70')}>
+              {label}
             </button>
-          ) : (
-            <div className="bg-white/6 border border-white/10 rounded-2xl p-4 space-y-3">
-              <textarea
-                autoFocus
-                value={postContent}
-                onChange={e => setPostContent(e.target.value)}
-                placeholder="What's on your mind?"
-                rows={3}
-                className="w-full resize-none bg-[#1a1a35] border border-white/12 rounded-xl px-4 py-3 text-sm text-white/90 placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-brand-400/50"
-              />
-              {sections.length > 0 && (
-                <select value={postSection} onChange={e => setPostSection(e.target.value)}
-                  className="w-full bg-[#1a1a35] border border-white/12 rounded-xl px-3 py-2 text-sm text-white/85 focus:outline-none focus:ring-1 focus:ring-brand-400/50 [color-scheme:dark]">
-                  <option value="">No section</option>
-                  {sections.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}
-                </select>
-              )}
-              <div className="flex justify-end gap-2">
-                <button onClick={() => { setComposing(false); setPostContent(''); setPostSection('') }}
-                  className="px-4 py-2 rounded-xl text-white/50 text-sm hover:text-white/80 transition-colors">
-                  Cancel
-                </button>
-                <button onClick={submitPost} disabled={!postContent.trim() || posting}
-                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold disabled:opacity-40 transition-colors">
-                  {posting && <Loader2 size={14} className="animate-spin" />} Post
-                </button>
-              </div>
-            </div>
-          )}
-
-          {feedLoading ? (
-            <div className="flex justify-center py-16">
-              <Loader2 size={24} className="animate-spin text-brand-400" />
-            </div>
-          ) : posts.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-12 h-12 rounded-2xl bg-brand-500/15 flex items-center justify-center mx-auto mb-3">
-                <MessageCircle size={22} className="text-brand-400" />
-              </div>
-              <p className="text-white/40 font-semibold">No posts yet</p>
-              <p className="text-white/20 text-xs mt-1">Your coach will post updates here.</p>
-            </div>
-          ) : posts.map(post => (
-            <div key={post.id} className={clsx(
-              'rounded-2xl border overflow-hidden',
-              post.pinned
-                ? 'bg-brand-500/10 border-brand-500/25'
-                : 'bg-white/6 border-white/10',
-            )}>
-              {post.pinned && (
-                <div className="flex items-center gap-1.5 px-4 py-2 bg-brand-500/20 border-b border-brand-500/20">
-                  <span className="text-[10px] font-bold text-brand-300 uppercase tracking-widest">Pinned</span>
-                </div>
-              )}
-              <div className="p-4">
-                {/* Author row */}
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className={clsx(
-                    'w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0',
-                    post.author_type === 'client'
-                      ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                      : 'bg-gradient-to-br from-brand-500 to-violet-600',
-                  )}>
-                    {(post.author_name ?? 'C').charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-white/85 text-sm font-semibold leading-tight">{post.author_name ?? 'Coach'}</p>
-                      {post.section_id && (() => {
-                        const sec = sections.find(s => s.id === post.section_id)
-                        return sec ? (
-                          <span className="text-[10px] font-semibold bg-white/10 text-white/60 px-2 py-0.5 rounded-full">
-                            {sec.emoji} {sec.name}
-                          </span>
-                        ) : null
-                      })()}
-                    </div>
-                    <p className="text-white/30 text-[10px]">{communityTimeAgo(post.created_at)}</p>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <p className="text-white/75 text-sm leading-relaxed whitespace-pre-wrap">{post.content}</p>
-
-                {/* Media */}
-                {post.media_url && post.media_type === 'image' && (
-                  <img src={post.media_url} alt="" className="mt-3 rounded-xl w-full max-h-64 object-cover" />
-                )}
-                {post.media_url && post.media_type === 'video' && (
-                  <div className="mt-3 rounded-xl overflow-hidden aspect-video bg-black">
-                    <iframe src={post.media_url} className="w-full h-full" allowFullScreen />
-                  </div>
-                )}
-                {post.media_url && post.media_type === 'audio' && (
-                  <audio src={post.media_url} controls className="mt-3 w-full" />
-                )}
-
-                {/* Reactions / comment toggle */}
-                <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/8">
-                  <button
-                    onClick={() => toggleReaction(post.id)}
-                    className={clsx(
-                      'flex items-center gap-1.5 text-xs font-semibold transition-all active:scale-90',
-                      post.client_reacted ? 'text-rose-400' : 'text-white/30 hover:text-white/60',
-                    )}>
-                    <Heart size={15} className={post.client_reacted ? 'fill-rose-400' : ''} />
-                    {post.reaction_count > 0 && post.reaction_count}
-                  </button>
-                  <button
-                    onClick={() => toggleComments(post.id)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-white/30 hover:text-white/60 transition-colors">
-                    <MessageCircle size={15} />
-                    {post.comment_count > 0 ? post.comment_count : 'Comment'}
-                  </button>
-                </div>
-
-                {/* Comments panel */}
-                {expandedComments.has(post.id) && (
-                  <div className="mt-3 pt-3 border-t border-white/8 space-y-3">
-                    {(comments[post.id] ?? []).length === 0 && (
-                      <p className="text-white/25 text-xs text-center py-2">No comments yet.</p>
-                    )}
-                    {(comments[post.id] ?? []).map(c => (
-                      <div key={c.id} className="flex gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/60 text-xs font-bold flex-shrink-0">
-                          {(c.author_name ?? '?').charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0 bg-white/5 rounded-xl px-3 py-2">
-                          <p className="text-white/60 text-[11px] font-semibold mb-0.5">{c.author_name ?? 'Unknown'}</p>
-                          <p className="text-white/75 text-sm leading-snug">{c.content}</p>
-                        </div>
-                      </div>
-                    ))}
-                    {/* Comment input */}
-                    <div className="flex gap-2 mt-2">
-                      <input
-                        value={commentInput[post.id] ?? ''}
-                        onChange={e => setCommentInput(prev => ({ ...prev, [post.id]: e.target.value }))}
-                        onKeyDown={e => e.key === 'Enter' && sendComment(post.id)}
-                        placeholder="Add a comment…"
-                        className="flex-1 bg-[#1a1a35] border border-white/12 rounded-xl px-3 py-2 text-sm text-white/90 placeholder-white/35 focus:outline-none focus:ring-1 focus:ring-brand-400/50"
-                      />
-                      <button
-                        onClick={() => sendComment(post.id)}
-                        disabled={!commentInput[post.id]?.trim() || sendingComment === post.id}
-                        className="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center disabled:opacity-40 transition-all active:scale-90 flex-shrink-0">
-                        {sendingComment === post.id
-                          ? <Loader2 size={14} className="animate-spin" />
-                          : <Send size={14} />}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
           ))}
         </div>
-      )}
+      </div>
 
-      {/* ── COURSES ── */}
-      {subTab === 'courses' && (
-        <div className="px-4 mt-4 space-y-4">
-          {coursesLoading ? (
-            <div className="flex justify-center py-16">
-              <Loader2 size={24} className="animate-spin text-brand-400" />
-            </div>
-          ) : modules.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-12 h-12 rounded-2xl bg-violet-500/15 flex items-center justify-center mx-auto mb-3">
-                <BookOpen size={22} className="text-violet-400" />
-              </div>
-              <p className="text-white/40 font-semibold">No courses yet</p>
-              <p className="text-white/20 text-xs mt-1">Your coach will add lessons here.</p>
-            </div>
-          ) : modules.map(mod => {
-            const total     = mod.lessons.length
-            const done      = mod.lessons.filter(l => l.completed).length
-            const pct       = total > 0 ? Math.round((done / total) * 100) : 0
-            return (
-              <div key={mod.id} className="rounded-2xl bg-white/6 border border-white/10 overflow-hidden">
-                {/* Module header */}
-                <div className="px-4 py-4 border-b border-white/8">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
-                      <BookOpen size={16} className="text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white/85 font-bold text-sm">{mod.title}</p>
-                      {mod.description && <p className="text-white/35 text-xs mt-0.5">{mod.description}</p>}
-                      <div className="flex items-center gap-2 mt-2">
-                        <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-brand-500 to-violet-500 rounded-full transition-all"
-                            style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-[10px] text-white/35 font-semibold flex-shrink-0">{done}/{total}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+      {/* COMMUNITY (FEED) */}
+      {subTab === 'feed' && (
+        <div className="max-w-5xl mx-auto px-4 mt-5">
+          <div className="flex gap-5">
 
-                {/* Lessons */}
-                <div className="divide-y divide-white/6">
-                  {mod.lessons.map((lesson, i) => (
-                    <button
-                      key={lesson.id}
-                      onClick={() => { if (!lesson.locked) { setOpenLesson(lesson); setPreviewDoc(false) } }}
-                      disabled={lesson.locked}
-                      className={clsx(
-                        'w-full flex items-center gap-3 px-4 py-3 text-left transition-all',
-                        lesson.locked ? 'opacity-40 cursor-default' : 'hover:bg-white/4 active:bg-white/8',
-                      )}>
-                      <span className="text-xs text-white/25 w-5 text-center font-bold flex-shrink-0">{i + 1}</span>
-                      <span className={clsx('flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0', lessonTypeBg[lesson.content_type])}>
-                        {lessonTypeIcon[lesson.content_type]}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className={clsx('text-sm font-semibold truncate', lesson.completed ? 'text-white/35 line-through' : 'text-white/80')}>
-                          {lesson.title}
-                        </p>
-                        {lesson.duration_minutes && (
-                          <p className="text-[10px] text-white/25 mt-0.5">{lesson.duration_minutes} min</p>
-                        )}
-                      </div>
-                      {lesson.locked
-                        ? <Lock size={13} className="text-white/20 flex-shrink-0" />
-                        : lesson.completed
-                          ? <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />
-                          : <ChevronRight size={15} className="text-white/20 flex-shrink-0" />}
+            {/* Main feed column */}
+            <div className="flex-1 min-w-0 space-y-3">
+
+              {sections.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                  <button onClick={() => handleSectionFilter(null)}
+                    className={clsx('flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border',
+                      activeSection === null ? 'bg-white/15 text-white border-white/20' : 'text-white/50 hover:text-white/80 border-white/10')}>
+                    All
+                  </button>
+                  {sections.map(s => (
+                    <button key={s.id} onClick={() => handleSectionFilter(s.id)}
+                      className={clsx('flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border',
+                        activeSection === s.id ? 'bg-white/15 text-white border-white/20' : 'text-white/50 hover:text-white/80 border-white/10')}>
+                      {s.emoji} {s.name}
                     </button>
                   ))}
                 </div>
+              )}
+
+              {/* Post composer */}
+              {!composing ? (
+                <button onClick={() => setComposing(true)}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white/6 border border-white/10 hover:bg-white/8 hover:border-white/18 transition-all text-left">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    Me
+                  </div>
+                  <span className="text-white/35 text-sm">Write something...</span>
+                </button>
+              ) : (
+                <div className="bg-white/6 border border-white/12 rounded-2xl p-4 space-y-3">
+                  <textarea autoFocus value={postContent} onChange={e => setPostContent(e.target.value)}
+                    placeholder="What's on your mind?" rows={3}
+                    className="w-full resize-none bg-[#1a1a35] border border-white/12 rounded-xl px-4 py-3 text-sm text-white/90 placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-brand-400/50" />
+                  {sections.length > 0 && (
+                    <select value={postSection} onChange={e => setPostSection(e.target.value)}
+                      className="w-full bg-[#1a1a35] border border-white/12 rounded-xl px-3 py-2 text-sm text-white/85 focus:outline-none focus:ring-1 focus:ring-brand-400/50 [color-scheme:dark]">
+                      <option value="">No section</option>
+                      {sections.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}
+                    </select>
+                  )}
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => { setComposing(false); setPostContent(''); setPostSection('') }}
+                      className="px-4 py-2 rounded-xl text-white/50 text-sm hover:text-white/80 transition-colors">Cancel</button>
+                    <button onClick={submitPost} disabled={!postContent.trim() || posting}
+                      className="flex items-center gap-2 px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold disabled:opacity-40 transition-colors">
+                      {posting && <Loader2 size={14} className="animate-spin" />}Post
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Feed */}
+              {feedLoading ? (
+                <div className="flex justify-center py-16">
+                  <Loader2 size={24} className="animate-spin text-brand-400" />
+                </div>
+              ) : posts.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="w-12 h-12 rounded-2xl bg-brand-500/15 flex items-center justify-center mx-auto mb-3">
+                    <MessageCircle size={22} className="text-brand-400" />
+                  </div>
+                  <p className="text-white/40 font-semibold">No posts yet</p>
+                  <p className="text-white/20 text-xs mt-1">Your coach will post updates here.</p>
+                </div>
+              ) : posts.map(post => (
+                <div key={post.id} className={clsx(
+                  'rounded-2xl border overflow-hidden',
+                  post.pinned ? 'border-amber-500/40 bg-amber-500/4' : 'bg-white/5 border-white/8',
+                )}>
+                  <div className="p-4">
+                    {/* Author + pinned badge row */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className={clsx(
+                          'w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0',
+                          post.author_type === 'client'
+                            ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                            : 'bg-gradient-to-br from-brand-500 to-violet-600',
+                        )}>
+                          {(post.author_name ?? 'C').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-white/90 text-sm font-semibold leading-tight">{post.author_name ?? 'Coach'}</p>
+                            {post.author_type === 'coach' && (
+                              <span className="text-[9px] font-bold bg-brand-500/20 text-brand-300 px-1.5 py-0.5 rounded-full border border-brand-500/25">
+                                Coach
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10px] text-white/30 mt-0.5">
+                            <span>{communityTimeAgo(post.created_at)}</span>
+                            {post.section_id && (() => {
+                              const sec = sections.find(s => s.id === post.section_id)
+                              return sec ? <><span>&middot;</span><span className="text-white/50">{sec.emoji} {sec.name}</span></> : null
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                      {post.pinned && (
+                        <span className="text-[10px] font-bold text-amber-400/80 flex-shrink-0 mt-0.5 select-none">&#128204; Pinned</span>
+                      )}
+                    </div>
+
+                    {/* Content + optional image thumbnail on right */}
+                    <div className={clsx('flex gap-3', post.media_url && post.media_type === 'image' ? 'items-start' : '')}>
+                      <p className="flex-1 text-white/75 text-sm leading-relaxed whitespace-pre-wrap">{post.content}</p>
+                      {post.media_url && post.media_type === 'image' && (
+                        <img src={post.media_url} alt="" className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+                      )}
+                    </div>
+
+                    {post.media_url && post.media_type === 'video' && (
+                      <div className="mt-3 rounded-xl overflow-hidden aspect-video bg-black">
+                        <iframe src={post.media_url} className="w-full h-full" allowFullScreen />
+                      </div>
+                    )}
+                    {post.media_url && post.media_type === 'audio' && (
+                      <audio src={post.media_url} controls className="mt-3 w-full" />
+                    )}
+
+                    <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/8">
+                      <button onClick={() => toggleReaction(post.id)}
+                        className={clsx('flex items-center gap-1.5 text-xs font-semibold transition-all active:scale-90',
+                          post.client_reacted ? 'text-rose-400' : 'text-white/30 hover:text-white/60')}>
+                        <Heart size={14} className={post.client_reacted ? 'fill-rose-400' : ''} />
+                        {post.reaction_count > 0 && post.reaction_count}
+                      </button>
+                      <button onClick={() => toggleComments(post.id)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-white/30 hover:text-white/60 transition-colors">
+                        <MessageCircle size={14} />
+                        {post.comment_count > 0 ? post.comment_count : 'Comment'}
+                      </button>
+                    </div>
+
+                    {expandedComments.has(post.id) && (
+                      <div className="mt-3 pt-3 border-t border-white/8 space-y-3">
+                        {(comments[post.id] ?? []).length === 0 && (
+                          <p className="text-white/25 text-xs text-center py-2">No comments yet.</p>
+                        )}
+                        {(comments[post.id] ?? []).map(c => (
+                          <div key={c.id} className="flex gap-2.5">
+                            <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/60 text-xs font-bold flex-shrink-0">
+                              {(c.author_name ?? '?').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0 bg-white/5 rounded-xl px-3 py-2">
+                              <p className="text-white/60 text-[11px] font-semibold mb-0.5">{c.author_name ?? 'Unknown'}</p>
+                              <p className="text-white/75 text-sm leading-snug">{c.content}</p>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex gap-2 mt-2">
+                          <input value={commentInput[post.id] ?? ''}
+                            onChange={e => setCommentInput(prev => ({ ...prev, [post.id]: e.target.value }))}
+                            onKeyDown={e => e.key === 'Enter' && sendComment(post.id)}
+                            placeholder="Add a comment..."
+                            className="flex-1 bg-[#1a1a35] border border-white/12 rounded-xl px-3 py-2 text-sm text-white/90 placeholder-white/35 focus:outline-none focus:ring-1 focus:ring-brand-400/50" />
+                          <button onClick={() => sendComment(post.id)}
+                            disabled={!commentInput[post.id]?.trim() || sendingComment === post.id}
+                            className="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center disabled:opacity-40 transition-all active:scale-90 flex-shrink-0">
+                            {sendingComment === post.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Right sidebar — desktop only */}
+            <div className="hidden lg:block w-64 flex-shrink-0 space-y-4">
+              {(() => {
+                const ac = activeCommunityId ? clientCommunities.find(c => c.id === activeCommunityId) : null
+                return ac ? (
+                  <div className="rounded-2xl bg-white/6 border border-white/10 overflow-hidden">
+                    <div className="h-20 bg-gradient-to-br from-brand-600 to-violet-700 flex items-center justify-center">
+                      <span className="text-4xl">{ac.emoji}</span>
+                    </div>
+                    <div className="p-4">
+                      <p className="text-white font-bold text-sm">{ac.name}</p>
+                      {ac.description && (
+                        <p className="text-white/45 text-xs mt-1.5 leading-relaxed">{ac.description}</p>
+                      )}
+                    </div>
+                  </div>
+                ) : null
+              })()}
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* CLASSROOM */}
+      {subTab === 'courses' && (
+        <div className="max-w-5xl mx-auto px-4 mt-5">
+
+          {!selectedModule && (
+            coursesLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 size={24} className="animate-spin text-brand-400" />
+              </div>
+            ) : modules.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-12 h-12 rounded-2xl bg-violet-500/15 flex items-center justify-center mx-auto mb-3">
+                  <BookOpen size={22} className="text-violet-400" />
+                </div>
+                <p className="text-white/40 font-semibold">No courses yet</p>
+                <p className="text-white/20 text-xs mt-1">Your coach will add lessons here.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {modules.map(mod => {
+                  const total = mod.lessons.length
+                  const done  = mod.lessons.filter(l => l.completed).length
+                  const pct   = total > 0 ? Math.round((done / total) * 100) : 0
+                  return (
+                    <button key={mod.id} onClick={() => setSelectedModuleId(mod.id)}
+                      className="text-left rounded-2xl bg-white/5 border border-white/10 overflow-hidden hover:border-white/20 hover:bg-white/7 transition-all active:scale-[0.98] group">
+                      <div className="relative h-36 bg-[#0d0d20] flex flex-col items-center justify-center">
+                        {mod.cover_url
+                          ? <img src={mod.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-80 transition-opacity" />
+                          : <>
+                              <div className="w-10 h-10 rounded-xl bg-white/8 flex items-center justify-center mb-2">
+                                <BookOpen size={18} className="text-white/40" />
+                              </div>
+                              <p className="text-white/25 text-[9px] font-bold uppercase tracking-widest px-4 text-center line-clamp-2">
+                                {mod.title}
+                              </p>
+                            </>
+                        }
+                      </div>
+                      <div className="p-4">
+                        <p className="text-white/90 font-bold text-sm mb-1 line-clamp-2">{mod.title}</p>
+                        {mod.description && (
+                          <p className="text-white/40 text-xs leading-relaxed line-clamp-2 mb-3">{mod.description}</p>
+                        )}
+                        <div>
+                          <div className="h-2 bg-white/8 rounded-full overflow-hidden mb-1">
+                            <div className={clsx('h-full rounded-full transition-all', pct === 100 ? 'bg-emerald-400' : 'bg-brand-500')}
+                              style={{ width: `${pct > 0 ? Math.max(pct, 4) : 0}%` }} />
+                          </div>
+                          <p className="text-[10px] text-white/35 font-semibold">{pct}%</p>
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             )
-          })}
+          )}
+
+          {selectedModule && !openLesson && (
+            <div className="max-w-2xl mx-auto">
+              <button onClick={() => setSelectedModuleId(null)}
+                className="flex items-center gap-2 text-white/40 text-sm mb-5 hover:text-white/70 transition-colors">
+                <ArrowLeft size={16} /> All courses
+              </button>
+              <div className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden mb-4">
+                {selectedModule.cover_url && (
+                  <img src={selectedModule.cover_url} alt="" className="w-full h-32 object-cover opacity-70" />
+                )}
+                <div className="p-5">
+                  <p className="text-white font-bold text-base">{selectedModule.title}</p>
+                  {selectedModule.description && (
+                    <p className="text-white/40 text-sm mt-1.5 leading-relaxed">{selectedModule.description}</p>
+                  )}
+                  {selectedModule.lessons.length > 0 && (() => {
+                    const done  = selectedModule.lessons.filter(l => l.completed).length
+                    const total = selectedModule.lessons.length
+                    const pct   = Math.round((done / total) * 100)
+                    return (
+                      <div className="flex items-center gap-3 mt-4">
+                        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                          <div className={clsx('h-full rounded-full transition-all', pct === 100 ? 'bg-emerald-400' : 'bg-brand-500')}
+                            style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs text-white/40 font-semibold flex-shrink-0">{done}/{total} complete</span>
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden divide-y divide-white/6">
+                {selectedModule.lessons.map((lesson, i) => (
+                  <button key={lesson.id}
+                    onClick={() => { if (!lesson.locked) { setOpenLesson(lesson); setPreviewDoc(false) } }}
+                    disabled={lesson.locked}
+                    className={clsx('w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all',
+                      lesson.locked ? 'opacity-40 cursor-default' : 'hover:bg-white/4 active:bg-white/8')}>
+                    <span className="text-xs text-white/20 w-5 text-center font-bold flex-shrink-0">{i + 1}</span>
+                    <span className={clsx('flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0', lessonTypeBg[lesson.content_type])}>
+                      {lessonTypeIcon[lesson.content_type]}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className={clsx('text-sm font-semibold truncate', lesson.completed ? 'text-white/30 line-through' : 'text-white/80')}>
+                        {lesson.title}
+                      </p>
+                      {lesson.duration_minutes && (
+                        <p className="text-[10px] text-white/25 mt-0.5">{lesson.duration_minutes} min</p>
+                      )}
+                    </div>
+                    {lesson.locked
+                      ? <Lock size={13} className="text-white/20 flex-shrink-0" />
+                      : lesson.completed
+                        ? <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />
+                        : <ChevronRight size={15} className="text-white/20 flex-shrink-0" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
       )}
 
