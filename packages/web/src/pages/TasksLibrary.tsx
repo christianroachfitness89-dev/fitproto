@@ -24,7 +24,7 @@ function AssignModal({
 }: {
   template: DbTask
   clients: { id: string; name: string }[]
-  onAssign: (clientId: string, dueDate?: string) => Promise<void>
+  onAssign: (clientId: string, dueDate?: string) => Promise<unknown>
   onClose: () => void
 }) {
   const [clientId, setClientId] = useState('')

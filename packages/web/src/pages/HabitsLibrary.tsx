@@ -32,7 +32,7 @@ function AssignModal({
 }: {
   template: DbHabit
   clients: { id: string; name: string }[]
-  onAssign: (clientId: string) => Promise<void>
+  onAssign: (clientId: string) => Promise<unknown>
   onClose: () => void
 }) {
   const [clientId, setClientId] = useState('')
