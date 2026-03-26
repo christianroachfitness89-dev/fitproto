@@ -2448,8 +2448,9 @@ export default function ClientDetail() {
   const toggleTask = useToggleTask()
   const navigate = useNavigate()
   const getOrCreate = useGetOrCreateConversation()
-  const [activeTab, setActiveTab] = useState<Tab>('overview')
-  const [showEdit, setShowEdit]   = useState(false)
+  const [activeTab, setActiveTab]     = useState<Tab>('overview')
+  const [mountedTabs, setMountedTabs] = useState<Set<Tab>>(new Set(['overview']))
+  const [showEdit, setShowEdit]       = useState(false)
   const [copied, setCopied]       = useState(false)
 
   async function openMessage() {
@@ -2622,7 +2623,7 @@ export default function ClientDetail() {
             {tabs.map(tab => (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => { setMountedTabs(prev => new Set([...prev, tab.key])); setActiveTab(tab.key) }}
                 className={clsx(
                   'flex-shrink-0 px-5 py-3.5 text-sm font-medium border-b-2 transition-colors',
                   activeTab === tab.key
@@ -2733,12 +2734,12 @@ export default function ClientDetail() {
             </div>
           )}
 
-          {activeTab === 'plan'      && <PlanTab clientId={client.id} />}
-          {activeTab === 'workouts'  && <WorkoutsTab clientId={client.id} />}
-          {activeTab === 'history'   && <HistoryTab clientId={client.id} />}
-          {activeTab === 'nutrition' && <ComingSoon label="Nutrition plans" />}
-          {activeTab === 'metrics'   && <MetricsTab clientId={client.id} />}
-          {activeTab === 'notes'     && <ComingSoon label="Coach notes" />}
+          {mountedTabs.has('plan')      && <div className={activeTab !== 'plan'      ? 'hidden' : ''}><PlanTab clientId={client.id} /></div>}
+          {mountedTabs.has('workouts')  && <div className={activeTab !== 'workouts'  ? 'hidden' : ''}><WorkoutsTab clientId={client.id} /></div>}
+          {mountedTabs.has('history')   && <div className={activeTab !== 'history'   ? 'hidden' : ''}><HistoryTab clientId={client.id} /></div>}
+          {mountedTabs.has('nutrition') && <div className={activeTab !== 'nutrition' ? 'hidden' : ''}><ComingSoon label="Nutrition plans" /></div>}
+          {mountedTabs.has('metrics')   && <div className={activeTab !== 'metrics'   ? 'hidden' : ''}><MetricsTab clientId={client.id} /></div>}
+          {mountedTabs.has('notes')     && <div className={activeTab !== 'notes'     ? 'hidden' : ''}><ComingSoon label="Coach notes" /></div>}
         </div>
       </div>
     </div>

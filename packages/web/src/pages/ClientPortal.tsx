@@ -3539,8 +3539,9 @@ export default function ClientPortal() {
   const [data, setData]                     = useState<PortalData | null>(null)
   const [loading, setLoading]               = useState(true)
   const [notFound, setNotFound]             = useState(false)
-  const [activeSection, setActiveSection]   = useState<ActiveSection>(null)
-  const [showMore, setShowMore]             = useState(false)
+  const [activeSection, setActiveSection]     = useState<ActiveSection>(null)
+  const [mountedSections, setMountedSections] = useState<Set<string>>(new Set())
+  const [showMore, setShowMore]               = useState(false)
   const [tasks, setTasks]                   = useState<PortalTask[]>([])
   const [habits, setHabits]                 = useState<PortalHabit[]>([])
   const [loggingWorkout, setLoggingWorkout] = useState<PortalWorkout | null>(null)
@@ -3587,6 +3588,7 @@ export default function ClientPortal() {
       localStorage.setItem(`portal_msgs_seen_${clientId}`, String(Date.now()))
       setHasUnreadMessages(false)
     }
+    if (section !== null) setMountedSections(prev => new Set([...prev, section]))
     setActiveSection(section)
     setShowMore(false)
   }
@@ -3707,7 +3709,8 @@ export default function ClientPortal() {
       )}
 
       {/* ── Section views ── */}
-      {activeSection === 'plan' && (
+      {mountedSections.has('plan') && (
+        <div className={activeSection !== 'plan' ? 'hidden' : ''}>
         <PlanView
           data={data}
           tasks={tasks}
@@ -3727,27 +3730,42 @@ export default function ClientPortal() {
             ))
           }}
         />
+        </div>
       )}
-      {activeSection === 'workouts' && (
-        <WorkoutsView data={data} clientId={clientId!} onMarkComplete={markComplete} />
+      {mountedSections.has('workouts') && (
+        <div className={activeSection !== 'workouts' ? 'hidden' : ''}>
+          <WorkoutsView data={data} clientId={clientId!} onMarkComplete={markComplete} />
+        </div>
       )}
-      {activeSection === 'history' && (
-        <HistoryView clientId={clientId!} />
+      {mountedSections.has('history') && (
+        <div className={activeSection !== 'history' ? 'hidden' : ''}>
+          <HistoryView clientId={clientId!} />
+        </div>
       )}
-      {activeSection === 'metrics' && (
-        <MetricsView clientId={clientId!} />
+      {mountedSections.has('metrics') && (
+        <div className={activeSection !== 'metrics' ? 'hidden' : ''}>
+          <MetricsView clientId={clientId!} />
+        </div>
       )}
-      {activeSection === 'nutrition' && (
-        <NutritionView />
+      {mountedSections.has('nutrition') && (
+        <div className={activeSection !== 'nutrition' ? 'hidden' : ''}>
+          <NutritionView />
+        </div>
       )}
-      {activeSection === 'messages' && (
-        <MessagesView clientId={clientId!} onUnreadChange={setHasUnreadMessages} />
+      {mountedSections.has('messages') && (
+        <div className={activeSection !== 'messages' ? 'hidden' : ''}>
+          <MessagesView clientId={clientId!} onUnreadChange={setHasUnreadMessages} />
+        </div>
       )}
-      {activeSection === 'habits' && (
-        <HabitsView clientId={clientId!} />
+      {mountedSections.has('habits') && (
+        <div className={activeSection !== 'habits' ? 'hidden' : ''}>
+          <HabitsView clientId={clientId!} />
+        </div>
       )}
-      {activeSection === 'community' && (
-        <CommunityView clientId={clientId!} />
+      {mountedSections.has('community') && (
+        <div className={activeSection !== 'community' ? 'hidden' : ''}>
+          <CommunityView clientId={clientId!} />
+        </div>
       )}
 
       {/* ── Dashboard (home) ── */}
