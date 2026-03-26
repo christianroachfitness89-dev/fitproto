@@ -7,7 +7,7 @@ import {
   ClipboardList, ChevronLeft, ChevronRight, ClipboardCheck,
   SkipForward, ExternalLink, Copy, History, BarChart2, Utensils, Lock,
   ChevronUp, Scale, Zap, TrendingUp, Search, ListChecks,
-  BookOpen, Check, UserCheck, Globe, Moon, Repeat2, LineChart,
+  BookOpen, Check, UserCheck, Globe, Moon, LineChart,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { supabase } from '@/lib/supabase'
@@ -2142,8 +2142,6 @@ function MetricsTab({ clientId }: { clientId: string }) {
   const [showLogCustom, setShowLogCustom] = useState(false)
   const [expandedCI, setExpandedCI]   = useState(false)
 
-  const latest = checkIns[0]
-
   // Group custom values by definition
   const customByDef = useMemo(() => {
     const map = new Map<string, typeof customValues>()
@@ -2173,148 +2171,147 @@ function MetricsTab({ clientId }: { clientId: string }) {
         />
       )}
 
-      {/* ── Built-in check-ins ── */}
+      {/* ── Unified Metrics ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <LineChart size={16} className="text-emerald-500" />
-            <h3 className="font-semibold text-gray-900">Check-ins</h3>
+            <h3 className="font-semibold text-gray-900">Metrics</h3>
             {checkIns.length > 0 && (
-              <span className="text-xs text-gray-400">{checkIns.length} logged</span>
+              <span className="text-xs text-gray-400">{checkIns.length} check-ins</span>
             )}
           </div>
-          <button onClick={() => setShowLogCI(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-all">
-            <Plus size={12} />Log Check-in
-          </button>
+          <div className="flex items-center gap-2">
+            {definitions.length > 0 && (
+              <button onClick={() => setShowLogCustom(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-lg hover:from-brand-700 hover:to-violet-700 transition-all">
+                <Plus size={12} />Log Metric
+              </button>
+            )}
+            <button onClick={() => setShowLogCI(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-all">
+              <Plus size={12} />Log Check-in
+            </button>
+          </div>
         </div>
 
-        {checkIns.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">No check-ins yet. Log one to start tracking progress.</p>
+        {checkIns.length === 0 && customValues.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">No metrics logged yet. Log a check-in to start tracking progress.</p>
         ) : (
           <>
-            {/* Latest snapshot */}
-            {latest && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                {CHECKIN_METRICS.map(m => {
-                  const val = latest[m.key]
-                  if (val == null) return null
-                  const history = [...checkIns].reverse().map(c => c[m.key]).filter((v): v is number => v != null)
-                  return (
-                    <div key={m.key} className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                      <div className={clsx('flex items-center gap-1.5 mb-1', m.color)}>
-                        {m.icon}
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{m.label}</span>
-                      </div>
-                      <p className="text-lg font-bold text-gray-900">{val}<span className="text-xs text-gray-400 font-normal ml-0.5">{m.unit}</span></p>
-                      <MiniSparkline values={history} color="#10b981" />
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* History list */}
-            <div>
-              <button onClick={() => setExpandedCI(v => !v)}
-                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors mb-2">
-                <ChevronDown size={13} className={clsx('transition-transform', expandedCI && 'rotate-180')} />
-                {expandedCI ? 'Hide' : 'Show'} history
-              </button>
-              {expandedCI && (
-                <div className="space-y-1">
-                  {checkIns.map(ci => (
-                    <div key={ci.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors group">
+            {/* All metric cards in a unified grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              {/* Built-in check-in metric cards */}
+              {CHECKIN_METRICS.map(m => {
+                const series = checkIns.filter(c => c[m.key] != null)
+                if (series.length === 0) return null
+                const latestVal = series[series.length - 1][m.key] as number
+                const sparkVals = series.map(c => c[m.key] as number)
+                const trend = series.length > 1 ? sparkVals[sparkVals.length - 1] - sparkVals[0] : null
+                return (
+                  <div key={m.key} className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                    <div className="flex items-center gap-3">
+                      <span className={clsx('flex-shrink-0', m.color)}>{m.icon}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-700">
-                          {new Date(ci.checked_in_at).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </p>
-                        <div className="flex gap-3 mt-0.5 flex-wrap">
-                          {ci.weight_kg != null && <span className="text-[10px] text-gray-400">{ci.weight_kg}kg</span>}
-                          {ci.body_fat_pct != null && <span className="text-[10px] text-gray-400">{ci.body_fat_pct}% bf</span>}
-                          {ci.energy_level != null && <span className="text-[10px] text-gray-400">⚡{ci.energy_level}/10</span>}
-                          {ci.sleep_hours != null && <span className="text-[10px] text-gray-400">😴{ci.sleep_hours}h</span>}
-                          {ci.notes && <span className="text-[10px] text-gray-400 italic truncate max-w-[140px]">"{ci.notes}"</span>}
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-gray-800">{m.label}</p>
+                          {trend != null && (
+                            <span className={clsx('text-[10px] font-semibold', trend > 0 ? 'text-emerald-500' : trend < 0 ? 'text-rose-500' : 'text-gray-400')}>
+                              {trend > 0 ? '+' : ''}{trend.toFixed(1)}{m.unit}
+                            </span>
+                          )}
                         </div>
+                        <p className="text-xs text-gray-400">{series.length} entries · latest: <strong>{latestVal}{m.unit}</strong></p>
                       </div>
-                      <button onClick={() => deleteCheckIn.mutate({ id: ci.id, clientId })}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-300 hover:text-rose-500 hover:bg-rose-50 transition-all">
-                        <Trash2 size={13} />
-                      </button>
+                      <MiniSparkline values={sparkVals} color="#10b981" />
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* ── Custom metrics ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Repeat2 size={16} className="text-brand-500" />
-            <h3 className="font-semibold text-gray-900">Custom Metrics</h3>
-          </div>
-          {definitions.length > 0 && (
-            <button onClick={() => setShowLogCustom(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-lg hover:from-brand-700 hover:to-violet-700 transition-all">
-              <Plus size={12} />Log Value
-            </button>
-          )}
-        </div>
-
-        {definitions.length === 0 ? (
-          <div className="text-center py-6">
-            <p className="text-sm text-gray-400">No custom metrics defined yet.</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Go to <span className="font-medium text-brand-500">Library → Metrics</span> to define trackable metrics for your clients.
-            </p>
-          </div>
-        ) : customValues.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">No custom values logged yet.</p>
-        ) : (
-          <div className="space-y-3">
-            {definitions.filter(d => customByDef.has(d.id)).map(def => {
-              const vals = [...(customByDef.get(def.id) ?? [])].reverse()
-              const latest = vals[vals.length - 1]
-              const sparkVals = vals.map(v => v.value)
-              const trend = vals.length > 1 ? vals[vals.length - 1].value - vals[0].value : null
-              return (
-                <div key={def.id} className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{def.emoji}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-gray-800">{def.name}</p>
-                        {trend != null && (
-                          <span className={clsx('text-[10px] font-semibold', trend > 0 ? 'text-emerald-500' : trend < 0 ? 'text-rose-500' : 'text-gray-400')}>
-                            {trend > 0 ? '+' : ''}{trend.toFixed(1)}{def.unit}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-400">{vals.length} entries · latest: <strong>{latest.value}{def.unit}</strong></p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {series.slice(-6).reverse().map(c => (
+                        <div key={c.id} className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2 py-1 text-[10px]">
+                          <span className="text-gray-500">{new Date(c.checked_in_at).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
+                          <span className="font-bold text-gray-700">{c[m.key]}{m.unit}</span>
+                        </div>
+                      ))}
                     </div>
-                    <MiniSparkline values={sparkVals} color="#6366f1" />
                   </div>
-                  {/* Recent entries */}
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {[...customByDef.get(def.id)!].slice(0, 6).map(v => (
-                      <div key={v.id} className="group flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2 py-1 text-[10px]">
-                        <span className="text-gray-500">{new Date(v.logged_at).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
-                        <span className="font-bold text-gray-700">{v.value}{def.unit}</span>
-                        <button onClick={() => deleteCustom.mutate({ id: v.id, clientId })}
-                          className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-rose-500 transition-all ml-0.5">
-                          <X size={10} />
+                )
+              })}
+
+              {/* Custom metric cards */}
+              {definitions.filter(d => customByDef.has(d.id)).map(def => {
+                const vals = [...(customByDef.get(def.id) ?? [])].reverse()
+                const latestCustom = vals[vals.length - 1]
+                const sparkVals = vals.map(v => v.value)
+                const trend = vals.length > 1 ? sparkVals[sparkVals.length - 1] - sparkVals[0] : null
+                return (
+                  <div key={def.id} className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{def.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-gray-800">{def.name}</p>
+                          {trend != null && (
+                            <span className={clsx('text-[10px] font-semibold', trend > 0 ? 'text-emerald-500' : trend < 0 ? 'text-rose-500' : 'text-gray-400')}>
+                              {trend > 0 ? '+' : ''}{trend.toFixed(1)}{def.unit}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400">{vals.length} entries · latest: <strong>{latestCustom.value}{def.unit}</strong></p>
+                      </div>
+                      <MiniSparkline values={sparkVals} color="#6366f1" />
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {[...customByDef.get(def.id)!].slice(0, 6).map(v => (
+                        <div key={v.id} className="group flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2 py-1 text-[10px]">
+                          <span className="text-gray-500">{new Date(v.logged_at).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
+                          <span className="font-bold text-gray-700">{v.value}{def.unit}</span>
+                          <button onClick={() => deleteCustom.mutate({ id: v.id, clientId })}
+                            className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-rose-500 transition-all ml-0.5">
+                            <X size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Check-in history */}
+            {checkIns.length > 0 && (
+              <div>
+                <button onClick={() => setExpandedCI(v => !v)}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors mb-2">
+                  <ChevronDown size={13} className={clsx('transition-transform', expandedCI && 'rotate-180')} />
+                  {expandedCI ? 'Hide' : 'Show'} check-in history
+                </button>
+                {expandedCI && (
+                  <div className="space-y-1">
+                    {checkIns.map(ci => (
+                      <div key={ci.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors group">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-700">
+                            {new Date(ci.checked_in_at).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
+                          <div className="flex gap-3 mt-0.5 flex-wrap">
+                            {ci.weight_kg != null && <span className="text-[10px] text-gray-400">{ci.weight_kg}kg</span>}
+                            {ci.body_fat_pct != null && <span className="text-[10px] text-gray-400">{ci.body_fat_pct}% bf</span>}
+                            {ci.energy_level != null && <span className="text-[10px] text-gray-400">⚡{ci.energy_level}/10</span>}
+                            {ci.sleep_hours != null && <span className="text-[10px] text-gray-400">😴{ci.sleep_hours}h</span>}
+                            {ci.notes && <span className="text-[10px] text-gray-400 italic truncate max-w-[140px]">"{ci.notes}"</span>}
+                          </div>
+                        </div>
+                        <button onClick={() => deleteCheckIn.mutate({ id: ci.id, clientId })}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-300 hover:text-rose-500 hover:bg-rose-50 transition-all">
+                          <Trash2 size={13} />
                         </button>
                       </div>
                     ))}
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
