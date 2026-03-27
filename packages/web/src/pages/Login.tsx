@@ -38,7 +38,7 @@ export default function Login() {
 
     if (adminMode) {
       const { error } = await signIn(ADMIN_EMAIL, password)
-      if (error) setError('Access denied.')
+      if (error) setError(error.message)
     } else if (mode === 'signin') {
       const { error } = await signIn(email, password)
       if (error) setError(error.message)
