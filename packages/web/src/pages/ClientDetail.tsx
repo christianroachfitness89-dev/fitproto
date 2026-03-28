@@ -7,7 +7,7 @@ import {
   ClipboardList, ChevronLeft, ChevronRight, ClipboardCheck,
   SkipForward, ExternalLink, Copy, History, BarChart2, Utensils, Lock,
   ChevronUp, Scale, Zap, TrendingUp, Search, ListChecks,
-  BookOpen, Check, UserCheck, Globe, Moon, LineChart,
+  BookOpen, Check, UserCheck, Globe, Moon, LineChart, FileText,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { supabase } from '@/lib/supabase'
@@ -30,6 +30,7 @@ import {
   usePrograms, useClientProgramAssignment, useAssignProgram, useUnassignProgram,
 } from '@/hooks/useWorkouts'
 import { useNutritionPlan, useUpsertNutritionPlan } from '@/hooks/useNutrition'
+import ProgressReport from './ProgressReport'
 import { useUnitSystem, weightLabel } from '@/lib/units'
 import { playRestEndChime } from '@/lib/sound'
 import type { DbClient, DbTask, DbClientWorkoutWithWorkout, PortalSection } from '@/lib/database.types'
@@ -2583,7 +2584,8 @@ export default function ClientDetail() {
   const [activeTab, setActiveTab]     = useState<Tab>('overview')
   const [mountedTabs, setMountedTabs] = useState<Set<Tab>>(new Set(['overview']))
   const [showEdit, setShowEdit]       = useState(false)
-  const [copied, setCopied]       = useState(false)
+  const [copied, setCopied]           = useState(false)
+  const [showReport, setShowReport]   = useState(false)
 
   async function openMessage() {
     if (!id) return
@@ -2635,7 +2637,8 @@ export default function ClientDetail() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
-      {showEdit && <EditClientModal client={client} onClose={() => setShowEdit(false)} />}
+      {showEdit   && <EditClientModal client={client} onClose={() => setShowEdit(false)} />}
+      {showReport && <ProgressReport  client={client} onClose={() => setShowReport(false)} />}
 
       {/* Back */}
       <Link to="/clients" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">
@@ -2712,6 +2715,13 @@ export default function ClientDetail() {
                 <ExternalLink size={13} />
               </button>
             </div>
+            <button
+              onClick={() => setShowReport(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+            >
+              <FileText size={15} />
+              Report
+            </button>
             <button
               onClick={openMessage}
               disabled={getOrCreate.isPending}
