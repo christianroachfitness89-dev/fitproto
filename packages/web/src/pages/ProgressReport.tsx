@@ -112,15 +112,25 @@ export default function ProgressReport({ client, onClose }: {
   const { data: metricValues = [] } = useCustomMetricValues(client.id)
   const filteredMetricValues = metricValues.filter(v => v.logged_at >= since)
 
-  // Workout sessions via the same RPC used by the history tab
+  // Workout sessions — direct query with date filter (fast)
   useEffect(() => {
     let cancelled = false
     async function load() {
       setSessionsLoading(true)
-      const { data } = await supabase.rpc('get_portal_history', { p_client_id: client.id })
+      const { data } = await supabase
+        .from('workout_logs')
+        .select('id, completed_at, notes, workouts(name), workout_set_logs(id)')
+        .eq('client_id', client.id)
+        .gte('completed_at', since)
+        .order('completed_at', { ascending: false })
       if (!cancelled) {
-        const all = (data as WorkoutSession[]) ?? []
-        setSessions(all.filter(s => s.completed_at >= since))
+        const rows = (data ?? []).map((r: any) => ({
+          id:           r.id,
+          completed_at: r.completed_at,
+          workout_name: r.workouts?.name ?? 'Workout',
+          set_count:    r.workout_set_logs?.length ?? 0,
+        }))
+        setSessions(rows)
         setSessionsLoading(false)
       }
     }
