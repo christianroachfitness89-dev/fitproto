@@ -222,6 +222,10 @@ export default function ProgressReport({ client, onClose }: {
   return (
     <>
       <style>{`
+        @page {
+          size: A4 portrait;
+          margin: 1cm;
+        }
         @media print {
           body * { visibility: hidden; }
           #progress-report-print,
@@ -230,10 +234,43 @@ export default function ProgressReport({ client, onClose }: {
             position: fixed !important;
             inset: 0 !important;
             background: white !important;
-            padding: 2rem !important;
+            padding: 0.6cm 0.8cm !important;
             overflow: visible !important;
             z-index: 9999;
           }
+
+          /* Scale entire report to fit one page */
+          #progress-report-print > * {
+            zoom: 0.78;
+          }
+
+          /* Tighten spacing */
+          #progress-report-print .space-y-6 > * + * { margin-top: 0.6rem !important; }
+          #progress-report-print .space-y-3 > * + * { margin-top: 0.35rem !important; }
+          #progress-report-print .space-y-2 > * + * { margin-top: 0.25rem !important; }
+          #progress-report-print .p-5 { padding: 0.5rem !important; }
+          #progress-report-print .p-4 { padding: 0.4rem !important; }
+          #progress-report-print .py-6 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+          #progress-report-print .gap-6 { gap: 0.75rem !important; }
+          #progress-report-print .gap-3 { gap: 0.4rem !important; }
+
+          /* Two-column layout for stat sections */
+          #progress-report-print .print-two-col {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 0.5rem !important;
+          }
+
+          /* Reduce heading sizes */
+          #progress-report-print h1 { font-size: 1.1rem !important; }
+          #progress-report-print h2 { font-size: 0.6rem !important; }
+          #progress-report-print .text-2xl { font-size: 1.1rem !important; }
+          #progress-report-print .text-sm { font-size: 0.7rem !important; }
+          #progress-report-print .text-xs { font-size: 0.6rem !important; }
+
+          /* Shrink donut */
+          #progress-report-print svg[width="88"] { width: 60px !important; height: 60px !important; }
+
           .print-page { page-break-inside: avoid; }
         }
       `}</style>
@@ -321,6 +358,9 @@ export default function ProgressReport({ client, onClose }: {
             </div>
 
             <div className="border-t border-gray-100" />
+
+            {/* All sections in a two-column grid when printed */}
+            <div className="print-two-col space-y-4">
 
             {/* Body metrics */}
             <div className="print-page space-y-3">
@@ -545,6 +585,8 @@ export default function ProgressReport({ client, onClose }: {
                 </div>
               )
             })()}
+
+            </div>{/* end print-two-col */}
 
             {/* Footer */}
             <div className="border-t border-gray-100 pt-4 text-center">
