@@ -19,6 +19,7 @@ import MetricsLibrary from './pages/MetricsLibrary'
 import Placeholder from './pages/Placeholder'
 import ClientPortal from './pages/ClientPortal'
 import AdminPanel from './pages/AdminPanel'
+import Leads from './pages/Leads'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -153,6 +154,7 @@ export default function App() {
               <Route path="library/programs/:id" element={<ProgramBuilder />} />
               <Route path="library/:section" element={<Library />} />
               <Route path="library" element={<Navigate to="/library/exercises" replace />} />
+              <Route path="leads" element={<Leads />} />
               <Route path="inbox" element={<Inbox />} />
               <Route path="automation" element={<Placeholder title="Automation" description="Set up automated workflows, reminders, and check-ins for your clients." />} />
               <Route path="on-demand" element={<Placeholder title="On-demand Content" description="Create and manage on-demand video content and resources for your clients." />} />

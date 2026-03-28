@@ -6,7 +6,7 @@ import {
   ChevronDown, Dumbbell, LayoutDashboard,
   CheckSquare, ClipboardList, Utensils, BarChart3,
   HelpCircle, ShoppingBag, Gift, UserCog,
-  X, Menu, LogOut, Settings, Loader2, CheckCircle2, Repeat2,
+  X, Menu, LogOut, Settings, Loader2, CheckCircle2, Repeat2, UserPlus,
 } from 'lucide-react'
 import type React from 'react'
 import clsx from 'clsx'
@@ -244,6 +244,16 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
             </div>
           )}
         </div>
+
+        <NavLink to="/leads" className={navItemClass}>
+          {({ isActive }) => (
+            <>
+              <UserPlus size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
+              <span className="flex-1">Lead Pool</span>
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            </>
+          )}
+        </NavLink>
 
         <NavLink to="/inbox" className={navItemClass}>
           {({ isActive }) => (

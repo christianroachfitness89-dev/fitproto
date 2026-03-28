@@ -276,6 +276,33 @@ export interface DbGlobalTemplateHabit {
   created_at: string
 }
 
+export type LeadStatus = 'new' | 'preq_sent' | 'preq_completed' | 'consult_scheduled' | 'consult_completed' | 'converted' | 'lost'
+
+export interface DbLead {
+  id: string
+  org_id: string
+  name: string
+  email: string | null
+  phone: string | null
+  source: string | null
+  status: LeadStatus
+  notes: string | null
+  assigned_coach_id: string | null
+  converted_client_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DbQuestionnaireTemplate {
+  id: string
+  org_id: string
+  type: 'preq' | 'consult'
+  title: string
+  questions: { id: string; text: string; type: string; required: boolean }[]
+  created_at: string
+  updated_at: string
+}
+
 export interface DbNotification {
   id: string
   org_id: string
