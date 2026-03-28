@@ -1,33 +1,63 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   X, Printer, Loader2, TrendingUp, TrendingDown, Minus,
-  Dumbbell, BarChart2, Heart, Scale, Zap, Moon,
+  Dumbbell, BarChart2, Heart, Scale, Zap, Moon, Calendar,
+  CheckCircle2, XCircle, Clock,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useCheckIns, useMetricDefinitions, useCustomMetricValues } from '@/hooks/useMetrics'
 import type { DbClient } from '@/lib/database.types'
 import { useUnitSystem, weightLabel } from '@/lib/units'
 
-// ─── Types ─────────────────────────────────────────────────────
-interface WorkoutSession {
-  id: string
-  completed_at: string
-  workout_name: string
-  set_count: number
+// ─── Date range helpers ────────────────────────────────────────
+type RangePreset = 'thisweek' | 'lastweek' | '14d' | '30d' | '60d' | '90d' | '180d' | 'custom'
+
+interface DateRange { since: string; until: string; days: number }
+
+function getMonday(d: Date): Date {
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  const m = new Date(d)
+  m.setDate(d.getDate() + diff)
+  m.setHours(0, 0, 0, 0)
+  return m
 }
 
-interface HabitStat {
-  name: string
-  emoji: string
-  completed: number
-  total: number
+function computeRange(preset: RangePreset, customStart: string, customEnd: string): DateRange {
+  const now   = new Date()
+  const today = now.toISOString()
+
+  if (preset === 'custom' && customStart && customEnd) {
+    const s = new Date(customStart + 'T00:00:00')
+    const e = new Date(customEnd   + 'T23:59:59')
+    const days = Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400_000))
+    return { since: s.toISOString(), until: e.toISOString(), days }
+  }
+  if (preset === 'thisweek') {
+    const monday = getMonday(now)
+    const days = Math.max(1, Math.ceil((now.getTime() - monday.getTime()) / 86400_000))
+    return { since: monday.toISOString(), until: today, days }
+  }
+  if (preset === 'lastweek') {
+    const thisMonday = getMonday(now)
+    const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7)
+    const lastSunday = new Date(thisMonday); lastSunday.setDate(thisMonday.getDate() - 1); lastSunday.setHours(23, 59, 59, 999)
+    return { since: lastMonday.toISOString(), until: lastSunday.toISOString(), days: 7 }
+  }
+  const daysMap: Record<string, number> = { '14d': 14, '30d': 30, '60d': 60, '90d': 90, '180d': 180 }
+  const days = daysMap[preset] ?? 30
+  return { since: new Date(Date.now() - days * 86400_000).toISOString(), until: today, days }
 }
 
-const RANGES = [
-  { label: 'Last 30 days', days: 30  },
-  { label: 'Last 60 days', days: 60  },
-  { label: 'Last 90 days', days: 90  },
-  { label: 'Last 6 months', days: 180 },
+const PRESETS: { key: RangePreset; label: string }[] = [
+  { key: 'thisweek', label: 'This week'  },
+  { key: 'lastweek', label: 'Last week'  },
+  { key: '14d',      label: '2 weeks'    },
+  { key: '30d',      label: '30 days'    },
+  { key: '60d',      label: '60 days'    },
+  { key: '90d',      label: '90 days'    },
+  { key: '180d',     label: '6 months'   },
+  { key: 'custom',   label: 'Custom'     },
 ]
 
 // ─── Sparkline ─────────────────────────────────────────────────
@@ -51,11 +81,7 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 
 // ─── Stat card ─────────────────────────────────────────────────
 function StatCard({ icon, label, value, unit, sub }: {
-  icon: React.ReactNode
-  label: string
-  value: string | number
-  unit?: string
-  sub?: React.ReactNode
+  icon: React.ReactNode; label: string; value: string | number; unit?: string; sub?: React.ReactNode
 }) {
   return (
     <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
@@ -64,8 +90,7 @@ function StatCard({ icon, label, value, unit, sub }: {
         <span className="text-xs font-semibold uppercase tracking-wider">{label}</span>
       </div>
       <p className="text-2xl font-bold text-gray-900">
-        {value}
-        {unit && <span className="text-sm font-normal text-gray-400 ml-1">{unit}</span>}
+        {value}{unit && <span className="text-sm font-normal text-gray-400 ml-1">{unit}</span>}
       </p>
       {sub && <div className="mt-1">{sub}</div>}
     </div>
@@ -88,111 +113,142 @@ function Trend({ first, last, unit, lowerIsBetter }: {
   )
 }
 
+// ─── Compliance donut ──────────────────────────────────────────
+function ComplianceDonut({ pct }: { pct: number }) {
+  const r  = 36, cx = 44, cy = 44
+  const circumference = 2 * Math.PI * r
+  const dash = (pct / 100) * circumference
+  const color = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#f43f5e'
+  return (
+    <svg width={88} height={88} className="flex-shrink-0">
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f3f4f6" strokeWidth={8} />
+      <circle
+        cx={cx} cy={cy} r={r} fill="none"
+        stroke={color} strokeWidth={8}
+        strokeDasharray={`${dash} ${circumference}`}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${cx} ${cy})`}
+      />
+      <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fontSize={14} fontWeight={700} fill="#111">
+        {Math.round(pct)}%
+      </text>
+    </svg>
+  )
+}
+
 // ─── Main ProgressReport modal ─────────────────────────────────
+interface WorkoutCompliance { assigned: number; completed: number; skipped: number; logged: number }
+interface HabitStat { name: string; emoji: string; completed: number; total: number }
+
 export default function ProgressReport({ client, onClose }: {
   client: DbClient
   onClose: () => void
 }) {
-  const [rangeDays,       setRangeDays]       = useState(30)
-  const [sessions,        setSessions]        = useState<WorkoutSession[]>([])
-  const [habitStats,      setHabitStats]      = useState<HabitStat[]>([])
-  const [sessionsLoading, setSessionsLoading] = useState(true)
+  const [preset,       setPreset]       = useState<RangePreset>('30d')
+  const [customStart,  setCustomStart]  = useState('')
+  const [customEnd,    setCustomEnd]    = useState('')
+  const [compliance,   setCompliance]   = useState<WorkoutCompliance | null>(null)
+  const [habitStats,   setHabitStats]   = useState<HabitStat[]>([])
+  const [workoutLoad,  setWorkoutLoad]  = useState(true)
   const printRef = useRef<HTMLDivElement>(null)
   const unitSystem = useUnitSystem()
 
-  // Date range
-  const since = new Date(Date.now() - rangeDays * 86400_000).toISOString()
+  const range = computeRange(preset, customStart, customEnd)
+  const { since, until, days } = range
 
   // Check-ins
   const { data: allCheckIns = [] } = useCheckIns(client.id)
-  const checkIns = allCheckIns.filter(c => c.checked_in_at >= since)
+  const checkIns = allCheckIns.filter(c => c.checked_in_at >= since && c.checked_in_at <= until)
 
   // Custom metrics
   const { data: metricDefs = [] } = useMetricDefinitions()
   const { data: metricValues = [] } = useCustomMetricValues(client.id)
-  const filteredMetricValues = metricValues.filter(v => v.logged_at >= since)
+  const filteredMetricValues = metricValues.filter(v => v.logged_at >= since && v.logged_at <= until)
 
-  // Workout sessions — direct query with date filter (fast)
+  // Workout compliance
   useEffect(() => {
     let cancelled = false
     async function load() {
-      setSessionsLoading(true)
-      const { data } = await supabase
-        .from('workout_logs')
-        .select('id, completed_at, notes, workouts(name), workout_set_logs(id)')
-        .eq('client_id', client.id)
-        .gte('completed_at', since)
-        .order('completed_at', { ascending: false })
-      if (!cancelled) {
-        const rows = (data ?? []).map((r: any) => ({
-          id:           r.id,
-          completed_at: r.completed_at,
-          workout_name: r.workouts?.name ?? 'Workout',
-          set_count:    r.workout_set_logs?.length ?? 0,
-        }))
-        setSessions(rows)
-        setSessionsLoading(false)
-      }
+      setWorkoutLoad(true)
+      const [assignedRes, logsRes] = await Promise.all([
+        supabase
+          .from('client_workouts')
+          .select('id, status')
+          .eq('client_id', client.id)
+          .gte('assigned_at', since)
+          .lte('assigned_at', until),
+        supabase
+          .from('workout_logs')
+          .select('id')
+          .eq('client_id', client.id)
+          .gte('completed_at', since)
+          .lte('completed_at', until),
+      ])
+      if (cancelled) return
+      const assigned  = assignedRes.data ?? []
+      const completed = assigned.filter(w => w.status === 'completed').length
+      const skipped   = assigned.filter(w => w.status === 'skipped').length
+      setCompliance({
+        assigned:  assigned.length,
+        completed,
+        skipped,
+        logged: (logsRes.data ?? []).length,
+      })
+      setWorkoutLoad(false)
     }
     load()
     return () => { cancelled = true }
-  }, [client.id, since])
+  }, [client.id, since, until])
 
   // Habits
   useEffect(() => {
     let cancelled = false
     async function load() {
       const { data: habits } = await supabase
-        .from('habits')
-        .select('id, name, emoji')
-        .eq('client_id', client.id)
-        .eq('active', true)
+        .from('habits').select('id, name, emoji')
+        .eq('client_id', client.id).eq('active', true)
       if (!habits?.length || cancelled) { setHabitStats([]); return }
 
       const { data: completions } = await supabase
-        .from('habit_completions')
-        .select('habit_id, completed_date')
+        .from('habit_completions').select('habit_id, completed_date')
         .eq('client_id', client.id)
         .gte('completed_date', since.split('T')[0])
+        .lte('completed_date', until.split('T')[0])
 
       const completionMap: Record<string, number> = {}
-      completions?.forEach(c => {
-        completionMap[c.habit_id] = (completionMap[c.habit_id] ?? 0) + 1
-      })
+      completions?.forEach(c => { completionMap[c.habit_id] = (completionMap[c.habit_id] ?? 0) + 1 })
 
       if (!cancelled) {
         setHabitStats(habits.map(h => ({
-          name:      h.name,
-          emoji:     h.emoji,
-          completed: completionMap[h.id] ?? 0,
-          total:     rangeDays,
+          name: h.name, emoji: h.emoji,
+          completed: completionMap[h.id] ?? 0, total: days,
         })))
       }
     }
     load()
     return () => { cancelled = true }
-  }, [client.id, since, rangeDays])
+  }, [client.id, since, until, days])
 
-  // Derived check-in series
-  const weightSeries = checkIns.map(c => c.weight_kg).filter((v): v is number => v != null)
-  const bfSeries     = checkIns.map(c => c.body_fat_pct).filter((v): v is number => v != null)
-  const energySeries = checkIns.map(c => c.energy_level).filter((v): v is number => v != null)
-  const sleepSeries  = checkIns.map(c => c.sleep_hours).filter((v): v is number => v != null)
+  // Derived check-in series (sorted ascending for sparklines)
+  const sortedCheckIns = [...checkIns].reverse()
+  const weightSeries = sortedCheckIns.map(c => c.weight_kg).filter((v): v is number => v != null)
+  const bfSeries     = sortedCheckIns.map(c => c.body_fat_pct).filter((v): v is number => v != null)
+  const energySeries = sortedCheckIns.map(c => c.energy_level).filter((v): v is number => v != null)
+  const sleepSeries  = sortedCheckIns.map(c => c.sleep_hours).filter((v): v is number => v != null)
 
   const displayWeight = (kg: number) =>
     unitSystem === 'imperial' ? (kg * 2.20462).toFixed(1) : kg.toFixed(1)
 
-  function handlePrint() {
-    window.print()
-  }
-
   const reportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-  const sinceDate  = new Date(since).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  const toDate     = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const sinceLabel = new Date(since).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const untilLabel = new Date(until).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+  const compliancePct = compliance && compliance.assigned > 0
+    ? (compliance.completed / compliance.assigned) * 100
+    : null
 
   return (
     <>
-      {/* Print styles injected in head */}
       <style>{`
         @media print {
           body * { visibility: hidden; }
@@ -213,51 +269,78 @@ export default function ProgressReport({ client, onClose }: {
       {/* Modal backdrop */}
       <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-start justify-center overflow-y-auto py-8 px-4 no-print">
         <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden">
-          {/* Modal toolbar */}
-          <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100 no-print">
-            <div className="flex-1">
-              <p className="text-base font-bold text-gray-900">Progress Report</p>
-              <p className="text-xs text-gray-400">{client.name}</p>
+
+          {/* Toolbar */}
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 flex-wrap no-print">
+            <div className="mr-1">
+              <p className="text-base font-bold text-gray-900 leading-none">Progress Report</p>
+              <p className="text-xs text-gray-400 mt-0.5">{client.name}</p>
             </div>
-            {/* Range selector */}
-            <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-              {RANGES.map(r => (
+
+            {/* Preset buttons */}
+            <div className="flex gap-1 flex-wrap">
+              {PRESETS.map(p => (
                 <button
-                  key={r.days}
-                  onClick={() => setRangeDays(r.days)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    rangeDays === r.days
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
+                  key={p.key}
+                  onClick={() => setPreset(p.key)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    preset === p.key
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                   }`}
                 >
-                  {r.label.replace('Last ', '')}
+                  {p.label}
                 </button>
               ))}
             </div>
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-700 transition-colors"
-            >
-              <Printer size={15} /> Print / PDF
-            </button>
-            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-colors">
-              <X size={18} />
-            </button>
+
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-700 transition-colors"
+              >
+                <Printer size={14} /> Print / PDF
+              </button>
+              <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100">
+                <X size={18} />
+              </button>
+            </div>
           </div>
+
+          {/* Custom date pickers */}
+          {preset === 'custom' && (
+            <div className="flex items-center gap-3 px-5 py-3 bg-gray-50 border-b border-gray-100 no-print">
+              <Calendar size={14} className="text-gray-400" />
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={customStart}
+                  onChange={e => setCustomStart(e.target.value)}
+                  className="text-sm border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                />
+                <span className="text-gray-400 text-sm">to</span>
+                <input
+                  type="date"
+                  value={customEnd}
+                  onChange={e => setCustomEnd(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="text-sm border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                />
+              </div>
+              {(!customStart || !customEnd) && (
+                <p className="text-xs text-gray-400">Select a start and end date</p>
+              )}
+            </div>
+          )}
 
           {/* Report content */}
           <div id="progress-report-print" ref={printRef} className="px-6 py-6 space-y-6">
-            {/* Report header */}
+            {/* Header */}
             <div className="flex items-start justify-between print-page">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
-                <p className="text-gray-500 text-sm mt-0.5">
-                  Progress Report · {sinceDate} – {toDate}
-                </p>
-                {client.goal && (
-                  <p className="text-gray-400 text-xs mt-1">Goal: {client.goal}</p>
-                )}
+                <p className="text-gray-500 text-sm mt-0.5">Progress Report · {sinceLabel} – {untilLabel}</p>
+                {client.goal && <p className="text-gray-400 text-xs mt-1">Goal: {client.goal}</p>}
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-400">Generated</p>
@@ -267,7 +350,7 @@ export default function ProgressReport({ client, onClose }: {
 
             <div className="border-t border-gray-100" />
 
-            {/* Check-ins summary */}
+            {/* Body metrics */}
             <div className="print-page space-y-3">
               <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
                 <Scale size={14} className="text-brand-600" /> Body Metrics
@@ -363,62 +446,58 @@ export default function ProgressReport({ client, onClose }: {
               </div>
             )}
 
-            {/* Workouts */}
+            {/* Workout compliance */}
             <div className="print-page space-y-3">
               <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                <Dumbbell size={14} className="text-brand-600" /> Workouts
+                <Dumbbell size={14} className="text-brand-600" /> Workout Compliance
               </h2>
-              {sessionsLoading ? (
+              {workoutLoad ? (
                 <div className="flex items-center gap-2 text-gray-400 text-sm">
                   <Loader2 size={14} className="animate-spin" /> Loading...
                 </div>
-              ) : sessions.length === 0 ? (
-                <p className="text-gray-400 text-sm">No sessions logged in this period.</p>
+              ) : !compliance || compliance.assigned === 0 ? (
+                <p className="text-gray-400 text-sm">No workouts assigned in this period.</p>
               ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <StatCard
-                      icon={<Dumbbell size={14} />}
-                      label="Sessions"
-                      value={sessions.length}
-                      sub={<p className="text-xs text-gray-400">
-                        {(sessions.length / (rangeDays / 7)).toFixed(1)} per week
-                      </p>}
-                    />
-                    <StatCard
-                      icon={<BarChart2 size={14} />}
-                      label="Total Sets"
-                      value={sessions.reduce((a, s) => a + s.set_count, 0)}
-                    />
+                <div className="bg-gray-50 rounded-2xl border border-gray-100 p-5">
+                  <div className="flex items-center gap-6">
+                    {/* Donut */}
+                    <ComplianceDonut pct={compliancePct ?? 0} />
+
+                    {/* Stats breakdown */}
+                    <div className="flex-1 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">Assigned</span>
+                        <span className="text-sm font-bold text-gray-900">{compliance.assigned}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-sm text-emerald-600">
+                          <CheckCircle2 size={13} /> Completed
+                        </span>
+                        <span className="text-sm font-bold text-emerald-600">{compliance.completed}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-sm text-rose-500">
+                          <XCircle size={13} /> Skipped
+                        </span>
+                        <span className="text-sm font-bold text-rose-500">{compliance.skipped}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-sm text-gray-400">
+                          <Clock size={13} /> Pending
+                        </span>
+                        <span className="text-sm font-bold text-gray-400">
+                          {compliance.assigned - compliance.completed - compliance.skipped}
+                        </span>
+                      </div>
+                      {compliance.logged > 0 && (
+                        <div className="pt-1 border-t border-gray-200 flex items-center justify-between">
+                          <span className="text-xs text-gray-400">Sessions logged</span>
+                          <span className="text-xs font-semibold text-gray-600">{compliance.logged}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-100">
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Workout</th>
-                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Date</th>
-                          <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">Sets</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {sessions.slice(-10).reverse().map(s => (
-                          <tr key={s.id}>
-                            <td className="px-4 py-2.5 text-gray-700 font-medium">{s.workout_name}</td>
-                            <td className="px-4 py-2.5 text-gray-400 text-right text-xs">
-                              {new Date(s.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </td>
-                            <td className="px-4 py-2.5 text-gray-600 text-right">{s.set_count}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {sessions.length > 10 && (
-                      <p className="text-xs text-gray-400 px-4 py-2 border-t border-gray-100">
-                        Showing last 10 of {sessions.length} sessions
-                      </p>
-                    )}
-                  </div>
-                </>
+                </div>
               )}
             </div>
 
