@@ -291,6 +291,7 @@ export interface DbLead {
   converted_client_id: string | null
   consult_scheduled_at: string | null
   consult_calendar_booked: boolean
+  non_conversion_reason: string | null
   created_at: string
   updated_at: string
 }

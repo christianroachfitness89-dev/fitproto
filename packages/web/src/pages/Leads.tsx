@@ -484,6 +484,8 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
   const [consultDate, setConsultDate]               = useState('')
   const [consultTime, setConsultTime]               = useState('')
   const [calendarBooked, setCalendarBooked]         = useState(false)
+  const [showLostForm, setShowLostForm]             = useState(false)
+  const [lostReason, setLostReason]                 = useState('')
 
   // sync notes when lead prop updates (status change), but not if user is typing
   if (!notesTouched && notes !== (lead.notes ?? '')) setNotes(lead.notes ?? '')
@@ -507,6 +509,15 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
   async function handleDelete() {
     await deleteLead.mutateAsync(lead.id)
     onClose()
+  }
+
+  async function handleMarkLost() {
+    await updateLead.mutateAsync({
+      id: lead.id,
+      status: 'lost',
+      non_conversion_reason: lostReason || null,
+    })
+    setShowLostForm(false)
   }
 
   async function handleScheduleConsult() {
@@ -692,25 +703,73 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
               </div>
             )}
 
-            {/* ── Convert to Client (after consult done) ── */}
+            {/* ── Consult Outcome (after consult done) ── */}
             {lead.status === 'consult_completed' && (
-              <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50">
-                <div className="flex items-center gap-2 mb-2">
-                  <UserCheck size={16} className="text-emerald-600" />
-                  <p className="text-sm font-semibold text-emerald-800">Convert to Client</p>
+              <div className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-0.5">Consult Outcome</p>
+                  <p className="text-xs text-gray-500">Did this lead convert?</p>
                 </div>
-                <p className="text-xs text-emerald-700 mb-3">Creates a new active client profile from this lead's details.</p>
-                {showConvertConfirm ? (
-                  <div className="flex gap-2">
-                    <button onClick={() => setShowConvertConfirm(false)} className="flex-1 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-                    <button onClick={handleConvert} disabled={convertLead.isPending} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors">
-                      {convertLead.isPending ? <Loader2 size={12} className="animate-spin" /> : <><UserCheck size={12} /> Confirm</>}
+
+                {/* Convert path */}
+                {!showLostForm && (
+                  showConvertConfirm ? (
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowConvertConfirm(false)}
+                        className="flex-1 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">
+                        Cancel
+                      </button>
+                      <button onClick={handleConvert} disabled={convertLead.isPending}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+                        {convertLead.isPending ? <Loader2 size={12} className="animate-spin" /> : <><UserCheck size={12} /> Confirm Convert</>}
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowConvertConfirm(true)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors">
+                      <UserCheck size={15} /> Yes — Convert to Client
                     </button>
-                  </div>
-                ) : (
-                  <button onClick={() => setShowConvertConfirm(true)} className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors">
-                    <UserCheck size={12} /> Convert to Client
-                  </button>
+                  )
+                )}
+
+                {/* Not converted path */}
+                {!showConvertConfirm && (
+                  showLostForm ? (
+                    <div className="space-y-2.5">
+                      <select
+                        value={lostReason}
+                        onChange={e => setLostReason(e.target.value)}
+                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 transition-all"
+                      >
+                        <option value="">Select a reason…</option>
+                        <option value="Price / budget concerns">Price / budget concerns</option>
+                        <option value="Not ready to start">Not ready to start</option>
+                        <option value="Chose another coach or gym">Chose another coach or gym</option>
+                        <option value="Schedule / location conflict">Schedule / location conflict</option>
+                        <option value="Lost interest">Lost interest</option>
+                        <option value="No response after consult">No response after consult</option>
+                        <option value="Health / medical reasons">Health / medical reasons</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      <div className="flex gap-2">
+                        <button onClick={() => setShowLostForm(false)}
+                          className="flex-1 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">
+                          Back
+                        </button>
+                        <button
+                          onClick={handleMarkLost}
+                          disabled={updateLead.isPending}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-white bg-rose-600 rounded-xl hover:bg-rose-700 disabled:opacity-50 transition-colors">
+                          {updateLead.isPending ? <Loader2 size={12} className="animate-spin" /> : 'Confirm — Mark Lost'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowLostForm(true)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-rose-600 bg-white border border-rose-200 hover:bg-rose-50 rounded-xl transition-colors">
+                      No — Not Converted
+                    </button>
+                  )
                 )}
               </div>
             )}
@@ -724,6 +783,13 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                     View client profile <ExternalLink size={10} />
                   </a>
                 </div>
+              </div>
+            )}
+
+            {lead.status === 'lost' && lead.non_conversion_reason && (
+              <div className="border border-rose-200 rounded-xl p-4 bg-rose-50">
+                <p className="text-xs font-semibold text-rose-600 uppercase tracking-wider mb-1">Not Converted</p>
+                <p className="text-sm text-rose-800">{lead.non_conversion_reason}</p>
               </div>
             )}
 
