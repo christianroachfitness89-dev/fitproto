@@ -276,9 +276,9 @@ export interface DbGlobalTemplateHabit {
   created_at: string
 }
 
-export type LeadStatus = 'new' | 'called' | 'booked' | 'preq_sent' | 'preq_completed' | 'consult_scheduled' | 'consult_completed' | 'converted' | 'lost'
+export type LeadStatus = 'new' | 'called' | 'booked' | 'preq_sent' | 'preq_completed' | 'consult_scheduled' | 'consult_completed' | 'converted' | 'lost' | 'follow_up'
 
-export type CallOutcome = 'answered' | 'voicemail' | 'no_answer' | 'sms' | 'scheduled'
+export type CallOutcome = 'answered' | 'voicemail' | 'no_answer' | 'sms' | 'scheduled' | 'not_interested'
 
 export interface CallLog {
   called_at: string
@@ -300,6 +300,7 @@ export interface DbLead {
   consult_calendar_booked: boolean
   non_conversion_reason: string | null
   call_logs: CallLog[]
+  follow_up_date: string | null
   created_at: string
   updated_at: string
 }

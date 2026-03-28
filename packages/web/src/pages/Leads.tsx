@@ -26,16 +26,18 @@ const STAGES: { status: LeadStatus; label: string; color: string; dot: string }[
   { status: 'booked',            label: 'Booked',        color: 'bg-violet-50 text-violet-700 border-violet-200',  dot: 'bg-violet-400'  },
   { status: 'preq_completed',    label: 'PreQ Done',     color: 'bg-indigo-50 text-indigo-700 border-indigo-200',  dot: 'bg-indigo-400'  },
   { status: 'consult_completed', label: 'Consult Done',  color: 'bg-amber-50 text-amber-700 border-amber-200',    dot: 'bg-amber-400'   },
-  { status: 'converted',         label: 'Converted',     color: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
-  { status: 'lost',              label: 'Lost',          color: 'bg-rose-50 text-rose-700 border-rose-200',        dot: 'bg-rose-400'    },
+  { status: 'converted',  label: 'Converted',  color: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  { status: 'lost',       label: 'Lost',       color: 'bg-rose-50 text-rose-700 border-rose-200',         dot: 'bg-rose-400'    },
+  { status: 'follow_up',  label: 'Follow Up',  color: 'bg-orange-50 text-orange-700 border-orange-200',   dot: 'bg-orange-400'  },
 ]
 
 const CALL_OUTCOMES: { value: CallOutcome; label: string }[] = [
-  { value: 'answered',  label: 'Answered'  },
-  { value: 'voicemail', label: 'Voicemail' },
-  { value: 'no_answer', label: 'No Answer' },
-  { value: 'sms',       label: 'SMS Sent'  },
-  { value: 'scheduled', label: 'Scheduled ✓' },
+  { value: 'answered',      label: 'Answered'       },
+  { value: 'voicemail',     label: 'Voicemail'      },
+  { value: 'no_answer',     label: 'No Answer'      },
+  { value: 'sms',           label: 'SMS Sent'       },
+  { value: 'scheduled',     label: 'Scheduled ✓'   },
+  { value: 'not_interested', label: 'Not Interested' },
 ]
 
 function statusCfg(s: LeadStatus) {
@@ -731,6 +733,9 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
   const [callDate, setCallDate]                     = useState(() => new Date().toISOString().slice(0, 10))
   const [callTime, setCallTime]                     = useState(() => new Date().toTimeString().slice(0, 5))
   const [callOutcome, setCallOutcome]               = useState<CallOutcome | ''>('')
+  const [followUpDate, setFollowUpDate]             = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10)
+  })
 
   // sync notes when lead prop updates (status change), but not if user is typing
   if (!notesTouched && notes !== (lead.notes ?? '')) setNotes(lead.notes ?? '')
@@ -758,6 +763,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
 
   async function handleLogCall() {
     if (!callOutcome) return
+    if (callOutcome === 'not_interested' && !followUpDate) return
     const dt = `${callDate}T${callTime}`
     const outcomeLabel = CALL_OUTCOMES.find(o => o.value === callOutcome)?.label ?? callOutcome
     const newLog: CallLog = { called_at: dt, outcome: callOutcome as CallOutcome }
@@ -766,9 +772,10 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
     const newNotes = lead.notes ? `${lead.notes}\n${line}` : line
     await updateLead.mutateAsync({
       id: lead.id,
-      status: 'called',
+      status: callOutcome === 'not_interested' ? 'follow_up' : 'called',
       call_logs: [...existingLogs, newLog],
       notes: newNotes,
+      ...(callOutcome === 'not_interested' ? { follow_up_date: followUpDate } : {}),
     })
     setCallOutcome('')
     setCallDate(new Date().toISOString().slice(0, 10))
@@ -823,6 +830,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
     s.status !== lead.status &&
     s.status !== 'converted' &&
     s.status !== 'lost' &&
+    s.status !== 'follow_up' &&
     s.status !== naturalNext
   )
 
@@ -944,7 +952,9 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                               callOutcome === o.value
                                 ? o.value === 'scheduled'
                                   ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                                  : 'border-sky-500 bg-sky-50 text-sky-700'
+                                  : o.value === 'not_interested'
+                                    ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                    : 'border-sky-500 bg-sky-50 text-sky-700'
                                 : 'border-gray-200 text-gray-500 hover:border-gray-300'
                             )}>
                             {o.label}
@@ -952,12 +962,21 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                         ))}
                       </div>
                     </div>
+                    {callOutcome === 'not_interested' && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Follow-up Date <span className="text-rose-500">*</span></label>
+                        <input type="date" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)}
+                          className="w-full px-2.5 py-2 text-sm border border-orange-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-orange-400/30 focus:border-orange-400 transition-all" />
+                        <p className="text-[11px] text-orange-600 mt-1">Lead will move to the Follow Up pool on save.</p>
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       <button onClick={() => setShowCallForm(false)}
                         className="flex-1 py-2 text-xs font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
                         Cancel
                       </button>
-                      <button onClick={handleLogCall} disabled={!callOutcome || updateLead.isPending}
+                      <button onClick={handleLogCall}
+                        disabled={!callOutcome || updateLead.isPending || (callOutcome === 'not_interested' && !followUpDate)}
                         className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:opacity-50 transition-colors">
                         {updateLead.isPending ? <Loader2 size={12} className="animate-spin" /> : <><PhoneCall size={12} /> Save Log</>}
                       </button>
@@ -1176,8 +1195,48 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
               </div>
             )}
 
+            {lead.status === 'follow_up' && (
+              <div className="border border-orange-200 bg-orange-50/40 rounded-xl p-4 space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-orange-700 uppercase tracking-wider mb-1">Follow Up Pool</p>
+                  {lead.follow_up_date ? (
+                    <p className="text-sm font-semibold text-orange-800">
+                      Follow up: {new Date(lead.follow_up_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-orange-600">No follow-up date set.</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Update Follow-up Date</label>
+                    <input
+                      type="date"
+                      defaultValue={lead.follow_up_date ?? ''}
+                      onChange={e => updateLead.mutate({ id: lead.id, follow_up_date: e.target.value || null })}
+                      className="w-full px-3 py-2 text-sm border border-orange-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-orange-400/30 focus:border-orange-400 transition-all"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={() => updateLead.mutateAsync({ id: lead.id, status: 'called', follow_up_date: null })}
+                  disabled={updateLead.isPending}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 rounded-xl disabled:opacity-50 transition-all"
+                >
+                  {updateLead.isPending ? <Loader2 size={14} className="animate-spin" /> : <><PhoneCall size={14} /> Contact Now — Back to Pipeline</>}
+                </button>
+                <button
+                  onClick={() => handleStatusChange('lost')}
+                  disabled={updateLead.isPending}
+                  className="w-full py-2 text-xs font-semibold text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors disabled:opacity-50"
+                >
+                  Mark as Lost
+                </button>
+              </div>
+            )}
+
             {/* ── Manual stage jump ────────────────────── */}
-            {lead.status !== 'converted' && lead.status !== 'lost' && otherStages.length > 0 && (
+            {lead.status !== 'converted' && lead.status !== 'lost' && lead.status !== 'follow_up' && otherStages.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Jump to Stage</p>
                 <div className="flex flex-wrap gap-2">
@@ -1270,7 +1329,9 @@ function LeadCard({ lead, onClick }: { lead: DbLead; onClick: () => void }) {
       <div className="mt-3 flex items-center justify-between">
         <StatusBadge status={lead.status} />
         <span className="text-[11px] text-gray-400">
-          {new Date(lead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {lead.status === 'follow_up' && lead.follow_up_date
+            ? `Follow up ${new Date(lead.follow_up_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+            : new Date(lead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
         </span>
       </div>
     </button>
@@ -1284,32 +1345,52 @@ export default function Leads() {
   const [showTemplates, setShowTemplates] = useState(false)
   const [showBulkImport, setShowBulkImport] = useState(false)
   const [selectedId, setSelectedId]     = useState<string | null>(null)
+  const [pool, setPool]                 = useState<'pipeline' | 'followup'>('pipeline')
 
   // Always read the live lead from the query so status updates reflect immediately
   const selected = selectedId ? (leads.find(l => l.id === selectedId) ?? null) : null
   const [activeStage, setActiveStage] = useState<LeadStatus | 'all'>('all')
-  const [search, setSearch]         = useState('')
+  const [search, setSearch]           = useState('')
 
-  const filtered = leads.filter(l => {
-    if (activeStage !== 'all' && l.status !== activeStage) return false
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      return (
-        l.name.toLowerCase().includes(q) ||
-        (l.email ?? '').toLowerCase().includes(q) ||
-        (l.phone ?? '').toLowerCase().includes(q)
-      )
-    }
-    return true
-  })
+  // Separate follow-up leads from main pipeline
+  const followUpLeads = leads
+    .filter(l => l.status === 'follow_up')
+    .sort((a, b) => {
+      if (!a.follow_up_date) return 1
+      if (!b.follow_up_date) return -1
+      return a.follow_up_date.localeCompare(b.follow_up_date)
+    })
+  const pipelineLeads = leads.filter(l => l.status !== 'follow_up')
+
+  const filtered = pool === 'followup'
+    ? followUpLeads.filter(l => {
+        if (!search.trim()) return true
+        const q = search.toLowerCase()
+        return l.name.toLowerCase().includes(q) || (l.email ?? '').toLowerCase().includes(q) || (l.phone ?? '').toLowerCase().includes(q)
+      })
+    : pipelineLeads.filter(l => {
+        if (activeStage !== 'all' && l.status !== activeStage) return false
+        if (search.trim()) {
+          const q = search.toLowerCase()
+          return (
+            l.name.toLowerCase().includes(q) ||
+            (l.email ?? '').toLowerCase().includes(q) ||
+            (l.phone ?? '').toLowerCase().includes(q)
+          )
+        }
+        return true
+      })
 
   const counts = STAGES.reduce((acc, s) => {
     acc[s.status] = leads.filter(l => l.status === s.status).length
     return acc
   }, {} as Record<LeadStatus, number>)
 
-  const activeLeads     = leads.filter(l => l.status !== 'converted' && l.status !== 'lost')
-  const convertedLeads  = leads.filter(l => l.status === 'converted')
+  // Pipeline-only stages for the stage filter tabs (exclude follow_up)
+  const PIPELINE_STAGES = STAGES.filter(s => s.status !== 'follow_up')
+
+  const activeLeads    = leads.filter(l => l.status !== 'converted' && l.status !== 'lost' && l.status !== 'follow_up')
+  const convertedLeads = leads.filter(l => l.status === 'converted')
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -1317,9 +1398,13 @@ export default function Leads() {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Lead Pool</h1>
+            <h1 className="text-xl font-bold text-gray-900">
+              {pool === 'followup' ? 'Follow Up Pool' : 'Lead Pipeline'}
+            </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {activeLeads.length} active · {convertedLeads.length} converted
+              {pool === 'followup'
+                ? `${followUpLeads.length} lead${followUpLeads.length !== 1 ? 's' : ''} awaiting follow up`
+                : `${activeLeads.length} active · ${convertedLeads.length} converted`}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -1345,40 +1430,69 @@ export default function Leads() {
           </div>
         </div>
 
-        {/* Stage filter tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+        {/* Pool toggle */}
+        <div className="flex items-center gap-1.5 mb-3">
           <button
-            onClick={() => setActiveStage('all')}
+            onClick={() => setPool('pipeline')}
             className={clsx(
-              'flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
-              activeStage === 'all'
-                ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              pool === 'pipeline' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
             )}
           >
-            All <span className="ml-1 opacity-60">{leads.length}</span>
+            Pipeline
+            <span className="opacity-60">{pipelineLeads.length}</span>
           </button>
-          {STAGES.map(s => (
+          <button
+            onClick={() => setPool('followup')}
+            className={clsx(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              pool === 'followup' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            )}
+          >
+            <span className={clsx('w-1.5 h-1.5 rounded-full', pool === 'followup' ? 'bg-white/70' : 'bg-orange-400')} />
+            Follow Up
+            {followUpLeads.length > 0 && (
+              <span className={clsx('opacity-80', pool !== 'followup' && 'text-orange-600')}>{followUpLeads.length}</span>
+            )}
+          </button>
+        </div>
+
+        {/* Stage filter tabs — pipeline only */}
+        {pool === 'pipeline' && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
             <button
-              key={s.status}
-              onClick={() => setActiveStage(s.status)}
+              onClick={() => setActiveStage('all')}
               className={clsx(
-                'flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
-                activeStage === s.status
+                'flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                activeStage === 'all'
                   ? 'bg-gray-900 text-white'
                   : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
               )}
             >
-              <span className={clsx('w-1.5 h-1.5 rounded-full', s.dot)} />
-              {s.label}
-              {counts[s.status] > 0 && (
-                <span className={clsx('opacity-60', activeStage === s.status ? 'text-white' : '')}>
-                  {counts[s.status]}
-                </span>
-              )}
+              All <span className="ml-1 opacity-60">{pipelineLeads.length}</span>
             </button>
-          ))}
-        </div>
+            {PIPELINE_STAGES.map(s => (
+              <button
+                key={s.status}
+                onClick={() => setActiveStage(s.status)}
+                className={clsx(
+                  'flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                  activeStage === s.status
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                )}
+              >
+                <span className={clsx('w-1.5 h-1.5 rounded-full', s.dot)} />
+                {s.label}
+                {counts[s.status] > 0 && (
+                  <span className={clsx('opacity-60', activeStage === s.status ? 'text-white' : '')}>
+                    {counts[s.status]}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Search */}
@@ -1407,14 +1521,18 @@ export default function Leads() {
               <UserCheck size={24} className="text-gray-400" />
             </div>
             <p className="text-base font-semibold text-gray-700">
-              {leads.length === 0 ? 'No leads yet' : 'No leads match your filter'}
+              {pool === 'followup'
+                ? 'No follow-up leads'
+                : leads.length === 0 ? 'No leads yet' : 'No leads match your filter'}
             </p>
             <p className="text-sm text-gray-400 mt-1 max-w-xs">
-              {leads.length === 0
-                ? 'Add your first prospect to start tracking your pipeline.'
-                : 'Try a different stage filter or search term.'}
+              {pool === 'followup'
+                ? 'When a lead says "Not Interested" on a call, they\'ll appear here with a follow-up date.'
+                : leads.length === 0
+                  ? 'Add your first prospect to start tracking your pipeline.'
+                  : 'Try a different stage filter or search term.'}
             </p>
-            {leads.length === 0 && (
+            {leads.length === 0 && pool === 'pipeline' && (
               <button
                 onClick={() => setShowAdd(true)}
                 className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all"
@@ -1437,12 +1555,12 @@ export default function Leads() {
       </div>
 
       {/* Pipeline summary bar */}
-      {leads.length > 0 && (
+      {leads.length > 0 && pool === 'pipeline' && (
         <div className="bg-white border-t border-gray-200 px-6 py-3">
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
-            {STAGES.filter(s => s.status !== 'lost').map((s, i) => {
+            {PIPELINE_STAGES.filter(s => s.status !== 'lost').map((s, i) => {
               const count = counts[s.status]
-              const isLast = i === STAGES.filter(s => s.status !== 'lost').length - 1
+              const isLast = i === PIPELINE_STAGES.filter(s => s.status !== 'lost').length - 1
               return (
                 <div key={s.status} className="flex items-center gap-1 flex-shrink-0">
                   <div className="flex items-center gap-1.5">
