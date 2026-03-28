@@ -189,9 +189,17 @@ export default function ProgressReport({ client, onClose }: {
       {/* Print styles injected in head */}
       <style>{`
         @media print {
-          body > * { display: none !important; }
-          #progress-report-print { display: block !important; }
-          .no-print { display: none !important; }
+          body * { visibility: hidden; }
+          #progress-report-print,
+          #progress-report-print * { visibility: visible; }
+          #progress-report-print {
+            position: fixed !important;
+            inset: 0 !important;
+            background: white !important;
+            padding: 2rem !important;
+            overflow: visible !important;
+            z-index: 9999;
+          }
           .print-page { page-break-inside: avoid; }
         }
       `}</style>
