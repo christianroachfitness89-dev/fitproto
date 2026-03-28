@@ -3,7 +3,7 @@ import {
   Plus, X, ChevronRight, Search, Loader2, Trash2,
   UserCheck, Phone, Mail, Tag, Calendar, ExternalLink,
   ArrowRight, AlertCircle, Settings2, ClipboardList,
-  CheckCircle2, CalendarClock, GripVertical,
+  CheckCircle2, CalendarClock, GripVertical, PhoneCall,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useConvertLeadToClient } from '@/hooks/useLeads'
@@ -15,17 +15,25 @@ import {
   type QuestionnaireQuestion,
   type QuestionType,
 } from '@/hooks/useQuestionnaires'
-import type { DbLead, LeadStatus } from '@/lib/database.types'
+import type { DbLead, LeadStatus, CallLog, CallOutcome } from '@/lib/database.types'
 
 // ─── Status config ────────────────────────────────────────────
 const STAGES: { status: LeadStatus; label: string; color: string; dot: string }[] = [
-  { status: 'new',                label: 'New',                color: 'bg-gray-100 text-gray-700 border-gray-200',      dot: 'bg-gray-400' },
-  { status: 'preq_sent',         label: 'PreQ Sent',          color: 'bg-blue-50 text-blue-700 border-blue-200',        dot: 'bg-blue-400' },
-  { status: 'preq_completed',    label: 'PreQ Completed',     color: 'bg-indigo-50 text-indigo-700 border-indigo-200',  dot: 'bg-indigo-400' },
-  { status: 'consult_scheduled', label: 'Consult Scheduled',  color: 'bg-violet-50 text-violet-700 border-violet-200',  dot: 'bg-violet-400' },
-  { status: 'consult_completed', label: 'Consult Done',       color: 'bg-amber-50 text-amber-700 border-amber-200',    dot: 'bg-amber-400' },
-  { status: 'converted',         label: 'Converted',          color: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
-  { status: 'lost',              label: 'Lost',               color: 'bg-rose-50 text-rose-700 border-rose-200',        dot: 'bg-rose-400' },
+  { status: 'new',               label: 'New',          color: 'bg-gray-100 text-gray-700 border-gray-200',       dot: 'bg-gray-400'    },
+  { status: 'called',            label: 'Called',        color: 'bg-sky-50 text-sky-700 border-sky-200',           dot: 'bg-sky-400'     },
+  { status: 'booked',            label: 'Booked',        color: 'bg-violet-50 text-violet-700 border-violet-200',  dot: 'bg-violet-400'  },
+  { status: 'preq_completed',    label: 'PreQ Done',     color: 'bg-indigo-50 text-indigo-700 border-indigo-200',  dot: 'bg-indigo-400'  },
+  { status: 'consult_completed', label: 'Consult Done',  color: 'bg-amber-50 text-amber-700 border-amber-200',    dot: 'bg-amber-400'   },
+  { status: 'converted',         label: 'Converted',     color: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  { status: 'lost',              label: 'Lost',          color: 'bg-rose-50 text-rose-700 border-rose-200',        dot: 'bg-rose-400'    },
+]
+
+const CALL_OUTCOMES: { value: CallOutcome; label: string }[] = [
+  { value: 'answered',  label: 'Answered'  },
+  { value: 'voicemail', label: 'Voicemail' },
+  { value: 'no_answer', label: 'No Answer' },
+  { value: 'sms',       label: 'SMS Sent'  },
+  { value: 'scheduled', label: 'Scheduled ✓' },
 ]
 
 function statusCfg(s: LeadStatus) {
@@ -486,6 +494,10 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
   const [calendarBooked, setCalendarBooked]         = useState(false)
   const [showLostForm, setShowLostForm]             = useState(false)
   const [lostReason, setLostReason]                 = useState('')
+  const [showCallForm, setShowCallForm]             = useState(false)
+  const [callDate, setCallDate]                     = useState(() => new Date().toISOString().slice(0, 10))
+  const [callTime, setCallTime]                     = useState(() => new Date().toTimeString().slice(0, 5))
+  const [callOutcome, setCallOutcome]               = useState<CallOutcome | ''>('')
 
   // sync notes when lead prop updates (status change), but not if user is typing
   if (!notesTouched && notes !== (lead.notes ?? '')) setNotes(lead.notes ?? '')
@@ -511,6 +523,27 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
     onClose()
   }
 
+  async function handleLogCall() {
+    if (!callOutcome) return
+    const dt = `${callDate}T${callTime}`
+    const outcomeLabel = CALL_OUTCOMES.find(o => o.value === callOutcome)?.label ?? callOutcome
+    const newLog: CallLog = { called_at: dt, outcome: callOutcome as CallOutcome }
+    const existingLogs: CallLog[] = Array.isArray(lead.call_logs) ? lead.call_logs : []
+    const line = `📞 ${new Date(dt).toLocaleString('en-AU', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })} — ${outcomeLabel}`
+    const newNotes = lead.notes ? `${lead.notes}\n${line}` : line
+    await updateLead.mutateAsync({
+      id: lead.id,
+      status: 'called',
+      call_logs: [...existingLogs, newLog],
+      notes: newNotes,
+    })
+    setCallOutcome('')
+    setCallDate(new Date().toISOString().slice(0, 10))
+    setCallTime(new Date().toTimeString().slice(0, 5))
+    setShowCallForm(false)
+    setNotesTouched(false)
+  }
+
   async function handleMarkLost() {
     await updateLead.mutateAsync({
       id: lead.id,
@@ -526,7 +559,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
       : null
     await updateLead.mutateAsync({
       id: lead.id,
-      status: 'consult_scheduled',
+      status: 'booked',
       consult_scheduled_at: scheduledAt,
       consult_calendar_booked: calendarBooked,
     })
@@ -534,31 +567,30 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
   }
 
   // Contextual next-step action per status
+  // 'new' and 'called' are handled by the dedicated call log section below
   const nextStep: { label: string; icon: React.ReactNode; description: string; btnClass: string; action: () => void } | null = (() => {
     switch (lead.status) {
-      // new and preq_sent both go straight to the PreQ questionnaire
-      case 'new':
-      case 'preq_sent':
+      case 'booked':
         return { label: 'Start PreQ', icon: <ClipboardList size={15} />, description: 'Fill in the Pre-Qualification questions with the lead.', btnClass: 'from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600', action: () => setQuestModal('preq') }
       case 'preq_completed':
-        return { label: 'Schedule Consult', icon: <CalendarClock size={15} />, description: 'Pick a date & time and confirm it\'s in your calendar.', btnClass: 'from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600', action: () => setShowScheduleForm(true) }
-      case 'consult_scheduled':
         return { label: 'Start Consult', icon: <ClipboardList size={15} />, description: 'Fill in the Consultation answers with the lead.', btnClass: 'from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600', action: () => setQuestModal('consult') }
       default: return null
     }
   })()
 
-  // Hide the natural next step from the manual jump list
+  const callLogs: CallLog[] = Array.isArray(lead.call_logs) ? lead.call_logs : []
+  const hasScheduledCall = callLogs.some(l => l.outcome === 'scheduled')
+
+  // Hide the natural next step + legacy statuses from manual jump list
   const NATURAL_NEXT: Partial<Record<LeadStatus, LeadStatus>> = {
-    new: 'preq_completed', preq_sent: 'preq_completed', preq_completed: 'consult_scheduled', consult_scheduled: 'consult_completed',
+    new: 'called', called: 'booked', booked: 'preq_completed', preq_completed: 'consult_completed',
   }
   const naturalNext = NATURAL_NEXT[lead.status]
   const otherStages = STAGES.filter(s =>
     s.status !== lead.status &&
     s.status !== 'converted' &&
     s.status !== 'lost' &&
-    s.status !== naturalNext &&
-    s.status !== 'preq_sent'  // hidden — no longer part of the flow
+    s.status !== naturalNext
   )
 
   return (
@@ -613,7 +645,110 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
               )}
             </div>
 
-            {/* ── Next Step (contextual) ────────────────── */}
+            {/* ── Call Log section (New / Called) ──────── */}
+            {(lead.status === 'new' || lead.status === 'called') && (
+              <div className="border border-sky-200 bg-sky-50/40 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-sky-700 uppercase tracking-wider">Call Log</p>
+                    {callLogs.length > 0 && (
+                      <p className="text-xs text-gray-400 mt-0.5">{callLogs.length} attempt{callLogs.length > 1 ? 's' : ''} logged</p>
+                    )}
+                  </div>
+                  {!showCallForm && (
+                    <button onClick={() => setShowCallForm(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-sky-700 bg-white border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors">
+                      <PhoneCall size={12} /> Log Call
+                    </button>
+                  )}
+                </div>
+
+                {/* Previous call log entries */}
+                {callLogs.length > 0 && (
+                  <div className="space-y-1.5">
+                    {callLogs.map((log, i) => {
+                      const outcomeLabel = CALL_OUTCOMES.find(o => o.value === log.outcome)?.label ?? log.outcome
+                      return (
+                        <div key={i} className="flex items-center justify-between text-xs bg-white border border-sky-100 rounded-lg px-3 py-2">
+                          <span className="text-gray-500">
+                            {new Date(log.called_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
+                          </span>
+                          <span className={clsx('font-semibold',
+                            log.outcome === 'scheduled' ? 'text-emerald-600' :
+                            log.outcome === 'answered'  ? 'text-sky-600'     :
+                            'text-gray-500'
+                          )}>
+                            {outcomeLabel}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Log call form */}
+                {showCallForm && (
+                  <div className="bg-white border border-sky-200 rounded-xl p-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Date</label>
+                        <input type="date" value={callDate} onChange={e => setCallDate(e.target.value)}
+                          className="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sky-400/30 focus:border-sky-400 transition-all" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Time</label>
+                        <input type="time" value={callTime} onChange={e => setCallTime(e.target.value)}
+                          className="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sky-400/30 focus:border-sky-400 transition-all" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Outcome</label>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {CALL_OUTCOMES.map(o => (
+                          <button key={o.value} type="button" onClick={() => setCallOutcome(o.value)}
+                            className={clsx(
+                              'px-2.5 py-2 text-xs font-semibold rounded-lg border-2 transition-all',
+                              callOutcome === o.value
+                                ? o.value === 'scheduled'
+                                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                  : 'border-sky-500 bg-sky-50 text-sky-700'
+                                : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                            )}>
+                            {o.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowCallForm(false)}
+                        className="flex-1 py-2 text-xs font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                        Cancel
+                      </button>
+                      <button onClick={handleLogCall} disabled={!callOutcome || updateLead.isPending}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:opacity-50 transition-colors">
+                        {updateLead.isPending ? <Loader2 size={12} className="animate-spin" /> : <><PhoneCall size={12} /> Save Log</>}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Move to Booked — only once a Scheduled outcome is logged */}
+                {!showCallForm && !showScheduleForm && (
+                  hasScheduledCall ? (
+                    <button onClick={() => setShowScheduleForm(true)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600 rounded-xl transition-all">
+                      <CalendarClock size={15} /> Move to Booked / Scheduled →
+                    </button>
+                  ) : (
+                    <p className="text-center text-xs text-gray-400 py-1">
+                      Log a call with outcome <span className="font-semibold text-emerald-600">Scheduled ✓</span> to proceed
+                    </p>
+                  )
+                )}
+              </div>
+            )}
+
+            {/* ── Next Step (contextual — Booked / PreQ Done) ── */}
             {nextStep && !showScheduleForm && (
               <div className="border border-brand-200 bg-brand-50/50 rounded-xl p-4">
                 <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-1">Next Step</p>
@@ -632,8 +767,8 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
               </div>
             )}
 
-            {/* ── Schedule Consult form ─────────────────── */}
-            {showScheduleForm && lead.status === 'preq_completed' && (
+            {/* ── Schedule / Book form ──────────────────── */}
+            {showScheduleForm && (lead.status === 'called' || lead.status === 'new') && (
               <div className="border border-violet-200 bg-violet-50/40 rounded-xl p-4 space-y-4">
                 <div>
                   <p className="text-xs font-semibold text-violet-700 uppercase tracking-wider mb-1">Schedule Consult</p>

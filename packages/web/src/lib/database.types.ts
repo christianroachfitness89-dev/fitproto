@@ -276,7 +276,14 @@ export interface DbGlobalTemplateHabit {
   created_at: string
 }
 
-export type LeadStatus = 'new' | 'preq_sent' | 'preq_completed' | 'consult_scheduled' | 'consult_completed' | 'converted' | 'lost'
+export type LeadStatus = 'new' | 'called' | 'booked' | 'preq_sent' | 'preq_completed' | 'consult_scheduled' | 'consult_completed' | 'converted' | 'lost'
+
+export type CallOutcome = 'answered' | 'voicemail' | 'no_answer' | 'sms' | 'scheduled'
+
+export interface CallLog {
+  called_at: string
+  outcome: CallOutcome
+}
 
 export interface DbLead {
   id: string
@@ -292,6 +299,7 @@ export interface DbLead {
   consult_scheduled_at: string | null
   consult_calendar_booked: boolean
   non_conversion_reason: string | null
+  call_logs: CallLog[]
   created_at: string
   updated_at: string
 }

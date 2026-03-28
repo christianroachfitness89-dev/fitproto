@@ -249,11 +249,12 @@ export default function Dashboard() {
     .sort((a, b) => new Date(a.consult_scheduled_at!).getTime() - new Date(b.consult_scheduled_at!).getTime())
 
   const PIPELINE_STAGES: { status: LeadStatus; label: string; color: string; bar: string }[] = [
-    { status: 'new',               label: 'New',            color: 'text-gray-600',    bar: 'bg-gray-400'    },
-    { status: 'preq_completed',    label: 'PreQ Done',      color: 'text-indigo-600',  bar: 'bg-indigo-400'  },
-    { status: 'consult_scheduled', label: 'Consult Sched.', color: 'text-violet-600',  bar: 'bg-violet-400'  },
-    { status: 'consult_completed', label: 'Consult Done',   color: 'text-amber-600',   bar: 'bg-amber-400'   },
-    { status: 'converted',         label: 'Converted',      color: 'text-emerald-600', bar: 'bg-emerald-500' },
+    { status: 'new',               label: 'New',          color: 'text-gray-600',    bar: 'bg-gray-400'    },
+    { status: 'called',            label: 'Called',        color: 'text-sky-600',     bar: 'bg-sky-400'     },
+    { status: 'booked',            label: 'Booked',        color: 'text-violet-600',  bar: 'bg-violet-400'  },
+    { status: 'preq_completed',    label: 'PreQ Done',     color: 'text-indigo-600',  bar: 'bg-indigo-400'  },
+    { status: 'consult_completed', label: 'Consult Done',  color: 'text-amber-600',   bar: 'bg-amber-400'   },
+    { status: 'converted',         label: 'Converted',     color: 'text-emerald-600', bar: 'bg-emerald-500' },
   ]
   const pipelineCounts = PIPELINE_STAGES.reduce((acc, s) => {
     acc[s.status] = leads.filter(l => l.status === s.status).length
