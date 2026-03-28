@@ -112,19 +112,15 @@ export default function ProgressReport({ client, onClose }: {
   const { data: metricValues = [] } = useCustomMetricValues(client.id)
   const filteredMetricValues = metricValues.filter(v => v.logged_at >= since)
 
-  // Workout sessions
+  // Workout sessions via the same RPC used by the history tab
   useEffect(() => {
     let cancelled = false
     async function load() {
       setSessionsLoading(true)
-      const { data } = await supabase
-        .from('workout_sessions')
-        .select('id, completed_at, workout_name, set_count')
-        .eq('client_id', client.id)
-        .gte('completed_at', since)
-        .order('completed_at', { ascending: true })
+      const { data } = await supabase.rpc('get_portal_history', { p_client_id: client.id })
       if (!cancelled) {
-        setSessions((data as WorkoutSession[]) ?? [])
+        const all = (data as WorkoutSession[]) ?? []
+        setSessions(all.filter(s => s.completed_at >= since))
         setSessionsLoading(false)
       }
     }
