@@ -466,38 +466,85 @@ export default function ProgressReport({ client, onClose }: {
             </div>
 
             {/* Habits */}
-            {habitStats.length > 0 && (
-              <div className="print-page space-y-3">
-                <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                  <Heart size={14} className="text-brand-600" /> Habit Compliance
-                </h2>
-                <div className="space-y-2">
-                  {habitStats.map(h => {
-                    const pct = Math.round((h.completed / h.total) * 100)
-                    return (
-                      <div key={h.name} className="flex items-center gap-3">
-                        <span className="text-lg w-6 text-center flex-shrink-0">{h.emoji}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-gray-700 truncate">{h.name}</span>
-                            <span className={`text-xs font-semibold ml-2 flex-shrink-0 ${pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
-                              {pct}%
-                            </span>
-                          </div>
-                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-400' : 'bg-rose-400'}`}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
+            {habitStats.length > 0 && (() => {
+              const totalPossible  = habitStats.reduce((a, h) => a + h.total, 0)
+              const totalCompleted = habitStats.reduce((a, h) => a + h.completed, 0)
+              const overallPct     = totalPossible > 0 ? (totalCompleted / totalPossible) * 100 : 0
+              const bestHabit      = [...habitStats].sort((a, b) => (b.completed / b.total) - (a.completed / a.total))[0]
+              const worstHabit     = [...habitStats].sort((a, b) => (a.completed / a.total) - (b.completed / b.total))[0]
+
+              return (
+                <div className="print-page space-y-3">
+                  <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                    <Heart size={14} className="text-brand-600" /> Habit Compliance
+                  </h2>
+
+                  {/* Overall summary card */}
+                  <div className="bg-gray-50 rounded-2xl border border-gray-100 p-5">
+                    <div className="flex items-center gap-6">
+                      <ComplianceDonut pct={overallPct} />
+                      <div className="flex-1 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-500">Active habits</span>
+                          <span className="text-sm font-bold text-gray-900">{habitStats.length}</span>
                         </div>
-                        <span className="text-xs text-gray-400 flex-shrink-0">{h.completed}/{h.total}d</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-500">Total check-ins</span>
+                          <span className="text-sm font-bold text-gray-900">{totalCompleted} / {totalPossible}</span>
+                        </div>
+                        {habitStats.length > 1 && (
+                          <>
+                            <div className="flex items-center justify-between pt-1 border-t border-gray-200">
+                              <span className="text-xs text-emerald-600 flex items-center gap-1">
+                                <CheckCircle2 size={12} /> Best
+                              </span>
+                              <span className="text-xs font-semibold text-gray-600 truncate ml-2 max-w-[150px]">
+                                {bestHabit.emoji} {bestHabit.name}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-rose-500 flex items-center gap-1">
+                                <XCircle size={12} /> Needs work
+                              </span>
+                              <span className="text-xs font-semibold text-gray-600 truncate ml-2 max-w-[150px]">
+                                {worstHabit.emoji} {worstHabit.name}
+                              </span>
+                            </div>
+                          </>
+                        )}
                       </div>
-                    )
-                  })}
+                    </div>
+                  </div>
+
+                  {/* Per-habit bars */}
+                  <div className="space-y-2">
+                    {habitStats.map(h => {
+                      const pct = Math.round((h.completed / h.total) * 100)
+                      return (
+                        <div key={h.name} className="flex items-center gap-3">
+                          <span className="text-lg w-6 text-center flex-shrink-0">{h.emoji}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm text-gray-700 truncate">{h.name}</span>
+                              <span className={`text-xs font-semibold ml-2 flex-shrink-0 ${pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
+                                {pct}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-400' : 'bg-rose-400'}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                          <span className="text-xs text-gray-400 flex-shrink-0">{h.completed}/{h.total}d</span>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
             {/* Footer */}
             <div className="border-t border-gray-100 pt-4 text-center">
