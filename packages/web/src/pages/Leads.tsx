@@ -786,10 +786,25 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
               </div>
             )}
 
-            {lead.status === 'lost' && lead.non_conversion_reason && (
-              <div className="border border-rose-200 rounded-xl p-4 bg-rose-50">
-                <p className="text-xs font-semibold text-rose-600 uppercase tracking-wider mb-1">Not Converted</p>
-                <p className="text-sm text-rose-800">{lead.non_conversion_reason}</p>
+            {lead.status === 'lost' && (
+              <div className="space-y-3">
+                {lead.non_conversion_reason && (
+                  <div className="border border-rose-200 rounded-xl p-4 bg-rose-50">
+                    <p className="text-xs font-semibold text-rose-600 uppercase tracking-wider mb-1">Not Converted</p>
+                    <p className="text-sm text-rose-800">{lead.non_conversion_reason}</p>
+                  </div>
+                )}
+                <div className="border border-amber-200 rounded-xl p-4 bg-amber-50">
+                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Reactivate Lead</p>
+                  <p className="text-xs text-amber-600 mb-3">Move this lead back into the active pipeline.</p>
+                  <button
+                    onClick={() => updateLead.mutateAsync({ id: lead.id, status: 'new', non_conversion_reason: null })}
+                    disabled={updateLead.isPending}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-xl disabled:opacity-50 transition-colors"
+                  >
+                    {updateLead.isPending ? <Loader2 size={14} className="animate-spin" /> : 'Reactivate'}
+                  </button>
+                </div>
               </div>
             )}
 
