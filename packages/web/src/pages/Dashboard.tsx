@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Users, Dumbbell, TrendingUp, MessageSquare, CheckCircle2, Clock, ChevronRight, ArrowUpRight, Plus, Loader2 } from 'lucide-react'
+import { Users, Dumbbell, TrendingUp, MessageSquare, CheckCircle2, Clock, ChevronRight, ArrowUpRight, Plus, Loader2, UserPlus, CalendarClock, Calendar } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
 import { useAuth } from '@/contexts/AuthContext'
 import { useClients } from '@/hooks/useClients'
 import { useTasks, useToggleTask, useCreateTask } from '@/hooks/useTasks'
 import { useConversations } from '@/hooks/useConversations'
+import { useLeads } from '@/hooks/useLeads'
+import type { LeadStatus } from '@/lib/database.types'
 
 // ─── Stat card ────────────────────────────────────────────────
 function StatCard({ label, value, sub, icon, gradient, iconBg, trend }: {
@@ -86,11 +88,38 @@ export default function Dashboard() {
   const { data: clients = [], isLoading: loadingClients } = useClients()
   const { data: tasks = [],   isLoading: loadingTasks }   = useTasks()
   const { data: convos = [],  isLoading: loadingMessages } = useConversations()
+  const { data: leads = [],   isLoading: loadingLeads }   = useLeads()
   const toggleTask = useToggleTask()
 
   const activeClients  = clients.filter(c => c.status === 'active').length
   const pendingTasks   = tasks.filter(t => !t.completed).length
   const unreadMessages = convos.reduce((sum, c) => sum + c.unread_count, 0)
+
+  // Lead computations
+  const activeLeads = leads.filter(l => l.status !== 'converted' && l.status !== 'lost')
+  const newLeadsCount = leads.filter(l => l.status === 'new').length
+
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+  const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999)
+  const todayConsults = leads
+    .filter(l => {
+      if (!l.consult_scheduled_at) return false
+      const d = new Date(l.consult_scheduled_at)
+      return d >= todayStart && d <= todayEnd
+    })
+    .sort((a, b) => new Date(a.consult_scheduled_at!).getTime() - new Date(b.consult_scheduled_at!).getTime())
+
+  const PIPELINE_STAGES: { status: LeadStatus; label: string; color: string; bar: string }[] = [
+    { status: 'new',                label: 'New',             color: 'text-gray-600',   bar: 'bg-gray-400' },
+    { status: 'preq_completed',     label: 'PreQ Done',       color: 'text-indigo-600', bar: 'bg-indigo-400' },
+    { status: 'consult_scheduled',  label: 'Consult Sched.',  color: 'text-violet-600', bar: 'bg-violet-400' },
+    { status: 'consult_completed',  label: 'Consult Done',    color: 'text-amber-600',  bar: 'bg-amber-400' },
+    { status: 'converted',          label: 'Converted',       color: 'text-emerald-600',bar: 'bg-emerald-500' },
+  ]
+  const pipelineCounts = PIPELINE_STAGES.reduce((acc, s) => {
+    acc[s.status] = leads.filter(l => l.status === s.status).length
+    return acc
+  }, {} as Record<string, number>)
 
   const greeting = (() => {
     const h = new Date().getHours()
@@ -130,11 +159,11 @@ export default function Dashboard() {
           trend={12}
         />
         <StatCard
-          label="Workouts This Week"
-          value="—"
-          sub="coming soon"
-          icon={<Dumbbell size={20} className="text-white" />}
-          gradient="bg-gradient-to-br from-emerald-500 to-teal-600"
+          label="Active Leads"
+          value={loadingLeads ? '—' : activeLeads.length}
+          sub={loadingLeads ? undefined : `${newLeadsCount} new`}
+          icon={<UserPlus size={20} className="text-white" />}
+          gradient="bg-gradient-to-br from-violet-500 to-purple-600"
           iconBg="bg-white/20"
         />
         <StatCard
@@ -257,6 +286,115 @@ export default function Dashboard() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Lead Pool row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Today's Consults */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-card">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+            <div className="flex items-center gap-2">
+              <CalendarClock size={16} className="text-violet-500" />
+              <h3 className="font-semibold text-gray-900 text-sm">Today's Consults</h3>
+              {todayConsults.length > 0 && (
+                <span className="text-xs font-bold text-white bg-violet-500 rounded-full px-2 py-0.5 leading-none">
+                  {todayConsults.length}
+                </span>
+              )}
+            </div>
+            <Link to="/leads" className="text-brand-600 text-xs font-semibold hover:text-brand-700 flex items-center gap-0.5">
+              View all <ChevronRight size={13} />
+            </Link>
+          </div>
+          {loadingLeads ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 size={20} className="animate-spin text-gray-300" />
+            </div>
+          ) : todayConsults.length === 0 ? (
+            <div className="text-center py-10 text-gray-400">
+              <Calendar size={28} className="mx-auto mb-2 opacity-20" />
+              <p className="text-sm font-medium">No consults scheduled today</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {todayConsults.map(lead => (
+                <Link
+                  key={lead.id}
+                  to="/leads"
+                  className="flex items-center gap-3.5 px-5 py-3.5 hover:bg-surface-50 transition-colors group"
+                >
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
+                    {lead.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-brand-700 transition-colors">{lead.name}</p>
+                    <p className="text-xs text-gray-400 truncate">{lead.email ?? lead.phone ?? 'No contact'}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-lg">
+                      {new Date(lead.consult_scheduled_at!).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                    </span>
+                    {lead.consult_calendar_booked && (
+                      <span className="text-[10px] text-emerald-600 flex items-center gap-0.5">
+                        <CheckCircle2 size={9} /> In calendar
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Lead Pipeline */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-card">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+            <div className="flex items-center gap-2">
+              <UserPlus size={16} className="text-brand-500" />
+              <h3 className="font-semibold text-gray-900 text-sm">Lead Pipeline</h3>
+            </div>
+            <Link to="/leads" className="text-brand-600 text-xs font-semibold hover:text-brand-700 flex items-center gap-0.5">
+              View all <ChevronRight size={13} />
+            </Link>
+          </div>
+          {loadingLeads ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 size={20} className="animate-spin text-gray-300" />
+            </div>
+          ) : leads.length === 0 ? (
+            <div className="text-center py-10 text-gray-400">
+              <UserPlus size={28} className="mx-auto mb-2 opacity-20" />
+              <p className="text-sm font-medium">No leads yet</p>
+              <Link to="/leads" className="text-xs text-brand-600 mt-1 block hover:underline">Add your first lead</Link>
+            </div>
+          ) : (
+            <div className="px-5 py-4 space-y-3">
+              {PIPELINE_STAGES.map(s => {
+                const count = pipelineCounts[s.status] ?? 0
+                const max   = Math.max(...PIPELINE_STAGES.map(st => pipelineCounts[st.status] ?? 0), 1)
+                const pct   = Math.round((count / max) * 100)
+                return (
+                  <div key={s.status} className="flex items-center gap-3">
+                    <p className={clsx('text-xs font-semibold w-28 flex-shrink-0', s.color)}>{s.label}</p>
+                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={clsx('h-full rounded-full transition-all duration-500', s.bar)}
+                        style={{ width: count === 0 ? '0%' : `${Math.max(pct, 4)}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-bold text-gray-700 w-6 text-right flex-shrink-0">{count}</span>
+                  </div>
+                )
+              })}
+              <div className="pt-2 mt-1 border-t border-gray-50 flex items-center justify-between text-xs text-gray-400">
+                <span>{activeLeads.length} active</span>
+                <span>{leads.filter(l => l.status === 'lost').length} lost</span>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
 
       {/* Recent conversations */}
