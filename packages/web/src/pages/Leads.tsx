@@ -3,7 +3,7 @@ import {
   Plus, X, ChevronRight, Search, Loader2, Trash2,
   UserCheck, Phone, Mail, Tag, Calendar, ExternalLink,
   ArrowRight, AlertCircle, Settings2, ClipboardList,
-  CheckCircle2, Send, CalendarClock, GripVertical,
+  CheckCircle2, CalendarClock, GripVertical,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useConvertLeadToClient } from '@/hooks/useLeads'
@@ -480,6 +480,10 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
   const [showConvertConfirm, setShowConvertConfirm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm]   = useState(false)
   const [questModal, setQuestModal] = useState<'preq' | 'consult' | null>(null)
+  const [showScheduleForm, setShowScheduleForm]     = useState(false)
+  const [consultDate, setConsultDate]               = useState('')
+  const [consultTime, setConsultTime]               = useState('')
+  const [calendarBooked, setCalendarBooked]         = useState(false)
 
   // sync notes when lead prop updates (status change), but not if user is typing
   if (!notesTouched && notes !== (lead.notes ?? '')) setNotes(lead.notes ?? '')
@@ -505,27 +509,45 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
     onClose()
   }
 
+  async function handleScheduleConsult() {
+    const scheduledAt = (consultDate && consultTime)
+      ? new Date(`${consultDate}T${consultTime}`).toISOString()
+      : null
+    await updateLead.mutateAsync({
+      id: lead.id,
+      status: 'consult_scheduled',
+      consult_scheduled_at: scheduledAt,
+      consult_calendar_booked: calendarBooked,
+    })
+    setShowScheduleForm(false)
+  }
+
   // Contextual next-step action per status
   const nextStep: { label: string; icon: React.ReactNode; description: string; btnClass: string; action: () => void } | null = (() => {
     switch (lead.status) {
-      case 'new':              return { label: 'Send Pre-Qualification', icon: <Send size={15} />, description: 'Mark the PreQ as sent and move this lead forward.', btnClass: 'from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600', action: () => handleStatusChange('preq_sent') }
-      case 'preq_sent':        return { label: 'Start PreQ', icon: <ClipboardList size={15} />, description: 'Fill in the Pre-Qualification answers with the lead.', btnClass: 'from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600', action: () => setQuestModal('preq') }
-      case 'preq_completed':   return { label: 'Schedule Consult', icon: <CalendarClock size={15} />, description: 'Mark consult as scheduled and move this lead forward.', btnClass: 'from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600', action: () => handleStatusChange('consult_scheduled') }
-      case 'consult_scheduled':return { label: 'Start Consult', icon: <ClipboardList size={15} />, description: 'Fill in the Consultation answers with the lead.', btnClass: 'from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600', action: () => setQuestModal('consult') }
+      // new and preq_sent both go straight to the PreQ questionnaire
+      case 'new':
+      case 'preq_sent':
+        return { label: 'Start PreQ', icon: <ClipboardList size={15} />, description: 'Fill in the Pre-Qualification questions with the lead.', btnClass: 'from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600', action: () => setQuestModal('preq') }
+      case 'preq_completed':
+        return { label: 'Schedule Consult', icon: <CalendarClock size={15} />, description: 'Pick a date & time and confirm it\'s in your calendar.', btnClass: 'from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600', action: () => setShowScheduleForm(true) }
+      case 'consult_scheduled':
+        return { label: 'Start Consult', icon: <ClipboardList size={15} />, description: 'Fill in the Consultation answers with the lead.', btnClass: 'from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600', action: () => setQuestModal('consult') }
       default: return null
     }
   })()
 
-  // Hide the "natural next" from the manual jump list to avoid duplication
+  // Hide the natural next step from the manual jump list
   const NATURAL_NEXT: Partial<Record<LeadStatus, LeadStatus>> = {
-    new: 'preq_sent', preq_sent: 'preq_completed', preq_completed: 'consult_scheduled', consult_scheduled: 'consult_completed',
+    new: 'preq_completed', preq_sent: 'preq_completed', preq_completed: 'consult_scheduled', consult_scheduled: 'consult_completed',
   }
   const naturalNext = NATURAL_NEXT[lead.status]
   const otherStages = STAGES.filter(s =>
     s.status !== lead.status &&
     s.status !== 'converted' &&
     s.status !== 'lost' &&
-    s.status !== naturalNext
+    s.status !== naturalNext &&
+    s.status !== 'preq_sent'  // hidden — no longer part of the flow
   )
 
   return (
@@ -567,10 +589,21 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                 <Calendar size={14} className="flex-shrink-0" />
                 Added {new Date(lead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </div>
+              {lead.consult_scheduled_at && (
+                <div className="flex items-center gap-2.5 text-sm text-violet-600">
+                  <CalendarClock size={14} className="flex-shrink-0" />
+                  Consult: {new Date(lead.consult_scheduled_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  {lead.consult_calendar_booked && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">
+                      <CheckCircle2 size={10} /> In calendar
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* ── Next Step (contextual) ────────────────── */}
-            {nextStep && (
+            {nextStep && !showScheduleForm && (
               <div className="border border-brand-200 bg-brand-50/50 rounded-xl p-4">
                 <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-1">Next Step</p>
                 <p className="text-xs text-gray-500 mb-3">{nextStep.description}</p>
@@ -585,6 +618,77 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                   {updateLead.isPending ? <Loader2 size={15} className="animate-spin" /> : nextStep.icon}
                   {nextStep.label}
                 </button>
+              </div>
+            )}
+
+            {/* ── Schedule Consult form ─────────────────── */}
+            {showScheduleForm && lead.status === 'preq_completed' && (
+              <div className="border border-violet-200 bg-violet-50/40 rounded-xl p-4 space-y-4">
+                <div>
+                  <p className="text-xs font-semibold text-violet-700 uppercase tracking-wider mb-1">Schedule Consult</p>
+                  <p className="text-xs text-gray-500">Set the date and time for this consult.</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Date</label>
+                    <input
+                      type="date"
+                      value={consultDate}
+                      onChange={e => setConsultDate(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-400 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Time</label>
+                    <input
+                      type="time"
+                      value={consultTime}
+                      onChange={e => setConsultTime(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-400 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-600 mb-2">Added to calendar?</p>
+                  <div className="flex gap-2">
+                    {(['Yes', 'No'] as const).map(opt => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setCalendarBooked(opt === 'Yes')}
+                        className={clsx(
+                          'flex-1 py-2 text-sm font-semibold rounded-xl border-2 transition-all',
+                          calendarBooked === (opt === 'Yes')
+                            ? 'border-violet-500 bg-violet-50 text-violet-700'
+                            : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                        )}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowScheduleForm(false)}
+                    className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleScheduleConsult}
+                    disabled={updateLead.isPending || !consultDate || !consultTime}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-violet-500 rounded-xl hover:from-violet-700 hover:to-violet-600 disabled:opacity-50 transition-all"
+                  >
+                    {updateLead.isPending
+                      ? <Loader2 size={14} className="animate-spin" />
+                      : <><CalendarClock size={14} /> Confirm Schedule</>
+                    }
+                  </button>
+                </div>
               </div>
             )}
 
