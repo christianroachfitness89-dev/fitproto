@@ -145,10 +145,12 @@ interface SidebarProps {
 
 export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
   const [libraryOpen, setLibraryOpen]     = useState(false)
+  const [clientsOpen, setClientsOpen]     = useState(false)
   const [businessOpen, setBusinessOpen]   = useState(false)
   const [showSettings, setShowSettings]   = useState(false)
   const location = useLocation()
   const isLibraryActive  = location.pathname.startsWith('/library')
+  const isClientsActive  = location.pathname.startsWith('/clients')
   const isBusinessActive = location.pathname.startsWith('/leads')
   const { profile, signOut } = useAuth()
   const { data: conversations } = useConversations()
@@ -196,15 +198,62 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
           )}
         </NavLink>
 
-        <NavLink to="/clients" className={navItemClass}>
-          {({ isActive }) => (
-            <>
-              <Users size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
-              Clients
-              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
-            </>
+        {/* Clients with submenu */}
+        <div>
+          <button
+            onClick={() => setClientsOpen(!clientsOpen)}
+            className={clsx(
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 border relative',
+              isClientsActive
+                ? 'bg-gradient-to-r from-brand-600/25 to-brand-500/10 text-white border-brand-500/20'
+                : 'text-gray-400 hover:bg-sidebar-hover hover:text-gray-200 border-transparent'
+            )}
+          >
+            {isClientsActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            <Users size={17} className={isClientsActive ? 'text-brand-400' : 'text-gray-500'} />
+            <span className="flex-1 text-left">Clients</span>
+            <ChevronDown
+              size={14}
+              className={clsx('transition-transform duration-200 text-gray-500', (clientsOpen || isClientsActive) && 'rotate-180')}
+            />
+          </button>
+          {(clientsOpen || isClientsActive) && (
+            <div className="mt-1 ml-3 space-y-0.5 border-l border-sidebar-border pl-3">
+              {/* All Clients — active */}
+              <NavLink
+                to="/clients"
+                end
+                className={({ isActive }) =>
+                  clsx(
+                    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all',
+                    isActive
+                      ? 'text-brand-300 bg-brand-500/10'
+                      : 'text-gray-500 hover:text-gray-300 hover:bg-sidebar-hover'
+                  )
+                }
+              >
+                <Users size={14} />
+                <span className="flex-1">All Clients</span>
+              </NavLink>
+
+              {/* Locked placeholders */}
+              {([
+                { icon: <ClipboardList size={14} />, label: 'Check-ins'          },
+                { icon: <TrendingUp    size={14} />, label: 'Progress & Metrics' },
+                { icon: <Utensils      size={14} />, label: 'Nutrition Plans'    },
+                { icon: <Users2        size={14} />, label: 'Groups & Tags'      },
+                { icon: <CreditCard    size={14} />, label: 'Billing & Plans'    },
+              ] as { icon: React.ReactNode; label: string }[]).map(item => (
+                <div key={item.label}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-gray-700 cursor-default select-none">
+                  {item.icon}
+                  <span className="flex-1">{item.label}</span>
+                  <LockedBadge />
+                </div>
+              ))}
+            </div>
           )}
-        </NavLink>
+        </div>
 
         {/* Library with submenu */}
         <div>
