@@ -1,11 +1,20 @@
-import { useState } from 'react'
+import { useState, useId } from 'react'
 import {
   Plus, X, ChevronRight, Search, Loader2, Trash2,
   UserCheck, Phone, Mail, Tag, Calendar, ExternalLink,
-  ArrowRight, AlertCircle,
+  ArrowRight, AlertCircle, Settings2, ClipboardList,
+  CheckCircle2, Send, CalendarClock, GripVertical,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useConvertLeadToClient } from '@/hooks/useLeads'
+import {
+  useQuestionnaireTemplate,
+  useUpsertQuestionnaireTemplate,
+  useQuestionnaireResponse,
+  useSaveQuestionnaireResponse,
+  type QuestionnaireQuestion,
+  type QuestionType,
+} from '@/hooks/useQuestionnaires'
 import type { DbLead, LeadStatus } from '@/lib/database.types'
 
 // ─── Status config ────────────────────────────────────────────
@@ -30,6 +39,166 @@ function StatusBadge({ status }: { status: LeadStatus }) {
       <span className={clsx('w-1.5 h-1.5 rounded-full', cfg.dot)} />
       {cfg.label}
     </span>
+  )
+}
+
+// ─── Setup Templates modal ───────────────────────────────────
+function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<'preq' | 'consult'>('preq')
+  const { data: preqTpl }   = useQuestionnaireTemplate('preq')
+  const { data: consultTpl } = useQuestionnaireTemplate('consult')
+  const upsert = useUpsertQuestionnaireTemplate()
+  const uid = useId()
+
+  const DEFAULT_TITLES = { preq: 'Pre-Qualification', consult: 'Consultation' }
+
+  // local editable state per tab
+  const [preqQuestions,    setPreqQuestions]    = useState<QuestionnaireQuestion[] | null>(null)
+  const [consultQuestions, setConsultQuestions] = useState<QuestionnaireQuestion[] | null>(null)
+
+  // initialise from fetched data once (on first render with data)
+  const qs    = tab === 'preq' ? (preqQuestions ?? preqTpl?.questions ?? []) : (consultQuestions ?? consultTpl?.questions ?? [])
+  const setQs = tab === 'preq' ? setPreqQuestions : setConsultQuestions
+
+  function addQuestion() {
+    const q: QuestionnaireQuestion = {
+      id: `${uid}-${Date.now()}`,
+      text: '',
+      type: 'text',
+      required: false,
+    }
+    setQs([...qs, q])
+  }
+
+  function updateQuestion(id: string, patch: Partial<QuestionnaireQuestion>) {
+    setQs(qs.map(q => q.id === id ? { ...q, ...patch } : q))
+  }
+
+  function removeQuestion(id: string) {
+    setQs(qs.filter(q => q.id !== id))
+  }
+
+  async function handleSave() {
+    const title = tab === 'preq'
+      ? (preqTpl?.title ?? DEFAULT_TITLES.preq)
+      : (consultTpl?.title ?? DEFAULT_TITLES.consult)
+    await upsert.mutateAsync({ type: tab, title, questions: qs })
+  }
+
+  const TABS = [
+    { key: 'preq' as const, label: 'Pre-Qualification' },
+    { key: 'consult' as const, label: 'Consultation' },
+  ]
+  const QTYPES: { value: QuestionType; label: string }[] = [
+    { value: 'text',     label: 'Short answer' },
+    { value: 'textarea', label: 'Long answer' },
+    { value: 'yes_no',   label: 'Yes / No' },
+  ]
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh] z-10">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Questionnaire Templates</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Set up questions for PreQ and Consult</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 px-6 pt-4">
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={clsx(
+                'px-4 py-2 text-sm font-semibold rounded-lg transition-all',
+                tab === t.key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Question list */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+          {qs.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-6">
+              No questions yet. Add your first one below.
+            </p>
+          )}
+          {qs.map((q, i) => (
+            <div key={q.id} className="flex items-start gap-2 bg-gray-50 rounded-xl p-3 border border-gray-200">
+              <span className="text-gray-300 mt-2.5 flex-shrink-0 cursor-grab"><GripVertical size={14} /></span>
+              <div className="flex-1 space-y-2">
+                <input
+                  type="text"
+                  value={q.text}
+                  onChange={e => updateQuestion(q.id, { text: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                  placeholder={`Question ${i + 1}`}
+                />
+                <div className="flex items-center gap-3">
+                  <select
+                    value={q.type}
+                    onChange={e => updateQuestion(q.id, { type: e.target.value as QuestionType })}
+                    className="flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all"
+                  >
+                    {QTYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                  <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={q.required}
+                      onChange={e => updateQuestion(q.id, { required: e.target.checked })}
+                      className="rounded"
+                    />
+                    Required
+                  </label>
+                </div>
+              </div>
+              <button
+                onClick={() => removeQuestion(q.id)}
+                className="p-1.5 text-gray-300 hover:text-rose-400 transition-colors flex-shrink-0"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+
+          <button
+            onClick={addQuestion}
+            className="w-full py-2.5 text-sm font-semibold text-brand-600 bg-brand-50 border border-dashed border-brand-300 rounded-xl hover:bg-brand-100 transition-colors"
+          >
+            + Add Question
+          </button>
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={upsert.isPending}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all"
+          >
+            {upsert.isPending
+              ? <><Loader2 size={14} className="animate-spin" /> Saving…</>
+              : <><CheckCircle2 size={14} /> Save Template</>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -157,15 +326,163 @@ function AddLeadModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+// ─── Questionnaire fill-out modal ────────────────────────────
+function QuestionnaireModal({
+  lead,
+  type,
+  onComplete,
+  onClose,
+}: {
+  lead: DbLead
+  type: 'preq' | 'consult'
+  onComplete: () => void
+  onClose: () => void
+}) {
+  const { data: template, isLoading: tplLoading } = useQuestionnaireTemplate(type)
+  const { data: existing, isLoading: respLoading } = useQuestionnaireResponse(lead.id, type)
+  const saveResponse = useSaveQuestionnaireResponse()
+  const updateLead   = useUpdateLead()
+
+  const [answers, setAnswers] = useState<Record<string, string | boolean>>({})
+  const [initialised, setInitialised] = useState(false)
+
+  // populate from existing response once loaded
+  if (!initialised && !respLoading && existing) {
+    setAnswers(existing.answers)
+    setInitialised(true)
+  }
+
+  const questions = template?.questions ?? []
+  const title     = template?.title ?? (type === 'preq' ? 'Pre-Qualification' : 'Consultation')
+  const nextStatus: LeadStatus = type === 'preq' ? 'preq_completed' : 'consult_completed'
+
+  async function handleSave() {
+    await saveResponse.mutateAsync({
+      leadId: lead.id,
+      type,
+      answers,
+      existingId: existing?.id,
+    })
+    await updateLead.mutateAsync({ id: lead.id, status: nextStatus })
+    onComplete()
+  }
+
+  const loading = tplLoading || respLoading
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] z-10">
+        {/* Header */}
+        <div className="flex items-start gap-3 px-6 py-4 border-b border-gray-100">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-0.5">
+              {title}
+            </p>
+            <h2 className="text-base font-bold text-gray-900 truncate">{lead.name}</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex-shrink-0">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {loading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 size={20} className="animate-spin text-brand-500" />
+            </div>
+          ) : questions.length === 0 ? (
+            <div className="text-center py-8">
+              <ClipboardList size={32} className="mx-auto text-gray-300 mb-3" />
+              <p className="text-sm font-semibold text-gray-700 mb-1">No questions set up yet</p>
+              <p className="text-xs text-gray-400">
+                Add questions to the {title} template, or mark this as complete now.
+              </p>
+            </div>
+          ) : (
+            questions.map((q, i) => (
+              <div key={q.id}>
+                <label className="block text-sm font-medium text-gray-800 mb-1.5">
+                  {i + 1}. {q.text || <span className="text-gray-400 italic">Untitled question</span>}
+                  {q.required && <span className="text-rose-400 ml-1">*</span>}
+                </label>
+                {q.type === 'yes_no' ? (
+                  <div className="flex gap-2">
+                    {(['Yes', 'No'] as const).map(opt => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setAnswers(a => ({ ...a, [q.id]: opt === 'Yes' }))}
+                        className={clsx(
+                          'flex-1 py-2 text-sm font-semibold rounded-xl border-2 transition-all',
+                          answers[q.id] === (opt === 'Yes')
+                            ? 'border-brand-500 bg-brand-50 text-brand-700'
+                            : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                        )}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                ) : q.type === 'textarea' ? (
+                  <textarea
+                    value={(answers[q.id] as string) ?? ''}
+                    onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))}
+                    rows={3}
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all resize-none"
+                    placeholder="Enter your answer…"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={(answers[q.id] as string) ?? ''}
+                    onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))}
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                    placeholder="Enter your answer…"
+                  />
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saveResponse.isPending || updateLead.isPending || loading}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all"
+          >
+            {(saveResponse.isPending || updateLead.isPending)
+              ? <><Loader2 size={14} className="animate-spin" /> Saving…</>
+              : <><CheckCircle2 size={14} /> Save & Mark Complete</>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Lead detail panel ────────────────────────────────────────
 function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
   const updateLead  = useUpdateLead()
   const deleteLead  = useDeleteLead()
   const convertLead = useConvertLeadToClient()
-  const [notes, setNotes]   = useState(lead.notes ?? '')
-  const [saving, setSaving] = useState(false)
+  const [notes, setNotes]       = useState(lead.notes ?? '')
+  const [notesTouched, setNotesTouched] = useState(false)
+  const [saving, setSaving]     = useState(false)
   const [showConvertConfirm, setShowConvertConfirm] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm]   = useState(false)
+  const [questModal, setQuestModal] = useState<'preq' | 'consult' | null>(null)
+
+  // sync notes when lead prop updates (status change), but not if user is typing
+  if (!notesTouched && notes !== (lead.notes ?? '')) setNotes(lead.notes ?? '')
 
   async function handleStatusChange(status: LeadStatus) {
     await updateLead.mutateAsync({ id: lead.id, status })
@@ -175,6 +492,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
     setSaving(true)
     await updateLead.mutateAsync({ id: lead.id, notes })
     setSaving(false)
+    setNotesTouched(false)
   }
 
   async function handleConvert() {
@@ -187,186 +505,188 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
     onClose()
   }
 
-  const cfg = statusCfg(lead.status)
-  const nextStatuses = STAGES.filter(s => s.status !== lead.status && s.status !== 'converted' && s.status !== 'lost')
+  // Contextual next-step action per status
+  const nextStep: { label: string; icon: React.ReactNode; description: string; btnClass: string; action: () => void } | null = (() => {
+    switch (lead.status) {
+      case 'new':              return { label: 'Send Pre-Qualification', icon: <Send size={15} />, description: 'Mark the PreQ as sent and move this lead forward.', btnClass: 'from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600', action: () => handleStatusChange('preq_sent') }
+      case 'preq_sent':        return { label: 'Start PreQ', icon: <ClipboardList size={15} />, description: 'Fill in the Pre-Qualification answers with the lead.', btnClass: 'from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600', action: () => setQuestModal('preq') }
+      case 'preq_completed':   return { label: 'Schedule Consult', icon: <CalendarClock size={15} />, description: 'Mark consult as scheduled and move this lead forward.', btnClass: 'from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600', action: () => handleStatusChange('consult_scheduled') }
+      case 'consult_scheduled':return { label: 'Start Consult', icon: <ClipboardList size={15} />, description: 'Fill in the Consultation answers with the lead.', btnClass: 'from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600', action: () => setQuestModal('consult') }
+      default: return null
+    }
+  })()
+
+  // Hide the "natural next" from the manual jump list to avoid duplication
+  const NATURAL_NEXT: Partial<Record<LeadStatus, LeadStatus>> = {
+    new: 'preq_sent', preq_sent: 'preq_completed', preq_completed: 'consult_scheduled', consult_scheduled: 'consult_completed',
+  }
+  const naturalNext = NATURAL_NEXT[lead.status]
+  const otherStages = STAGES.filter(s =>
+    s.status !== lead.status &&
+    s.status !== 'converted' &&
+    s.status !== 'lost' &&
+    s.status !== naturalNext
+  )
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end">
-      <div className="absolute inset-0 bg-black/20" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white shadow-2xl flex flex-col h-full overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-start gap-3 p-5 border-b border-gray-100">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-gray-900 truncate">{lead.name}</h2>
-            <div className="mt-1.5">
-              <StatusBadge status={lead.status} />
+    <>
+      <div className="fixed inset-0 z-40 flex justify-end">
+        <div className="absolute inset-0 bg-black/20" onClick={onClose} />
+        <div className="relative w-full max-w-md bg-white shadow-2xl flex flex-col h-full overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-start gap-3 p-5 border-b border-gray-100">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold text-gray-900 truncate">{lead.name}</h2>
+              <div className="mt-1.5"><StatusBadge status={lead.status} /></div>
             </div>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex-shrink-0">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="flex-1 p-5 space-y-5">
-          {/* Contact info */}
-          <div className="space-y-2">
-            {lead.email && (
-              <a href={`mailto:${lead.email}`} className="flex items-center gap-2.5 text-sm text-gray-600 hover:text-brand-600 transition-colors">
-                <Mail size={14} className="text-gray-400 flex-shrink-0" />
-                {lead.email}
-              </a>
-            )}
-            {lead.phone && (
-              <a href={`tel:${lead.phone}`} className="flex items-center gap-2.5 text-sm text-gray-600 hover:text-brand-600 transition-colors">
-                <Phone size={14} className="text-gray-400 flex-shrink-0" />
-                {lead.phone}
-              </a>
-            )}
-            {lead.source && (
-              <div className="flex items-center gap-2.5 text-sm text-gray-500">
-                <Tag size={14} className="text-gray-400 flex-shrink-0" />
-                Source: <span className="font-medium text-gray-700">{lead.source}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2.5 text-sm text-gray-400">
-              <Calendar size={14} className="flex-shrink-0" />
-              Added {new Date(lead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </div>
-          </div>
-
-          {/* Move stage */}
-          {lead.status !== 'converted' && lead.status !== 'lost' && (
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Move to Stage</p>
-              <div className="flex flex-wrap gap-2">
-                {nextStatuses.map(s => (
-                  <button
-                    key={s.status}
-                    onClick={() => handleStatusChange(s.status)}
-                    disabled={updateLead.isPending}
-                    className={clsx(
-                      'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all hover:shadow-sm disabled:opacity-50',
-                      s.color
-                    )}
-                  >
-                    {s.label}
-                    <ArrowRight size={11} />
-                  </button>
-                ))}
-              </div>
-
-              {/* Quick-set lost */}
-              <button
-                onClick={() => handleStatusChange('lost')}
-                disabled={updateLead.isPending}
-                className="mt-2 text-xs text-rose-400 hover:text-rose-600 transition-colors disabled:opacity-50"
-              >
-                Mark as lost
-              </button>
-            </div>
-          )}
-
-          {/* Notes */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Notes</p>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={5}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all resize-none"
-              placeholder="Goals, context, follow-up reminders…"
-            />
-            <button
-              onClick={handleSaveNotes}
-              disabled={saving || notes === (lead.notes ?? '')}
-              className="mt-2 w-full py-2 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-40 transition-all"
-            >
-              {saving ? 'Saving…' : 'Save Notes'}
+            <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex-shrink-0">
+              <X size={18} />
             </button>
           </div>
 
-          {/* Convert to client */}
-          {lead.status !== 'converted' && lead.status !== 'lost' && (
-            <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50">
-              <div className="flex items-center gap-2 mb-2">
-                <UserCheck size={16} className="text-emerald-600" />
-                <p className="text-sm font-semibold text-emerald-800">Convert to Client</p>
-              </div>
-              <p className="text-xs text-emerald-700 mb-3">
-                Creates a new active client profile from this lead's details.
-              </p>
-              {showConvertConfirm ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowConvertConfirm(false)}
-                    className="flex-1 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleConvert}
-                    disabled={convertLead.isPending}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-                  >
-                    {convertLead.isPending ? <Loader2 size={12} className="animate-spin" /> : <><UserCheck size={12} /> Confirm</>}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowConvertConfirm(true)}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
-                >
-                  <UserCheck size={12} /> Convert to Client
-                </button>
-              )}
-            </div>
-          )}
-
-          {lead.status === 'converted' && lead.converted_client_id && (
-            <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50 flex items-center gap-3">
-              <UserCheck size={18} className="text-emerald-600 flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-emerald-800">Converted to Client</p>
-                <a
-                  href={`#/clients/${lead.converted_client_id}`}
-                  className="text-xs text-emerald-600 hover:text-emerald-800 flex items-center gap-1 mt-0.5 transition-colors"
-                >
-                  View client profile <ExternalLink size={10} />
+          <div className="flex-1 p-5 space-y-5">
+            {/* Contact info */}
+            <div className="space-y-2">
+              {lead.email && (
+                <a href={`mailto:${lead.email}`} className="flex items-center gap-2.5 text-sm text-gray-600 hover:text-brand-600 transition-colors">
+                  <Mail size={14} className="text-gray-400 flex-shrink-0" />{lead.email}
                 </a>
+              )}
+              {lead.phone && (
+                <a href={`tel:${lead.phone}`} className="flex items-center gap-2.5 text-sm text-gray-600 hover:text-brand-600 transition-colors">
+                  <Phone size={14} className="text-gray-400 flex-shrink-0" />{lead.phone}
+                </a>
+              )}
+              {lead.source && (
+                <div className="flex items-center gap-2.5 text-sm text-gray-500">
+                  <Tag size={14} className="text-gray-400 flex-shrink-0" />
+                  Source: <span className="font-medium text-gray-700 ml-1">{lead.source}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2.5 text-sm text-gray-400">
+                <Calendar size={14} className="flex-shrink-0" />
+                Added {new Date(lead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Delete */}
-        <div className="p-5 border-t border-gray-100">
-          {showDeleteConfirm ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleteLead.isPending}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-rose-600 rounded-xl hover:bg-rose-700 disabled:opacity-50 transition-colors"
-              >
-                {deleteLead.isPending ? <Loader2 size={14} className="animate-spin" /> : <><Trash2 size={14} /> Delete Lead</>}
+            {/* ── Next Step (contextual) ────────────────── */}
+            {nextStep && (
+              <div className="border border-brand-200 bg-brand-50/50 rounded-xl p-4">
+                <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-1">Next Step</p>
+                <p className="text-xs text-gray-500 mb-3">{nextStep.description}</p>
+                <button
+                  onClick={nextStep.action}
+                  disabled={updateLead.isPending}
+                  className={clsx(
+                    'w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r rounded-xl transition-all disabled:opacity-50',
+                    nextStep.btnClass
+                  )}
+                >
+                  {updateLead.isPending ? <Loader2 size={15} className="animate-spin" /> : nextStep.icon}
+                  {nextStep.label}
+                </button>
+              </div>
+            )}
+
+            {/* ── Convert to Client (after consult done) ── */}
+            {lead.status === 'consult_completed' && (
+              <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50">
+                <div className="flex items-center gap-2 mb-2">
+                  <UserCheck size={16} className="text-emerald-600" />
+                  <p className="text-sm font-semibold text-emerald-800">Convert to Client</p>
+                </div>
+                <p className="text-xs text-emerald-700 mb-3">Creates a new active client profile from this lead's details.</p>
+                {showConvertConfirm ? (
+                  <div className="flex gap-2">
+                    <button onClick={() => setShowConvertConfirm(false)} className="flex-1 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button onClick={handleConvert} disabled={convertLead.isPending} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+                      {convertLead.isPending ? <Loader2 size={12} className="animate-spin" /> : <><UserCheck size={12} /> Confirm</>}
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setShowConvertConfirm(true)} className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors">
+                    <UserCheck size={12} /> Convert to Client
+                  </button>
+                )}
+              </div>
+            )}
+
+            {lead.status === 'converted' && lead.converted_client_id && (
+              <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50 flex items-center gap-3">
+                <UserCheck size={18} className="text-emerald-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-emerald-800">Converted to Client</p>
+                  <a href={`#/clients/${lead.converted_client_id}`} className="text-xs text-emerald-600 hover:text-emerald-800 flex items-center gap-1 mt-0.5 transition-colors">
+                    View client profile <ExternalLink size={10} />
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* ── Manual stage jump ────────────────────── */}
+            {lead.status !== 'converted' && lead.status !== 'lost' && otherStages.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Jump to Stage</p>
+                <div className="flex flex-wrap gap-2">
+                  {otherStages.map(s => (
+                    <button key={s.status} onClick={() => handleStatusChange(s.status)} disabled={updateLead.isPending}
+                      className={clsx('inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all hover:shadow-sm disabled:opacity-50', s.color)}>
+                      {s.label} <ArrowRight size={11} />
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => handleStatusChange('lost')} disabled={updateLead.isPending}
+                  className="mt-2 text-xs text-rose-400 hover:text-rose-600 transition-colors disabled:opacity-50">
+                  Mark as lost
+                </button>
+              </div>
+            )}
+
+            {/* Notes */}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Notes</p>
+              <textarea
+                value={notes}
+                onChange={e => { setNotes(e.target.value); setNotesTouched(true) }}
+                rows={4}
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all resize-none"
+                placeholder="Goals, context, follow-up reminders…"
+              />
+              <button onClick={handleSaveNotes} disabled={saving || !notesTouched}
+                className="mt-2 w-full py-2 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-40 transition-all">
+                {saving ? 'Saving…' : 'Save Notes'}
               </button>
             </div>
-          ) : (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors"
-            >
-              <Trash2 size={14} /> Delete Lead
-            </button>
-          )}
+          </div>
+
+          {/* Delete */}
+          <div className="p-5 border-t border-gray-100">
+            {showDeleteConfirm ? (
+              <div className="flex gap-2">
+                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
+                <button onClick={handleDelete} disabled={deleteLead.isPending} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-rose-600 rounded-xl hover:bg-rose-700 disabled:opacity-50 transition-colors">
+                  {deleteLead.isPending ? <Loader2 size={14} className="animate-spin" /> : <><Trash2 size={14} /> Delete Lead</>}
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setShowDeleteConfirm(true)} className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors">
+                <Trash2 size={14} /> Delete Lead
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Questionnaire modal sits above the panel */}
+      {questModal && (
+        <QuestionnaireModal
+          lead={lead}
+          type={questModal}
+          onClose={() => setQuestModal(null)}
+          onComplete={() => setQuestModal(null)}
+        />
+      )}
+    </>
   )
 }
 
@@ -407,8 +727,12 @@ function LeadCard({ lead, onClick }: { lead: DbLead; onClick: () => void }) {
 // ─── Main page ────────────────────────────────────────────────
 export default function Leads() {
   const { data: leads = [], isLoading } = useLeads()
-  const [showAdd, setShowAdd]       = useState(false)
-  const [selected, setSelected]     = useState<DbLead | null>(null)
+  const [showAdd, setShowAdd]           = useState(false)
+  const [showTemplates, setShowTemplates] = useState(false)
+  const [selectedId, setSelectedId]     = useState<string | null>(null)
+
+  // Always read the live lead from the query so status updates reflect immediately
+  const selected = selectedId ? (leads.find(l => l.id === selectedId) ?? null) : null
   const [activeStage, setActiveStage] = useState<LeadStatus | 'all'>('all')
   const [search, setSearch]         = useState('')
 
@@ -444,12 +768,21 @@ export default function Leads() {
               {activeLeads.length} active · {convertedLeads.length} converted
             </p>
           </div>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm"
-          >
-            <Plus size={16} /> Add Lead
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowTemplates(true)}
+              title="Setup questionnaire templates"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+            >
+              <Settings2 size={15} /> Templates
+            </button>
+            <button
+              onClick={() => setShowAdd(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm"
+            >
+              <Plus size={16} /> Add Lead
+            </button>
+          </div>
         </div>
 
         {/* Stage filter tabs */}
@@ -536,7 +869,7 @@ export default function Leads() {
               <LeadCard
                 key={lead.id}
                 lead={lead}
-                onClick={() => setSelected(lead)}
+                onClick={() => setSelectedId(lead.id)}
               />
             ))}
           </div>
@@ -572,11 +905,12 @@ export default function Leads() {
       )}
 
       {/* Modals */}
-      {showAdd && <AddLeadModal onClose={() => setShowAdd(false)} />}
+      {showAdd       && <AddLeadModal onClose={() => setShowAdd(false)} />}
+      {showTemplates && <SetupTemplatesModal onClose={() => setShowTemplates(false)} />}
       {selected && (
         <LeadPanel
           lead={selected}
-          onClose={() => setSelected(null)}
+          onClose={() => setSelectedId(null)}
         />
       )}
     </div>

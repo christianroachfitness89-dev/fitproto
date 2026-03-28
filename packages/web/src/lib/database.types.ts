@@ -303,6 +303,14 @@ export interface DbQuestionnaireTemplate {
   updated_at: string
 }
 
+export interface DbQuestionnaireResponse {
+  id: string
+  lead_id: string
+  type: 'preq' | 'consult'
+  answers: Record<string, string | boolean>
+  submitted_at: string
+}
+
 export interface DbNotification {
   id: string
   org_id: string
