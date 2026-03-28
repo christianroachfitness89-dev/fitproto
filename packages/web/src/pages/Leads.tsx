@@ -4,7 +4,9 @@ import {
   UserCheck, Phone, Mail, Tag, Calendar, ExternalLink,
   ArrowRight, AlertCircle, Settings2, ClipboardList,
   CheckCircle2, CalendarClock, GripVertical, PhoneCall,
+  Upload, Download, FileSpreadsheet,
 } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import clsx from 'clsx'
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, useConvertLeadToClient } from '@/hooks/useLeads'
 import {
@@ -202,6 +204,237 @@ function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
             {upsert.isPending
               ? <><Loader2 size={14} className="animate-spin" /> Saving…</>
               : <><CheckCircle2 size={14} /> Save Template</>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Bulk Import modal ────────────────────────────────────────
+interface ImportRow {
+  name: string
+  email: string
+  phone: string
+  source: string
+  notes: string
+  valid: boolean
+  error?: string
+}
+
+function BulkImportModal({ onClose }: { onClose: () => void }) {
+  const createLead = useCreateLead()
+  const [rows, setRows]       = useState<ImportRow[]>([])
+  const [importing, setImporting] = useState(false)
+  const [done, setDone]       = useState(false)
+  const [imported, setImported] = useState(0)
+  const [dragOver, setDragOver] = useState(false)
+
+  function downloadTemplate() {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Name', 'Email', 'Phone', 'Source', 'Notes'],
+      ['Jane Smith', 'jane@example.com', '+1 555 000 0000', 'Instagram', 'Interested in 1-on-1 coaching'],
+    ])
+    ws['!cols'] = [{ wch: 24 }, { wch: 28 }, { wch: 18 }, { wch: 16 }, { wch: 40 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Leads')
+    XLSX.writeFile(wb, 'leads-import-template.xlsx')
+  }
+
+  function parseFile(file: File) {
+    const reader = new FileReader()
+    reader.onload = e => {
+      const data = new Uint8Array(e.target!.result as ArrayBuffer)
+      const wb   = XLSX.read(data, { type: 'array' })
+      const ws   = wb.Sheets[wb.SheetNames[0]]
+      const raw  = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: '' })
+
+      const parsed: ImportRow[] = raw.map(r => {
+        // case-insensitive column matching
+        const get = (key: string) => {
+          const found = Object.keys(r).find(k => k.trim().toLowerCase() === key.toLowerCase())
+          return found ? String(r[found]).trim() : ''
+        }
+        const name = get('name')
+        return {
+          name,
+          email:  get('email'),
+          phone:  get('phone'),
+          source: get('source'),
+          notes:  get('notes'),
+          valid:  !!name,
+          error:  !name ? 'Name is required' : undefined,
+        }
+      })
+      setRows(parsed)
+    }
+    reader.readAsArrayBuffer(file)
+  }
+
+  function handleFile(file: File) {
+    const ok = file.name.match(/\.(xlsx?|csv)$/i)
+    if (!ok) return
+    parseFile(file)
+  }
+
+  async function handleImport() {
+    const valid = rows.filter(r => r.valid)
+    if (!valid.length) return
+    setImporting(true)
+    let count = 0
+    for (const row of valid) {
+      try {
+        await createLead.mutateAsync({
+          name:   row.name,
+          email:  row.email  || undefined,
+          phone:  row.phone  || undefined,
+          source: row.source || undefined,
+          notes:  row.notes  || undefined,
+        })
+        count++
+      } catch { /* skip errored rows */ }
+    }
+    setImported(count)
+    setImporting(false)
+    setDone(true)
+  }
+
+  const validCount   = rows.filter(r => r.valid).length
+  const invalidCount = rows.filter(r => !r.valid).length
+
+  if (done) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 z-10 text-center">
+          <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 size={28} className="text-emerald-600" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">Import Complete</h2>
+          <p className="text-gray-500 text-sm mb-6">
+            <span className="font-semibold text-emerald-600">{imported}</span> lead{imported !== 1 ? 's' : ''} added to the pool.
+            {invalidCount > 0 && <span className="text-rose-500"> {invalidCount} row{invalidCount !== 1 ? 's' : ''} skipped.</span>}
+          </p>
+          <button onClick={onClose}
+            className="w-full py-2.5 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition-colors">
+            Done
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] z-10">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Import Leads</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Upload an Excel or CSV file to add leads in bulk</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {/* Template download */}
+          <div className="flex items-center justify-between p-4 bg-brand-50 border border-brand-200 rounded-xl">
+            <div className="flex items-center gap-3">
+              <FileSpreadsheet size={20} className="text-brand-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-brand-800">Download Template</p>
+                <p className="text-xs text-brand-600">Get the Excel template with correct column headers</p>
+              </div>
+            </div>
+            <button onClick={downloadTemplate}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors flex-shrink-0">
+              <Download size={13} /> Download
+            </button>
+          </div>
+
+          {/* Drop zone */}
+          {rows.length === 0 ? (
+            <label
+              onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
+              className={clsx(
+                'flex flex-col items-center justify-center gap-3 p-10 border-2 border-dashed rounded-xl cursor-pointer transition-all',
+                dragOver ? 'border-brand-400 bg-brand-50' : 'border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/40'
+              )}
+            >
+              <Upload size={28} className={dragOver ? 'text-brand-500' : 'text-gray-300'} />
+              <div className="text-center">
+                <p className="text-sm font-semibold text-gray-600">Drop your file here, or <span className="text-brand-600">browse</span></p>
+                <p className="text-xs text-gray-400 mt-1">Supports .xlsx, .xls, .csv</p>
+              </div>
+              <input type="file" accept=".xlsx,.xls,.csv" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
+            </label>
+          ) : (
+            /* Row preview */
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <p className="text-sm font-semibold text-gray-700">{rows.length} rows found</p>
+                  {validCount > 0   && <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">{validCount} valid</span>}
+                  {invalidCount > 0 && <span className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">{invalidCount} invalid</span>}
+                </div>
+                <button onClick={() => setRows([])}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                  Clear
+                </button>
+              </div>
+
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <div className="grid grid-cols-[auto_1fr_1fr_1fr_1fr] gap-0 text-[11px] font-semibold text-gray-500 uppercase tracking-wide bg-gray-50 px-3 py-2 border-b border-gray-200">
+                  <span className="w-6" />
+                  <span>Name</span><span>Email</span><span>Phone</span><span>Source</span>
+                </div>
+                <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+                  {rows.map((row, i) => (
+                    <div key={i}
+                      className={clsx('grid grid-cols-[auto_1fr_1fr_1fr_1fr] gap-0 items-center px-3 py-2.5 text-xs',
+                        row.valid ? 'bg-white' : 'bg-rose-50'
+                      )}>
+                      <div className="w-6 flex-shrink-0">
+                        {row.valid
+                          ? <CheckCircle2 size={13} className="text-emerald-500" />
+                          : <AlertCircle  size={13} className="text-rose-400" />
+                        }
+                      </div>
+                      <span className={clsx('truncate font-medium', row.valid ? 'text-gray-800' : 'text-rose-600')}>
+                        {row.name || <span className="italic text-rose-400">missing</span>}
+                      </span>
+                      <span className="truncate text-gray-500">{row.email || '—'}</span>
+                      <span className="truncate text-gray-500">{row.phone || '—'}</span>
+                      <span className="truncate text-gray-500">{row.source || '—'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={handleImport}
+            disabled={validCount === 0 || importing}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all"
+          >
+            {importing
+              ? <><Loader2 size={14} className="animate-spin" /> Importing…</>
+              : <><Upload size={14} /> Import {validCount > 0 ? `${validCount} Lead${validCount !== 1 ? 's' : ''}` : 'Leads'}</>
             }
           </button>
         </div>
@@ -1049,6 +1282,7 @@ export default function Leads() {
   const { data: leads = [], isLoading } = useLeads()
   const [showAdd, setShowAdd]           = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
+  const [showBulkImport, setShowBulkImport] = useState(false)
   const [selectedId, setSelectedId]     = useState<string | null>(null)
 
   // Always read the live lead from the query so status updates reflect immediately
@@ -1095,6 +1329,12 @@ export default function Leads() {
               className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
             >
               <Settings2 size={15} /> Templates
+            </button>
+            <button
+              onClick={() => setShowBulkImport(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+            >
+              <Upload size={15} /> Import
             </button>
             <button
               onClick={() => setShowAdd(true)}
@@ -1225,8 +1465,9 @@ export default function Leads() {
       )}
 
       {/* Modals */}
-      {showAdd       && <AddLeadModal onClose={() => setShowAdd(false)} />}
-      {showTemplates && <SetupTemplatesModal onClose={() => setShowTemplates(false)} />}
+      {showAdd        && <AddLeadModal onClose={() => setShowAdd(false)} />}
+      {showTemplates  && <SetupTemplatesModal onClose={() => setShowTemplates(false)} />}
+      {showBulkImport && <BulkImportModal onClose={() => setShowBulkImport(false)} />}
       {selected && (
         <LeadPanel
           lead={selected}
