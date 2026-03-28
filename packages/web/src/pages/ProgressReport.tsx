@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   X, Printer, Loader2, TrendingUp, TrendingDown, Minus,
   Dumbbell, BarChart2, Heart, Scale, Zap, Moon, Calendar,
   CheckCircle2, XCircle, Clock,
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'  // still used for habits
 import { useCheckIns, useMetricDefinitions, useCustomMetricValues } from '@/hooks/useMetrics'
+import { useClientWorkouts } from '@/hooks/useClientWorkouts'
 import type { DbClient } from '@/lib/database.types'
 import { useUnitSystem, weightLabel } from '@/lib/units'
 
@@ -137,68 +138,39 @@ function ComplianceDonut({ pct }: { pct: number }) {
 }
 
 // ─── Main ProgressReport modal ─────────────────────────────────
-interface WorkoutCompliance { assigned: number; completed: number; skipped: number; logged: number }
 interface HabitStat { name: string; emoji: string; completed: number; total: number }
 
 export default function ProgressReport({ client, onClose }: {
   client: DbClient
   onClose: () => void
 }) {
-  const [preset,       setPreset]       = useState<RangePreset>('30d')
-  const [customStart,  setCustomStart]  = useState('')
-  const [customEnd,    setCustomEnd]    = useState('')
-  const [compliance,   setCompliance]   = useState<WorkoutCompliance | null>(null)
-  const [habitStats,   setHabitStats]   = useState<HabitStat[]>([])
-  const [workoutLoad,  setWorkoutLoad]  = useState(true)
+  const [preset,      setPreset]      = useState<RangePreset>('30d')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd,   setCustomEnd]   = useState('')
+  const [habitStats,  setHabitStats]  = useState<HabitStat[]>([])
   const printRef = useRef<HTMLDivElement>(null)
   const unitSystem = useUnitSystem()
 
   const range = computeRange(preset, customStart, customEnd)
   const { since, until, days } = range
 
-  // Check-ins
+  // Check-ins (cached)
   const { data: allCheckIns = [] } = useCheckIns(client.id)
   const checkIns = allCheckIns.filter(c => c.checked_in_at >= since && c.checked_in_at <= until)
 
-  // Custom metrics
+  // Custom metrics (cached)
   const { data: metricDefs = [] } = useMetricDefinitions()
   const { data: metricValues = [] } = useCustomMetricValues(client.id)
   const filteredMetricValues = metricValues.filter(v => v.logged_at >= since && v.logged_at <= until)
 
-  // Workout compliance
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      setWorkoutLoad(true)
-      const [assignedRes, logsRes] = await Promise.all([
-        supabase
-          .from('client_workouts')
-          .select('id, status')
-          .eq('client_id', client.id)
-          .gte('assigned_at', since)
-          .lte('assigned_at', until),
-        supabase
-          .from('workout_logs')
-          .select('id')
-          .eq('client_id', client.id)
-          .gte('completed_at', since)
-          .lte('completed_at', until),
-      ])
-      if (cancelled) return
-      const assigned  = assignedRes.data ?? []
-      const completed = assigned.filter(w => w.status === 'completed').length
-      const skipped   = assigned.filter(w => w.status === 'skipped').length
-      setCompliance({
-        assigned:  assigned.length,
-        completed,
-        skipped,
-        logged: (logsRes.data ?? []).length,
-      })
-      setWorkoutLoad(false)
-    }
-    load()
-    return () => { cancelled = true }
-  }, [client.id, since, until])
+  // Workout compliance — derived from cached hook, no extra request
+  const { data: allAssigned = [], isLoading: workoutLoad } = useClientWorkouts(client.id)
+  const compliance = useMemo(() => {
+    const inRange  = allAssigned.filter(w => w.assigned_at >= since && w.assigned_at <= until)
+    const completed = inRange.filter(w => w.status === 'completed').length
+    const skipped   = inRange.filter(w => w.status === 'skipped').length
+    return { assigned: inRange.length, completed, skipped, pending: inRange.length - completed - skipped }
+  }, [allAssigned, since, until])
 
   // Habits
   useEffect(() => {
@@ -455,7 +427,7 @@ export default function ProgressReport({ client, onClose }: {
                 <div className="flex items-center gap-2 text-gray-400 text-sm">
                   <Loader2 size={14} className="animate-spin" /> Loading...
                 </div>
-              ) : !compliance || compliance.assigned === 0 ? (
+              ) : compliance.assigned === 0 ? (
                 <p className="text-gray-400 text-sm">No workouts assigned in this period.</p>
               ) : (
                 <div className="bg-gray-50 rounded-2xl border border-gray-100 p-5">
@@ -485,16 +457,8 @@ export default function ProgressReport({ client, onClose }: {
                         <span className="flex items-center gap-1.5 text-sm text-gray-400">
                           <Clock size={13} /> Pending
                         </span>
-                        <span className="text-sm font-bold text-gray-400">
-                          {compliance.assigned - compliance.completed - compliance.skipped}
-                        </span>
+                        <span className="text-sm font-bold text-gray-400">{compliance.pending}</span>
                       </div>
-                      {compliance.logged > 0 && (
-                        <div className="pt-1 border-t border-gray-200 flex items-center justify-between">
-                          <span className="text-xs text-gray-400">Sessions logged</span>
-                          <span className="text-xs font-semibold text-gray-600">{compliance.logged}</span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
