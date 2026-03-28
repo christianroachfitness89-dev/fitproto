@@ -7,6 +7,7 @@ import {
   CheckSquare, ClipboardList, Utensils, BarChart3,
   HelpCircle, ShoppingBag, Gift, UserCog,
   X, Menu, LogOut, Settings, Loader2, CheckCircle2, Repeat2, UserPlus,
+  Briefcase, CalendarDays, TrendingUp, Receipt, Mail, PieChart, FileText, Lock,
 } from 'lucide-react'
 import type React from 'react'
 import clsx from 'clsx'
@@ -129,6 +130,14 @@ function SoonBadge() {
   )
 }
 
+function LockedBadge() {
+  return (
+    <span className="flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide text-gray-700 bg-sidebar-hover border border-gray-700/40 px-1.5 py-0.5 rounded-md leading-none">
+      <Lock size={8} />
+    </span>
+  )
+}
+
 interface SidebarProps {
   mobile?: boolean
   onClose?: () => void
@@ -136,9 +145,11 @@ interface SidebarProps {
 
 export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
   const [libraryOpen, setLibraryOpen]     = useState(false)
+  const [businessOpen, setBusinessOpen]   = useState(false)
   const [showSettings, setShowSettings]   = useState(false)
   const location = useLocation()
-  const isLibraryActive = location.pathname.startsWith('/library')
+  const isLibraryActive  = location.pathname.startsWith('/library')
+  const isBusinessActive = location.pathname.startsWith('/leads')
   const { profile, signOut } = useAuth()
   const { data: conversations } = useConversations()
   const totalUnread = (conversations ?? []).reduce((sum, c) => sum + c.unread_count, 0)
@@ -245,15 +256,62 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
           )}
         </div>
 
-        <NavLink to="/leads" className={navItemClass}>
-          {({ isActive }) => (
-            <>
-              <UserPlus size={17} className={isActive ? 'text-brand-400' : 'text-gray-500 group-hover:text-gray-300'} />
-              <span className="flex-1">Lead Pool</span>
-              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
-            </>
+        {/* Business Admin with submenu */}
+        <div>
+          <button
+            onClick={() => setBusinessOpen(!businessOpen)}
+            className={clsx(
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 border relative',
+              isBusinessActive
+                ? 'bg-gradient-to-r from-brand-600/25 to-brand-500/10 text-white border-brand-500/20'
+                : 'text-gray-400 hover:bg-sidebar-hover hover:text-gray-200 border-transparent'
+            )}
+          >
+            {isBusinessActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />}
+            <Briefcase size={17} className={isBusinessActive ? 'text-brand-400' : 'text-gray-500'} />
+            <span className="flex-1 text-left">Business Admin</span>
+            <ChevronDown
+              size={14}
+              className={clsx('transition-transform duration-200 text-gray-500', (businessOpen || isBusinessActive) && 'rotate-180')}
+            />
+          </button>
+          {(businessOpen || isBusinessActive) && (
+            <div className="mt-1 ml-3 space-y-0.5 border-l border-sidebar-border pl-3">
+              {/* Lead Pool — active */}
+              <NavLink
+                to="/leads"
+                className={({ isActive }) =>
+                  clsx(
+                    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all',
+                    isActive
+                      ? 'text-brand-300 bg-brand-500/10'
+                      : 'text-gray-500 hover:text-gray-300 hover:bg-sidebar-hover'
+                  )
+                }
+              >
+                <UserPlus size={14} />
+                <span className="flex-1">Lead Pool</span>
+              </NavLink>
+
+              {/* Locked placeholders */}
+              {([
+                { icon: <CalendarDays size={14} />, label: 'Appointments'        },
+                { icon: <TrendingUp   size={14} />, label: 'Sales Pipeline'      },
+                { icon: <Receipt      size={14} />, label: 'Invoices & Billing'  },
+                { icon: <Mail         size={14} />, label: 'Email Campaigns'     },
+                { icon: <PieChart     size={14} />, label: 'Analytics'           },
+                { icon: <FileText     size={14} />, label: 'Contracts & Waivers' },
+              ] as { icon: React.ReactNode; label: string }[]).map(item => (
+                <div key={item.label}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-gray-700 cursor-default select-none">
+                  {item.icon}
+                  <span className="flex-1">{item.label}</span>
+                  <LockedBadge />
+                </div>
+              ))}
+            </div>
           )}
-        </NavLink>
+        </div>
 
         <NavLink to="/inbox" className={navItemClass}>
           {({ isActive }) => (
