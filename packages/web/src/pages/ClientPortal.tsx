@@ -658,11 +658,16 @@ function PortalLogOverlay({ cw, clientId, onClose, onDone }: {
               </div>
               {sets.some(s => s.last_reps != null || s.last_weight != null) ? (
                 <div className="space-y-0">
-                  {sets.filter(s => s.last_reps != null || s.last_weight != null).map(s => (
+                  <div className="flex items-center gap-4 py-2 border-b border-gray-200">
+                    <span className="text-xs text-gray-400 font-semibold w-12">SET</span>
+                    <span className="text-xs text-gray-400 font-semibold flex-1">WEIGHT</span>
+                    <span className="text-xs text-gray-400 font-semibold flex-1">REPS</span>
+                  </div>
+                  {sets.map(s => (
                     <div key={s.set_number} className="flex items-center gap-4 py-3 border-b border-gray-100 last:border-0">
                       <span className="text-sm text-gray-400 font-semibold w-12">Set {s.set_number}</span>
-                      {s.last_weight != null && <span className="text-gray-800 font-bold">{s.last_weight} kg</span>}
-                      {s.last_reps != null && <span className="text-gray-500 text-sm">{s.last_reps} reps</span>}
+                      <span className="flex-1 text-gray-800 font-bold">{s.last_weight != null ? `${s.last_weight} kg` : '—'}</span>
+                      <span className="flex-1 text-gray-500 text-sm">{s.last_reps != null ? `${s.last_reps} reps` : '—'}</span>
                     </div>
                   ))}
                 </div>
