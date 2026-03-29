@@ -13,7 +13,26 @@ import { playRestEndChime } from '@/lib/sound'
 import clsx from 'clsx'
 
 // ─── Types ─────────────────────────────────────────────────────
-type ActiveSection = 'workouts' | 'history' | 'metrics' | 'nutrition' | 'messages' | 'plan' | 'community' | 'habits' | null
+type ActiveSection = 'workouts' | 'history' | 'metrics' | 'nutrition' | 'messages' | 'plan' | 'community' | 'habits' | 'accountability' | null
+
+interface PortalSessionTask {
+  id: string
+  name: string
+  punishment: string
+  completed: boolean | null
+  punishment_notes: string
+}
+interface PortalSessionLog {
+  id: string
+  session_date: string
+  workout_type: string | null
+  tasks: PortalSessionTask[]
+  reviewed_at?: string | null
+}
+interface PortalAccountabilityData {
+  open_sessions:    PortalSessionLog[]
+  recent_completed: PortalSessionLog[]
+}
 
 interface PortalMessage {
   id: string
@@ -207,6 +226,15 @@ const SECTION_DEFS = [
     glow:     'shadow-rose-500/40',
     bg:       'bg-rose-500/10',
   },
+  {
+    id:       'accountability' as const,
+    label:    'Accountability',
+    desc:     'Tasks & commitments',
+    icon:     Zap,
+    gradient: 'from-orange-500 to-rose-500',
+    glow:     'shadow-orange-500/40',
+    bg:       'bg-orange-500/10',
+  },
 ]
 
 type SetEntry = { reps: string; weight: string; duration: string; distance: string; rpe: string }
@@ -272,6 +300,170 @@ function RestTimer({ restSeconds, label, onDone }: {
           onClick={() => setRemaining(r => r + 15)}
           className="w-12 h-12 rounded-2xl bg-white/8 hover:bg-white/15 text-white/60 hover:text-white text-sm font-bold transition-all border border-white/10 flex items-center justify-center hover:scale-105 active:scale-95"
         >+15</button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Accountability section ────────────────────────────────────
+function AccountabilityView({ data }: { data: PortalAccountabilityData | null }) {
+  const bg = 'min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040]'
+
+  if (!data) return (
+    <div className={bg + ' flex items-center justify-center'}>
+      <div className="w-6 h-6 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
+  const openSessions    = data.open_sessions    ?? []
+  const completedSessions = data.recent_completed ?? []
+
+  function taskStatusIcon(t: PortalSessionTask) {
+    if (t.completed === true)  return <span className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0"><CheckCircle2 size={12} className="text-emerald-400" /></span>
+    if (t.completed === false) return <span className="w-5 h-5 rounded-full bg-rose-500/20 flex items-center justify-center flex-shrink-0"><X size={12} className="text-rose-400" /></span>
+    return <span className="w-5 h-5 rounded-full bg-white/10 border border-white/20 flex-shrink-0" />
+  }
+
+  return (
+    <div className={bg}>
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 pt-14 pb-5 border-b border-white/8">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+          <Zap size={18} className="text-white" />
+        </div>
+        <div>
+          <p className="text-white font-bold text-base">Accountability</p>
+          <p className="text-white/35 text-xs">Your commitments &amp; outcomes</p>
+        </div>
+      </div>
+
+      <div className="px-4 pb-28 space-y-6 mt-5">
+
+        {/* Active commitments */}
+        {openSessions.length > 0 ? (
+          <div>
+            <p className="text-xs font-bold text-white/40 uppercase tracking-widest mb-3">Active Commitments</p>
+            <div className="space-y-3">
+              {openSessions.map(session => (
+                <div key={session.id} className="rounded-2xl bg-white/6 border border-white/10 overflow-hidden">
+                  {/* Session meta */}
+                  <div className="flex items-center gap-2 px-4 pt-4 pb-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white/80 text-sm font-bold">
+                        {session.workout_type ?? 'PT Session'}
+                      </p>
+                      <p className="text-white/30 text-xs mt-0.5">
+                        {new Date(session.session_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/20 px-2 py-0.5 rounded-full">
+                      Pending review
+                    </span>
+                  </div>
+                  {/* Tasks */}
+                  <div className="px-4 pb-4 space-y-2">
+                    {session.tasks.map(task => (
+                      <div key={task.id} className="bg-white/4 border border-white/8 rounded-xl p-3">
+                        <div className="flex items-start gap-2.5">
+                          {taskStatusIcon(task)}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white/80 text-sm font-semibold leading-snug">{task.name}</p>
+                            {task.punishment && (
+                              <p className="text-rose-400/70 text-xs mt-1 flex items-start gap-1">
+                                <Zap size={10} className="flex-shrink-0 mt-px" />
+                                {task.punishment}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-3xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-white/8 p-8 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 size={20} className="text-emerald-400" />
+            </div>
+            <p className="text-white/70 font-semibold">All clear!</p>
+            <p className="text-white/30 text-sm mt-1">No active commitments from your coach right now.</p>
+          </div>
+        )}
+
+        {/* Completed history */}
+        {completedSessions.length > 0 && (
+          <div>
+            <p className="text-xs font-bold text-white/40 uppercase tracking-widest mb-3">Recent History</p>
+            <div className="space-y-3">
+              {completedSessions.map(session => {
+                const failed = session.tasks.filter(t => t.completed === false)
+                const done   = session.tasks.filter(t => t.completed === true)
+                return (
+                  <div key={session.id} className="rounded-2xl bg-white/6 border border-white/10 overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 pt-4 pb-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white/80 text-sm font-bold">
+                          {session.workout_type ?? 'PT Session'}
+                        </p>
+                        <p className="text-white/30 text-xs mt-0.5">
+                          {new Date(session.session_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
+                      <span className={clsx(
+                        'text-[11px] font-bold border px-2 py-0.5 rounded-full',
+                        failed.length > 0
+                          ? 'bg-rose-500/20 text-rose-300 border-rose-400/20'
+                          : 'bg-emerald-500/20 text-emerald-300 border-emerald-400/20'
+                      )}>
+                        {done.length}/{session.tasks.length} done
+                      </span>
+                    </div>
+                    <div className="px-4 pb-4 space-y-2">
+                      {session.tasks.map(task => (
+                        <div key={task.id} className={clsx(
+                          'border rounded-xl p-3',
+                          task.completed === true  ? 'bg-emerald-500/8 border-emerald-500/15' :
+                          task.completed === false ? 'bg-rose-500/8 border-rose-500/15' :
+                          'bg-white/4 border-white/8'
+                        )}>
+                          <div className="flex items-start gap-2.5">
+                            {taskStatusIcon(task)}
+                            <div className="flex-1 min-w-0">
+                              <p className={clsx(
+                                'text-sm font-semibold leading-snug',
+                                task.completed === true  ? 'text-emerald-300 line-through opacity-70' :
+                                task.completed === false ? 'text-white/80' : 'text-white/60'
+                              )}>
+                                {task.name}
+                              </p>
+                              {/* Failed — show punishment + evidence if recorded */}
+                              {task.completed === false && (
+                                <div className="mt-1.5 space-y-1">
+                                  <p className="text-rose-400/80 text-xs flex items-start gap-1">
+                                    <Zap size={10} className="flex-shrink-0 mt-px" />
+                                    {task.punishment}
+                                  </p>
+                                  {task.punishment_notes && (
+                                    <p className="text-white/30 text-xs bg-white/4 rounded-lg px-2.5 py-1.5 border border-white/8">
+                                      {task.punishment_notes}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -3657,6 +3849,7 @@ export default function ClientPortal() {
   const [showMore, setShowMore]               = useState(false)
   const [tasks, setTasks]                   = useState<PortalTask[]>([])
   const [habits, setHabits]                 = useState<PortalHabit[]>([])
+  const [accountability, setAccountability] = useState<PortalAccountabilityData | null>(null)
   const [loggingWorkout, setLoggingWorkout] = useState<PortalWorkout | null>(null)
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false)
 
@@ -3673,6 +3866,9 @@ export default function ClientPortal() {
     const today = new Date().toISOString().slice(0, 10)
     supabase.rpc('get_client_habits', { p_client_id: clientId, p_date: today }).then(({ data: habitData }) => {
       if (habitData) setHabits(habitData as PortalHabit[])
+    })
+    supabase.rpc('get_portal_accountability', { p_client_id: clientId }).then(({ data: accData }) => {
+      if (accData) setAccountability(accData as PortalAccountabilityData)
     })
   }, [clientId])
 
@@ -3880,6 +4076,11 @@ export default function ClientPortal() {
           <CommunityView clientId={clientId!} />
         </div>
       )}
+      {mountedSections.has('accountability') && (
+        <div className={activeSection !== 'accountability' ? 'hidden' : ''}>
+          <AccountabilityView data={accountability} />
+        </div>
+      )}
 
       {/* ── Dashboard (home) ── */}
       {activeSection === null && (
@@ -4079,6 +4280,36 @@ export default function ClientPortal() {
                 </div>
               </div>
             )}
+
+            {/* ── Accountability widget ── */}
+            {accountability && accountability.open_sessions.length > 0 && (() => {
+              const totalTasks = accountability.open_sessions.reduce((s, sess) => s + sess.tasks.length, 0)
+              const doneTasks  = accountability.open_sessions.reduce((s, sess) => s + sess.tasks.filter(t => t.completed === true).length, 0)
+              const pending    = totalTasks - doneTasks
+              return (
+                <div className="mx-4 mb-3">
+                  <button
+                    onClick={() => goTo('accountability')}
+                    className="w-full text-left bg-gradient-to-br from-orange-50 to-rose-50 rounded-2xl border border-orange-100 shadow-sm p-4"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center">
+                          <Zap size={15} className="text-white" />
+                        </div>
+                        <span className="text-[14px] font-bold text-gray-900">Accountability</span>
+                      </div>
+                      <span className="text-[12px] font-semibold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                        {pending} pending
+                      </span>
+                    </div>
+                    <p className="text-[13px] text-gray-500 leading-snug">
+                      {accountability.open_sessions.length} open session{accountability.open_sessions.length !== 1 ? 's' : ''} — {doneTasks}/{totalTasks} tasks complete
+                    </p>
+                  </button>
+                </div>
+              )
+            })()}
 
             <p className="text-center text-[11px] text-gray-300 pt-6 pb-2 uppercase tracking-[0.2em] font-medium">
               Powered by FitProto
