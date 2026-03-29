@@ -1,14 +1,14 @@
-import { useState, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Search, UserPlus, ChevronDown, ArrowUpDown,
   MessageSquare, MoreHorizontal, Filter, LayoutGrid, List,
   Loader2, X, Users, Upload, Download, CheckCircle2, AlertCircle,
-  Copy, Check, Mail, UserCheck,
+  Copy, Check, Mail, UserCheck, Archive, Trash2, AlertTriangle,
 } from 'lucide-react'
 import clsx from 'clsx'
 import * as XLSX from 'xlsx'
-import { useClients, useCreateClient } from '@/hooks/useClients'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients'
 import type { DbClient } from '@/lib/database.types'
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'pending'
@@ -661,6 +661,135 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+// ─── Client table row with actions ───────────────────────────
+function ClientRow({ client }: { client: DbClient }) {
+  const navigate = useNavigate()
+  const updateClient = useUpdateClient()
+  const deleteClient = useDeleteClient()
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    if (menuOpen) document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
+
+  const initials = client.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
+
+  async function archive() {
+    setMenuOpen(false)
+    await updateClient.mutateAsync({ id: client.id, status: client.status === 'inactive' ? 'active' : 'inactive' })
+  }
+
+  async function confirmDelete() {
+    setDeleting(true)
+    try { await deleteClient.mutateAsync(client.id) } finally { setDeleting(false) }
+  }
+
+  return (
+    <>
+      <tr className="hover:bg-gray-50/70 transition-colors group">
+        <td className="px-5 py-4"><input type="checkbox" className="rounded border-gray-300" /></td>
+        <td className="px-4 py-4">
+          <Link to={`/clients/${client.id}`} className="flex items-center gap-3 group/link">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+              {initials}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-800 group-hover/link:text-brand-600 transition-colors">{client.name}</p>
+              <p className="text-xs text-gray-500">{client.email ?? '—'}</p>
+            </div>
+          </Link>
+        </td>
+        <td className="px-4 py-4"><StatusBadge status={client.status} /></td>
+        <td className="px-4 py-4 text-sm text-gray-600">{client.goal ?? '—'}</td>
+        <td className="px-4 py-4 text-sm text-gray-600">{new Date(client.joined_at).toLocaleDateString()}</td>
+        <td className="px-4 py-4 text-sm text-gray-600">{client.category ?? '—'}</td>
+        <td className="px-4 py-4">
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => navigate(`/clients/${client.id}`)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <MessageSquare size={15} />
+            </button>
+            <div ref={menuRef} className="relative">
+              <button
+                onClick={() => setMenuOpen(o => !o)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <MoreHorizontal size={15} />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
+                  <button
+                    onClick={archive}
+                    disabled={updateClient.isPending}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    <Archive size={14} className="text-amber-500" />
+                    {client.status === 'inactive' ? 'Unarchive' : 'Archive'}
+                  </button>
+                  <div className="my-1 border-t border-gray-100" />
+                  <button
+                    onClick={() => { setMenuOpen(false); setShowConfirm(true) }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      {showConfirm && (
+        <tr>
+          <td colSpan={7} className="p-0">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowConfirm(false)} />
+              <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10">
+                <div className="flex flex-col items-center text-center gap-3 mb-5">
+                  <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center">
+                    <AlertTriangle size={22} className="text-rose-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900">Delete {client.name}?</h3>
+                    <p className="text-sm text-gray-500 mt-1">This permanently removes the client and all their data. This cannot be undone.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    disabled={deleting}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-rose-600 rounded-xl hover:bg-rose-700 disabled:opacity-60 transition-colors"
+                  >
+                    {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}
+
 // ─── Clients page ─────────────────────────────────────────────
 export default function Clients() {
   const [search, setSearch]         = useState('')
@@ -800,41 +929,7 @@ export default function Clients() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {clients.map(client => {
-                  const initials = client.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
-                  return (
-                    <tr key={client.id} className="hover:bg-gray-50/70 transition-colors group">
-                      <td className="px-5 py-4"><input type="checkbox" className="rounded border-gray-300" /></td>
-                      <td className="px-4 py-4">
-                        <Link to={`/clients/${client.id}`} className="flex items-center gap-3 group/link">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                            {initials}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-gray-800 group-hover/link:text-brand-600 transition-colors">{client.name}</p>
-                            <p className="text-xs text-gray-500">{client.email ?? '—'}</p>
-                          </div>
-                        </Link>
-                      </td>
-                      <td className="px-4 py-4"><StatusBadge status={client.status} /></td>
-                      <td className="px-4 py-4 text-sm text-gray-600">{client.goal ?? '—'}</td>
-                      <td className="px-4 py-4 text-sm text-gray-600">
-                        {new Date(client.joined_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-gray-600">{client.category ?? '—'}</td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-                            <MessageSquare size={15} />
-                          </button>
-                          <button className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-                            <MoreHorizontal size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
+                {clients.map(client => <ClientRow key={client.id} client={client} />)}
               </tbody>
             </table>
           </div>

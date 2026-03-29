@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Mail, Phone, MessageSquare, Dumbbell,
@@ -8,10 +8,11 @@ import {
   SkipForward, ExternalLink, Copy, History, BarChart2, Utensils, Lock,
   ChevronUp, Scale, Zap, TrendingUp, Search, ListChecks,
   BookOpen, Check, UserCheck, Globe, Moon, LineChart, FileText,
+  Archive, AlertTriangle,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { supabase } from '@/lib/supabase'
-import { useClient, useUpdateClient } from '@/hooks/useClients'
+import { useClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients'
 import { useTasks, useCreateTask, useToggleTask } from '@/hooks/useTasks'
 import { useHabits, useCreateHabit, useDeleteHabit } from '@/hooks/useHabits'
 import {
@@ -2581,11 +2582,43 @@ export default function ClientDetail() {
   const toggleTask = useToggleTask()
   const navigate = useNavigate()
   const getOrCreate = useGetOrCreateConversation()
+  const updateClient = useUpdateClient()
+  const deleteClient = useDeleteClient()
+  const menuRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab]     = useState<Tab>('overview')
   const [mountedTabs, setMountedTabs] = useState<Set<Tab>>(new Set(['overview']))
   const [showEdit, setShowEdit]       = useState(false)
   const [copied, setCopied]           = useState(false)
   const [showReport, setShowReport]   = useState(false)
+  const [menuOpen, setMenuOpen]       = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
+  // Close menu on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    if (menuOpen) document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
+
+  async function handleArchive() {
+    if (!id || !client) return
+    setMenuOpen(false)
+    await updateClient.mutateAsync({ id, status: client.status === 'inactive' ? 'active' : 'inactive' })
+  }
+
+  async function handleDelete() {
+    if (!id) return
+    setDeleteLoading(true)
+    try {
+      await deleteClient.mutateAsync(id)
+      navigate('/clients')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
 
   async function openMessage() {
     if (!id) return
@@ -2733,12 +2766,75 @@ export default function ClientDetail() {
               }
               Message
             </button>
-            <button
-              onClick={() => setShowEdit(true)}
-              className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
-            >
-              <MoreHorizontal size={18} />
-            </button>
+            <div ref={menuRef} className="relative">
+              <button
+                onClick={() => setMenuOpen(o => !o)}
+                className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                <MoreHorizontal size={18} />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-44 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
+                  <button
+                    onClick={() => { setMenuOpen(false); setShowEdit(true) }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <MoreHorizontal size={15} className="text-gray-400" />
+                    Edit Details
+                  </button>
+                  <button
+                    onClick={handleArchive}
+                    disabled={updateClient.isPending}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    <Archive size={15} className="text-amber-500" />
+                    {client?.status === 'inactive' ? 'Unarchive' : 'Archive'}
+                  </button>
+                  <div className="my-1 border-t border-gray-100" />
+                  <button
+                    onClick={() => { setMenuOpen(false); setShowDeleteConfirm(true) }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
+                  >
+                    <Trash2 size={15} />
+                    Delete Client
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Delete confirm modal */}
+            {showDeleteConfirm && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
+                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10">
+                  <div className="flex flex-col items-center text-center gap-3 mb-5">
+                    <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center">
+                      <AlertTriangle size={22} className="text-rose-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900">Delete {client?.name}?</h3>
+                      <p className="text-sm text-gray-500 mt-1">This will permanently remove the client and all their data. This cannot be undone.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleteLoading}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-rose-600 rounded-xl hover:bg-rose-700 disabled:opacity-60 transition-colors"
+                    >
+                      {deleteLoading ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
