@@ -3585,7 +3585,7 @@ function PortalSideNav({
     { section: 'habits',         label: 'Habits',         icon: Repeat2,       alwaysUnlocked: true },
     { section: 'messages',       label: 'Messages',       icon: MessageCircle, alwaysUnlocked: true, unread: hasUnreadMessages },
     { section: 'accountability', label: 'Accountability', icon: Zap,           alwaysUnlocked: true },
-    { section: 'community',      label: 'Community',      icon: Users2 },
+    { section: 'community',      label: 'Community',      icon: Users2,        alwaysUnlocked: true },
   ]
 
   function NavContent() {
