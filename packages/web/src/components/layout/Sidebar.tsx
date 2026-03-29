@@ -8,6 +8,7 @@ import {
   HelpCircle, ShoppingBag, Gift, UserCog,
   X, Menu, LogOut, Settings, Loader2, CheckCircle2, Repeat2, UserPlus,
   Briefcase, CalendarDays, TrendingUp, Receipt, Mail, PieChart, FileText, Lock,
+  ClipboardCheck,
 } from 'lucide-react'
 import type React from 'react'
 import clsx from 'clsx'
@@ -250,6 +251,22 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
               >
                 <ClipboardList size={14} />
                 <span className="flex-1">Check-ins</span>
+              </NavLink>
+
+              {/* Session Logs — active */}
+              <NavLink
+                to="/clients/session-logs"
+                className={({ isActive }) =>
+                  clsx(
+                    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all',
+                    isActive
+                      ? 'text-brand-300 bg-brand-500/10'
+                      : 'text-gray-500 hover:text-gray-300 hover:bg-sidebar-hover'
+                  )
+                }
+              >
+                <ClipboardCheck size={14} />
+                <span className="flex-1">Session Logs</span>
               </NavLink>
 
               {/* Locked placeholders */}

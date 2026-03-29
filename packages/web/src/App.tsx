@@ -20,7 +20,8 @@ import Placeholder from './pages/Placeholder'
 import ClientPortal from './pages/ClientPortal'
 import AdminPanel from './pages/AdminPanel'
 import Leads from './pages/Leads'
-import CheckIns from './pages/CheckIns'
+import CheckIns     from './pages/CheckIns'
+import SessionLogs  from './pages/SessionLogs'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -147,7 +148,8 @@ export default function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="clients" element={<Clients />} />
               <Route path="clients/:id" element={<ClientDetail />} />
-              <Route path="clients/check-ins" element={<CheckIns />} />
+              <Route path="clients/check-ins"     element={<CheckIns />} />
+              <Route path="clients/session-logs"  element={<SessionLogs />} />
               <Route path="library/courses" element={<CourseBuilder />} />
               <Route path="library/tasks" element={<TasksLibrary />} />
               <Route path="library/habits" element={<HabitsLibrary />} />
