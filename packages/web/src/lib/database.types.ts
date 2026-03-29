@@ -315,6 +315,32 @@ export interface DbQuestionnaireTemplate {
   updated_at: string
 }
 
+export type SessionLogStatus = 'open' | 'completed'
+
+export interface SessionTask {
+  id: string
+  name: string
+  punishment: string
+  completed: boolean | null  // null = not yet reviewed
+  punishment_notes: string   // evidence / notes when punishment was applied
+}
+
+export interface DbSessionLog {
+  id: string
+  org_id: string
+  client_id: string
+  session_date: string          // YYYY-MM-DD
+  session_time: string | null   // HH:MM:SS
+  workout_type: string | null
+  client_weight_kg: number | null
+  session_notes: string | null
+  status: SessionLogStatus
+  tasks: SessionTask[]
+  reviewed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface DbQuestionnaireResponse {
   id: string
   lead_id: string
