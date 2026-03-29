@@ -7,7 +7,7 @@ import {
   BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight, ChevronLeft,
   X, Home, Menu, MessageCircle, Settings, Send, GripVertical,
   Users2, Heart, BookOpen, Video, Headphones, FileText, AlignLeft, ExternalLink,
-  Download, Eye, EyeOff, Check, Repeat2,
+  Download, Eye, EyeOff, Check, Repeat2, Play, Plus,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { playRestEndChime } from '@/lib/sound'
@@ -95,6 +95,9 @@ interface PortalSet {
   duration_seconds: number | null
   distance_meters: number | null
   rest_seconds: number | null
+  last_reps: number | null
+  last_weight: number | null
+  suggested_weight: number | null
 }
 
 interface PortalExercise {
@@ -103,6 +106,10 @@ interface PortalExercise {
   order_index: number
   metric_type: string
   muscle_group: string | null
+  equipment: string | null
+  video_url: string | null
+  progression_type: string | null
+  progression_value: number | null
   sets: PortalSet[] | null
 }
 
@@ -477,24 +484,23 @@ function PortalLogOverlay({ cw, clientId, onClose, onDone }: {
   onClose: () => void
   onDone: (id: string) => void
 }) {
-  const [detail, setDetail]     = useState<PortalWorkoutDetail | null>(null)
-  const [loading, setLoading]   = useState(true)
-  const [entries, setEntries]   = useState<Record<string, SetEntry>>({})
+  const [detail, setDetail]         = useState<PortalWorkoutDetail | null>(null)
+  const [loading, setLoading]       = useState(true)
+  const [entries, setEntries]       = useState<Record<string, SetEntry>>({})
+  const [doneSets, setDoneSets]     = useState<Set<string>>(new Set())
+  const [restTimer, setRestTimer]   = useState<{ restSeconds: number; label: string } | null>(null)
+  const [saving, setSaving]         = useState(false)
+  const [saved, setSaved]           = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+  const [notes, setNotes]           = useState('')
   const [completedAt, setCompletedAt] = useState(() => {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
   })
-  const [notes, setNotes]       = useState('')
-  const [saving, setSaving]     = useState(false)
-  const [saved, setSaved]       = useState(false)
-  const [error, setError]       = useState<string | null>(null)
-  const [doneSets, setDoneSets] = useState<Set<string>>(new Set())
-  const [restTimer, setRestTimer] = useState<{ restSeconds: number; label: string } | null>(null)
-
-  function handleSetDone(key: string, exerciseName: string, setNumber: number, restSeconds: number) {
-    setDoneSets(prev => new Set([...prev, key]))
-    if (restSeconds > 0) setRestTimer({ restSeconds, label: `${exerciseName} — Set ${setNumber} complete` })
-  }
+  const [activeExIdx, setActiveExIdx] = useState<number | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [extraSets, setExtraSets]     = useState<Record<string, number>>({})
+  const [videoOpen, setVideoOpen]     = useState(false)
 
   useEffect(() => {
     supabase.rpc('get_portal_workout_detail', {
@@ -506,13 +512,7 @@ function PortalLogOverlay({ cw, clientId, onClose, onDone }: {
         const init: Record<string, SetEntry> = {}
         for (const ex of d.exercises ?? [])
           for (const s of ex.sets ?? [])
-            init[`${ex.id}-${s.set_number}`] = {
-              reps:     s.reps?.toString()             ?? '',
-              weight:   s.weight?.toString()           ?? '',
-              duration: s.duration_seconds?.toString() ?? '',
-              distance: s.distance_meters?.toString()  ?? '',
-              rpe:      '',
-            }
+            init[`${ex.id}-${s.set_number}`] = { reps: '', weight: '', duration: '', distance: '', rpe: '' }
         setEntries(init)
       }
       setLoading(false)
@@ -520,13 +520,47 @@ function PortalLogOverlay({ cw, clientId, onClose, onDone }: {
   }, [cw.id, clientId])
 
   function setField(key: string, field: keyof SetEntry, value: string) {
-    setEntries(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
+    setEntries(prev => ({ ...prev, [key]: { ...(prev[key] ?? { reps: '', weight: '', duration: '', distance: '', rpe: '' }), [field]: value } }))
+  }
+
+  function handleSetDone(key: string, exerciseName: string, setNumber: number, restSeconds: number) {
+    setDoneSets(prev => new Set([...prev, key]))
+    if (restSeconds > 0) setRestTimer({ restSeconds, label: `${exerciseName} — Set ${setNumber} complete` })
+  }
+
+  function getAllSets(ex: PortalExercise): PortalSet[] {
+    const base  = ex.sets ?? []
+    const extra = extraSets[ex.id] ?? 0
+    if (!extra) return base
+    const last = base[base.length - 1]
+    return [
+      ...base,
+      ...Array.from({ length: extra }, (_, i) => ({
+        set_number:       base.length + i + 1,
+        reps:             last?.reps ?? null,
+        weight:           last?.weight ?? null,
+        duration_seconds: last?.duration_seconds ?? null,
+        distance_meters:  last?.distance_meters ?? null,
+        rest_seconds:     last?.rest_seconds ?? null,
+        last_reps:        null as number | null,
+        last_weight:      null as number | null,
+        suggested_weight: last?.suggested_weight ?? last?.weight ?? null,
+      } as PortalSet)),
+    ]
+  }
+
+  function markAllSets(ex: PortalExercise) {
+    getAllSets(ex).forEach(s => {
+      const key = `${ex.id}-${s.set_number}`
+      setDoneSets(prev => new Set([...prev, key]))
+    })
   }
 
   async function submit() {
     setError(null); setSaving(true)
-    const setLogs = (detail?.exercises ?? []).flatMap(ex =>
-      (ex.sets ?? []).map(s => {
+    const exList = detail?.exercises ?? []
+    const setLogs = exList.flatMap(ex =>
+      getAllSets(ex).map(s => {
         const e = entries[`${ex.id}-${s.set_number}`] ?? {} as SetEntry
         return {
           workout_exercise_id: ex.id,
@@ -548,200 +582,387 @@ function PortalLogOverlay({ cw, clientId, onClose, onDone }: {
       setError(err?.message ?? (result as any)?.error ?? 'Something went wrong'); return
     }
     setSaved(true)
-    setTimeout(() => { onDone(cw.id); onClose() }, 1000)
+    setTimeout(() => { onDone(cw.id); onClose() }, 1200)
   }
 
-  const inp = 'w-full px-2 py-2 text-[13px] text-center bg-[#1e1e3a] border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 transition-all [color-scheme:dark]'
-
-  // Count total and done sets for progress
-  const totalSets = (detail?.exercises ?? []).reduce((n, ex) => n + (ex.sets?.length ?? 0), 0)
+  const exercises    = detail?.exercises ?? []
+  const totalSets    = exercises.reduce((n, ex) => n + getAllSets(ex).length, 0)
   const doneSetsCount = doneSets.size
+  const dateLabel    = new Date(completedAt + 'T00:00:00').toLocaleDateString('en-US', {
+    weekday: 'long', month: 'short', day: 'numeric',
+  }).toUpperCase()
+
+  function ytId(url: string | null): string | null {
+    if (!url) return null
+    const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([^&?/]+)/)
+    return m?.[1] ?? null
+  }
+
+  // ── Loading ──
+  if (loading) return (
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-[#2142c8] to-[#7b68ee] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
+          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        </div>
+        <p className="text-white/50 text-xs uppercase tracking-widest">Loading workout</p>
+      </div>
+    </div>
+  )
+
+  // ── EXERCISE DETAIL ──
+  if (activeExIdx !== null) {
+    const activeEx = exercises[activeExIdx]
+    if (!activeEx) { setActiveExIdx(null); return null }
+    const sets       = getAllSets(activeEx)
+    const metric     = activeEx.metric_type ?? 'reps_weight'
+    const isWeighted = metric === 'reps_weight'
+    const isTimed    = metric === 'time'
+    const isDistance = metric === 'distance'
+    const colCls     = isWeighted ? 'grid-cols-[40px_1fr_1fr_1fr_44px]' : 'grid-cols-[40px_1fr_1fr_44px]'
+    const firstUndone = sets.findIndex(s => !doneSets.has(`${activeEx.id}-${s.set_number}`))
+    const vid = ytId(activeEx.video_url)
+    const thumb = vid ? `https://img.youtube.com/vi/${vid}/mqdefault.jpg` : null
+
+    return (
+      <div className="fixed inset-0 z-50 bg-white flex flex-col">
+        {restTimer && <RestTimer restSeconds={restTimer.restSeconds} label={restTimer.label} onDone={() => setRestTimer(null)} />}
+
+        {/* Video full-screen overlay */}
+        {videoOpen && activeEx.video_url && (
+          <div className="absolute inset-0 z-20 bg-black flex flex-col">
+            <button onClick={() => setVideoOpen(false)}
+              className="absolute top-12 right-4 z-30 w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white">
+              <X size={18} />
+            </button>
+            <iframe
+              src={vid ? `https://www.youtube.com/embed/${vid}?autoplay=1` : activeEx.video_url}
+              className="flex-1"
+              allow="autoplay; fullscreen"
+              allowFullScreen
+            />
+          </div>
+        )}
+
+        {/* History slide-up */}
+        {historyOpen && (
+          <>
+            <div className="absolute inset-0 z-20 bg-black/50" onClick={() => setHistoryOpen(false)} />
+            <div className="absolute bottom-0 left-0 right-0 z-30 bg-white rounded-t-3xl px-5 pt-5 pb-10">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-bold text-gray-900">Last Session</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">{activeEx.name}</p>
+                </div>
+                <button onClick={() => setHistoryOpen(false)} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
+              </div>
+              {sets.some(s => s.last_reps != null || s.last_weight != null) ? (
+                <div className="space-y-0">
+                  {sets.filter(s => s.last_reps != null || s.last_weight != null).map(s => (
+                    <div key={s.set_number} className="flex items-center gap-4 py-3 border-b border-gray-100 last:border-0">
+                      <span className="text-sm text-gray-400 font-semibold w-12">Set {s.set_number}</span>
+                      {s.last_weight != null && <span className="text-gray-800 font-bold">{s.last_weight} kg</span>}
+                      {s.last_reps != null && <span className="text-gray-500 text-sm">{s.last_reps} reps</span>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-400 text-sm text-center py-8">No previous session recorded for this exercise</p>
+              )}
+              {activeEx.progression_type && activeEx.progression_type !== 'none' && activeEx.progression_value && (
+                <div className="mt-4 p-3 bg-brand-50 rounded-xl">
+                  <p className="text-xs font-semibold text-brand-700">
+                    Auto-progression: {activeEx.progression_type === 'linear'
+                      ? `+${activeEx.progression_value} kg each session`
+                      : `+${activeEx.progression_value}% each session`}
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Top bar */}
+        <div className="flex items-center px-4 pt-12 pb-2 border-b border-gray-100 flex-shrink-0">
+          <button onClick={() => { setHistoryOpen(false); setVideoOpen(false); setActiveExIdx(null) }}
+            className="p-1.5 text-gray-500 hover:text-gray-900 transition-colors">
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1 flex justify-center gap-1.5 px-2">
+            {exercises.map((_, i) => (
+              <button key={i} onClick={() => setActiveExIdx(i)}
+                className={clsx('rounded-full transition-all',
+                  i === activeExIdx ? 'w-4 h-1.5 bg-brand-600' : 'w-1.5 h-1.5 bg-gray-200 hover:bg-gray-300'
+                )}
+              />
+            ))}
+          </div>
+          <div className="w-8" />
+        </div>
+
+        {/* Exercise image / video thumbnail */}
+        <div
+          className="relative h-48 flex-shrink-0 bg-gradient-to-br from-[#1a2a6c] via-[#2c3e8c] to-[#7b68ee] cursor-pointer"
+          onClick={() => activeEx.video_url && setVideoOpen(true)}
+        >
+          {thumb && <img src={thumb} alt={activeEx.name} className="absolute inset-0 w-full h-full object-cover opacity-60" />}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {activeEx.video_url
+              ? <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
+                  <Play size={22} className="text-gray-800 ml-1" fill="currentColor" />
+                </div>
+              : <Dumbbell size={40} className="text-white/20" />
+            }
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-4 py-3">
+            <p className="text-white font-extrabold text-lg leading-tight">{activeEx.name}</p>
+            {activeEx.muscle_group && <p className="text-white/60 text-xs">{activeEx.muscle_group}</p>}
+          </div>
+        </div>
+
+        {/* Action row */}
+        <div className="flex items-center gap-1 px-3 py-1.5 border-b border-gray-100 flex-shrink-0">
+          <button onClick={() => setHistoryOpen(true)}
+            className="flex flex-col items-center gap-0.5 p-2.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors min-w-[54px]">
+            <Clock size={19} />
+            <span className="text-[10px] font-semibold">History</span>
+          </button>
+          <button onClick={() => setExtraSets(prev => ({ ...prev, [activeEx.id]: (prev[activeEx.id] ?? 0) + 1 }))}
+            className="flex flex-col items-center gap-0.5 p-2.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors min-w-[54px]">
+            <Plus size={19} />
+            <span className="text-[10px] font-semibold">Add Set</span>
+          </button>
+          <div className="flex-1" />
+          <span className="text-xs font-semibold text-gray-400 pr-1">
+            {sets.filter(s => doneSets.has(`${activeEx.id}-${s.set_number}`)).length}/{sets.length} sets
+          </span>
+        </div>
+
+        {/* Set table */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {/* Headers */}
+          <div className={clsx('grid px-4 py-2.5 bg-blue-50/60 border-b border-gray-100 text-[11px] font-bold uppercase tracking-wide text-gray-400', colCls)}>
+            <span>SET</span>
+            {isWeighted && <span className="text-center">KG</span>}
+            {isTimed    && <span className="text-center">SEC</span>}
+            {isDistance && <span className="text-center">M</span>}
+            <span className="text-center">REPS</span>
+            <span className="text-center">RPE</span>
+            <span />
+          </div>
+
+          {sets.map((s, si) => {
+            const key      = `${activeEx.id}-${s.set_number}`
+            const e        = entries[key] ?? { reps: '', weight: '', duration: '', distance: '', rpe: '' }
+            const done     = doneSets.has(key)
+            const isActive = !done && si === firstUndone
+
+            const cellInput = (field: keyof SetEntry, placeholder: string, opts?: { brand?: boolean }) =>
+              <input
+                type="number" inputMode="decimal" min={0}
+                value={e[field]}
+                onChange={ev => setField(key, field, ev.target.value)}
+                placeholder={placeholder}
+                disabled={done}
+                className={clsx(
+                  'w-full text-center text-sm rounded-xl border py-1.5 px-1 focus:outline-none focus:ring-2 focus:ring-brand-400/30 transition-all',
+                  done       ? 'bg-transparent border-transparent text-emerald-600 font-semibold'
+                  : isActive
+                    ? clsx('bg-white border-gray-200', opts?.brand ? 'text-brand-600 font-bold' : 'text-gray-900 font-semibold')
+                  : 'bg-transparent border-transparent text-gray-300',
+                )}
+              />
+
+            return (
+              <div key={s.set_number}
+                className={clsx(
+                  'grid items-center py-3 border-b border-gray-50 transition-all',
+                  colCls,
+                  done       ? 'bg-emerald-50/70 px-4'
+                  : isActive ? 'border-l-[3px] border-l-brand-500 pl-[13px] pr-4 bg-blue-50/30'
+                  : 'px-4 opacity-55',
+                )}
+              >
+                <span className={clsx('font-bold text-sm',
+                  done ? 'text-emerald-500' : isActive ? 'text-gray-800' : 'text-gray-400'
+                )}>
+                  {s.set_number}
+                </span>
+                {isWeighted && cellInput('weight', s.suggested_weight?.toString() ?? s.weight?.toString() ?? '—')}
+                {isTimed    && cellInput('duration', s.duration_seconds?.toString() ?? '—')}
+                {isDistance && cellInput('distance', s.distance_meters?.toString() ?? '—')}
+                {cellInput('reps', s.reps?.toString() ?? '—', { brand: true })}
+                {cellInput('rpe', '—')}
+                <button type="button"
+                  onClick={() => handleSetDone(key, activeEx.name, s.set_number, s.rest_seconds ?? 0)}
+                  className={clsx(
+                    'w-9 h-9 rounded-full flex items-center justify-center transition-all flex-shrink-0',
+                    done ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30' : 'bg-gray-100 text-gray-400 hover:bg-gray-200',
+                  )}>
+                  <Check size={15} />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Mark All */}
+        <button
+          onClick={() => markAllSets(activeEx)}
+          className="py-3 text-brand-600 font-bold text-[14px] border-t border-gray-100 hover:bg-brand-50 transition-colors flex-shrink-0"
+        >
+          Mark All
+        </button>
+
+        {/* Navigation */}
+        <div className="flex gap-2 px-4 pb-8 pt-2 border-t border-gray-100 flex-shrink-0">
+          {activeExIdx > 0 && (
+            <button onClick={() => setActiveExIdx(activeExIdx - 1)}
+              className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-gray-100 text-gray-600 font-semibold text-sm">
+              <ChevronLeft size={16} /> Prev
+            </button>
+          )}
+          <button
+            onClick={() => setActiveExIdx(activeExIdx < exercises.length - 1 ? activeExIdx + 1 : null)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gradient-to-r from-brand-600 to-violet-600 text-white font-bold text-sm rounded-2xl"
+          >
+            {activeExIdx < exercises.length - 1
+              ? <>Next Exercise <ChevronRight size={16} /></>
+              : 'Back to Overview'
+            }
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── OVERVIEW ──
+  const equipment = [...new Set(exercises.flatMap(e => e.equipment ? [e.equipment] : []))]
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-[#0a0a1a] via-[#12122a] to-[#1a0f30] flex flex-col">
-      {restTimer && (
-        <RestTimer restSeconds={restTimer.restSeconds} label={restTimer.label} onDone={() => setRestTimer(null)} />
-      )}
+    <div className="fixed inset-0 z-50 flex flex-col bg-gradient-to-b from-[#2142c8] via-[#3457e8] to-[#7b68ee]">
+      {restTimer && <RestTimer restSeconds={restTimer.restSeconds} label={restTimer.label} onDone={() => setRestTimer(null)} />}
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-12 pb-4 border-b border-white/8">
+      <div className="px-4 pt-12 pb-2 flex items-center gap-3 flex-shrink-0">
         <button onClick={onClose}
-          className="w-10 h-10 rounded-2xl bg-white/8 border border-white/10 hover:bg-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all">
+          className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-white/70 hover:text-white transition-colors">
           <ArrowLeft size={18} />
         </button>
         <div className="flex-1 min-w-0">
-          <p className="text-white font-bold text-base truncate">{cw.workout.name}</p>
-          <p className="text-white/35 text-xs tracking-wide">
-            {loading ? 'Loading…' : `${doneSetsCount} / ${totalSets} sets done`}
-          </p>
+          <p className="text-white/60 text-[11px] font-bold uppercase tracking-widest">{dateLabel}</p>
+          <h1 className="text-white text-[20px] font-extrabold truncate leading-tight">{cw.workout.name}</h1>
         </div>
         <input type="date" value={completedAt} onChange={e => setCompletedAt(e.target.value)}
-          className="px-3 py-2 text-[11px] bg-[#1e1e3a] border border-white/15 rounded-2xl text-white/80 focus:outline-none focus:border-brand-400 [color-scheme:dark]" />
+          className="px-2.5 py-1.5 text-[11px] bg-white/10 border border-white/20 rounded-xl text-white/80 focus:outline-none [color-scheme:dark]" />
       </div>
 
       {/* Progress bar */}
-      {!loading && totalSets > 0 && (
-        <div className="h-0.5 bg-white/5">
-          <div
-            className="h-full bg-gradient-to-r from-brand-500 to-violet-500 transition-all duration-500"
-            style={{ width: `${(doneSetsCount / totalSets) * 100}%` }}
-          />
+      <div className="px-4 pb-3 flex items-center gap-2.5 flex-shrink-0">
+        <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
+          <div className="h-full bg-white rounded-full transition-all duration-500"
+            style={{ width: `${totalSets ? (doneSetsCount / totalSets) * 100 : 0}%` }} />
         </div>
-      )}
-
-      {/* Exercises */}
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/6 border border-white/10 flex items-center justify-center">
-              <div className="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-            <p className="text-white/30 text-xs tracking-widest uppercase">Loading exercises</p>
-          </div>
-        ) : (detail?.exercises ?? []).map((ex, idx) => {
-          const metric     = ex.metric_type ?? 'reps_weight'
-          const isWeighted = metric === 'reps_weight'
-          const isTimed    = metric === 'time'
-          const isDistance = metric === 'distance'
-          const colClass   = isWeighted
-            ? 'grid-cols-[28px_1fr_1fr_52px_38px]'
-            : 'grid-cols-[28px_1fr_52px_38px]'
-
-          const exSets    = ex.sets ?? []
-          const exDone    = exSets.filter(s => doneSets.has(`${ex.id}-${s.set_number}`)).length
-
-          return (
-            <div key={ex.id} className="rounded-2xl bg-white/5 border border-white/8 p-4">
-              {/* Exercise header */}
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-[11px] font-bold text-white/50 flex-shrink-0">
-                  {idx + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-bold text-[15px] leading-tight">{ex.name}</p>
-                  {ex.muscle_group && (
-                    <p className="text-white/35 text-[11px] font-medium mt-0.5">{ex.muscle_group}</p>
-                  )}
-                </div>
-                {exSets.length > 0 && (
-                  <span className="text-[11px] font-semibold text-white/30">
-                    {exDone}/{exSets.length}
-                  </span>
-                )}
-              </div>
-
-              {/* Column headers */}
-              <div className={clsx('grid gap-2 text-[10px] text-white/25 font-bold uppercase tracking-wide px-1 pb-2 mb-2 border-b border-white/6', colClass)}>
-                <span>#</span>
-                {isWeighted && <><span>Reps</span><span>Weight</span></>}
-                {isTimed    && <span>Duration (s)</span>}
-                {isDistance && <span>Distance (m)</span>}
-                {metric === 'reps' && <span>Reps</span>}
-                <span>RPE</span>
-                <span />
-              </div>
-
-              {/* Set rows */}
-              <div className="space-y-2">
-                {exSets.map(s => {
-                  const key  = `${ex.id}-${s.set_number}`
-                  const e    = entries[key] ?? { reps: '', weight: '', duration: '', distance: '', rpe: '' }
-                  const done = doneSets.has(key)
-                  return (
-                    <div key={s.set_number}
-                      className={clsx('grid gap-2 items-center rounded-xl px-2 py-1.5 border transition-all',
-                        done
-                          ? 'bg-emerald-500/10 border-emerald-500/20'
-                          : 'bg-white/4 border-white/8',
-                        colClass,
-                      )}>
-                      <div className={clsx(
-                        'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mx-auto',
-                        done ? 'bg-emerald-500/25 text-emerald-400' : 'text-white/35',
-                      )}>
-                        {s.set_number}
-                      </div>
-                      {isWeighted && (
-                        <>
-                          <input type="number" inputMode="numeric" min={0} value={e.reps}
-                            onChange={ev => setField(key, 'reps', ev.target.value)}
-                            placeholder={s.reps?.toString() ?? '—'}
-                            className={clsx(inp, done && 'opacity-50')} />
-                          <input type="number" inputMode="decimal" min={0} step={0.5} value={e.weight}
-                            onChange={ev => setField(key, 'weight', ev.target.value)}
-                            placeholder={s.weight?.toString() ?? '—'}
-                            className={clsx(inp, done && 'opacity-50')} />
-                        </>
-                      )}
-                      {isTimed && (
-                        <input type="number" inputMode="numeric" min={0} value={e.duration}
-                          onChange={ev => setField(key, 'duration', ev.target.value)}
-                          placeholder={s.duration_seconds?.toString() ?? '—'}
-                          className={clsx(inp, done && 'opacity-50')} />
-                      )}
-                      {isDistance && (
-                        <input type="number" inputMode="decimal" min={0} step={0.1} value={e.distance}
-                          onChange={ev => setField(key, 'distance', ev.target.value)}
-                          placeholder={s.distance_meters?.toString() ?? '—'}
-                          className={clsx(inp, done && 'opacity-50')} />
-                      )}
-                      {metric === 'reps' && (
-                        <input type="number" inputMode="numeric" min={0} value={e.reps}
-                          onChange={ev => setField(key, 'reps', ev.target.value)}
-                          placeholder={s.reps?.toString() ?? '—'}
-                          className={clsx(inp, done && 'opacity-50')} />
-                      )}
-                      <input type="number" inputMode="numeric" min={1} max={10} value={e.rpe}
-                        onChange={ev => setField(key, 'rpe', ev.target.value)}
-                        placeholder="RPE"
-                        className={clsx(inp, done && 'opacity-50')} />
-                      <button type="button"
-                        onClick={() => handleSetDone(key, ex.name, s.set_number, s.rest_seconds ?? 0)}
-                        className={clsx(
-                          'w-9 h-9 rounded-xl flex items-center justify-center transition-all flex-shrink-0',
-                          done
-                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/40'
-                            : 'bg-white/8 text-white/35 hover:bg-white/18 hover:text-white border border-white/10',
-                        )}>
-                        <CheckCircle2 size={16} />
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
+        <span className="text-white/60 text-xs font-semibold">{doneSetsCount}/{totalSets} sets</span>
       </div>
 
-      {/* Bottom bar */}
-      <div className="px-4 pb-8 pt-4 border-t border-white/8 space-y-3 bg-[#0a0a1a]/60 backdrop-blur-md">
-        {error && (
-          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3 text-rose-300 text-sm">
-            {error}
+      {/* Log Workout CTA */}
+      <div className="px-4 pb-4 flex-shrink-0">
+        <button onClick={() => setActiveExIdx(0)}
+          className="bg-white text-brand-700 font-bold text-sm px-6 py-2.5 rounded-2xl shadow-lg hover:bg-white/95 active:scale-[0.98] transition-all">
+          {doneSetsCount === 0 ? 'Log Workout' : 'Continue Workout'}
+        </button>
+      </div>
+
+      {/* White panel */}
+      <div className="flex-1 min-h-0 bg-white rounded-t-3xl overflow-y-auto">
+        {/* Equipment */}
+        {equipment.length > 0 && (
+          <div className="px-4 pt-5 pb-4 border-b border-gray-50">
+            <h3 className="font-bold text-gray-900 mb-3">Equipment</h3>
+            <div className="flex flex-wrap gap-2">
+              {equipment.map(eq => (
+                <span key={eq} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-full text-sm text-gray-700 shadow-sm">
+                  <Dumbbell size={12} className="text-gray-400" /> {eq}
+                </span>
+              ))}
+            </div>
           </div>
         )}
-        <textarea
-          value={notes} onChange={e => setNotes(e.target.value)}
-          placeholder="Session notes (optional)..."
-          rows={2}
-          className="w-full px-3.5 py-2.5 text-sm bg-[#1a1a35] border border-white/12 rounded-2xl text-white/90 placeholder-white/35 focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 transition-all resize-none leading-relaxed"
-        />
-        <button
-          onClick={submit}
-          disabled={saving || saved || loading}
-          className={clsx(
-            'w-full flex items-center justify-center gap-2 py-4 text-[15px] font-bold tracking-wide text-white rounded-2xl transition-all active:scale-[0.98] disabled:opacity-50 shadow-xl',
-            saved
-              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-600/30'
-              : 'bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 shadow-brand-600/30',
-          )}>
-          {saving
-            ? <><Loader2 size={16} className="animate-spin" />Saving…</>
-            : saved
-              ? <><CheckCircle2 size={16} />Session Saved!</>
-              : <><ClipboardList size={16} />Save Session</>}
-        </button>
+
+        {/* Exercise list with timeline */}
+        <div className="relative py-2">
+          {exercises.length > 1 && (
+            <div className="absolute left-[27px] top-8 bottom-8 w-px border-l-2 border-dashed border-gray-200 z-0" />
+          )}
+          {exercises.map((ex, i) => {
+            const exSets    = getAllSets(ex)
+            const exDone    = exSets.filter(s => doneSets.has(`${ex.id}-${s.set_number}`)).length
+            const fullyDone = exDone === exSets.length && exSets.length > 0
+            const id = ytId(ex.video_url)
+            const setLabel  = exSets.slice(0, 3).map(s => {
+              const w = s.suggested_weight ?? s.weight
+              if (w && s.reps) return `${w}kg × ${s.reps}`
+              if (s.reps)       return `${s.reps} reps`
+              if (s.duration_seconds) return `${s.duration_seconds}s`
+              return '—'
+            }).join(', ') + (exSets.length > 3 ? '…' : '')
+
+            return (
+              <button key={ex.id} onClick={() => setActiveExIdx(i)}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors relative z-10">
+                {/* Timeline dot */}
+                <div className={clsx('w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center',
+                  fullyDone ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-gray-300'
+                )}>
+                  {fullyDone && <Check size={9} className="text-white" />}
+                </div>
+                {/* Thumbnail */}
+                <div className="w-14 h-14 rounded-xl flex-shrink-0 overflow-hidden relative bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center">
+                  {id && <img src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center">
+                      <Play size={9} fill="currentColor" className="text-gray-800 ml-0.5" />
+                    </div>
+                  </div>
+                </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="font-bold text-gray-900 text-sm">{ex.name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 truncate">{setLabel}</p>
+                  {ex.muscle_group && <p className="text-[11px] text-gray-300">{ex.muscle_group}</p>}
+                </div>
+                {/* Set count */}
+                <span className="text-sm font-bold text-gray-400 flex-shrink-0">×{exSets.length}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Complete section */}
+        <div className="px-4 py-5 border-t border-gray-100">
+          {error && (
+            <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-rose-600 text-sm mb-3">{error}</div>
+          )}
+          <textarea value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="Session notes (optional)..."
+            rows={2}
+            className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all resize-none text-gray-700 placeholder-gray-300 mb-3" />
+          <button onClick={submit} disabled={saving || saved}
+            className={clsx(
+              'w-full flex items-center justify-center gap-2 py-4 text-[15px] font-bold rounded-2xl transition-all disabled:opacity-50',
+              saved
+                ? 'bg-emerald-500 text-white'
+                : 'bg-gradient-to-r from-brand-600 to-violet-600 text-white hover:from-brand-700 hover:to-violet-700',
+            )}>
+            {saving
+              ? <><Loader2 size={16} className="animate-spin" />Saving…</>
+              : saved
+                ? <><CheckCircle2 size={16} />Session Saved!</>
+                : <><ClipboardList size={16} />Save Session</>
+            }
+          </button>
+        </div>
       </div>
     </div>
   )
