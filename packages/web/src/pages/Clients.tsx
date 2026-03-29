@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Search, UserPlus, ChevronDown, ArrowUpDown,
   MessageSquare, MoreHorizontal, Filter, LayoutGrid, List,
-  Loader2, X, Users,
+  Loader2, X, Users, Upload, Download, CheckCircle2, AlertCircle,
+  Copy, Check, Mail, UserCheck,
 } from 'lucide-react'
 import clsx from 'clsx'
+import * as XLSX from 'xlsx'
 import { useClients, useCreateClient } from '@/hooks/useClients'
 import type { DbClient } from '@/lib/database.types'
 
@@ -232,6 +234,433 @@ function AddClientModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+// ─── Bulk Import ──────────────────────────────────────────────
+type ImportMethod = 'email' | 'manual'
+type ImportRow = {
+  name: string
+  email: string
+  phone: string
+  goal: string
+  category: string
+  group_name: string
+  invite_method: ImportMethod
+}
+type ImportResult = ImportRow & { status: 'success' | 'error'; error?: string; clientId?: string }
+
+const TEMPLATE_COLUMNS = ['name', 'email', 'phone', 'goal', 'category', 'group_name', 'invite_method']
+const TEMPLATE_EXAMPLE: ImportRow[] = [
+  { name: 'Jane Smith', email: 'jane@example.com', phone: '+61412345678', goal: 'Weight Loss', category: 'Premium', group_name: 'Group A', invite_method: 'email' },
+  { name: 'John Doe',   email: '',                 phone: '+61498765432', goal: 'Muscle Gain',  category: 'Standard', group_name: '',        invite_method: 'manual' },
+]
+
+function downloadTemplate() {
+  const ws = XLSX.utils.json_to_sheet(TEMPLATE_EXAMPLE, { header: TEMPLATE_COLUMNS })
+  // Style the header row
+  ws['!cols'] = TEMPLATE_COLUMNS.map(c => ({ wch: Math.max(c.length + 4, 18) }))
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Clients')
+  XLSX.writeFile(wb, 'fitproto_client_import_template.xlsx')
+}
+
+function parseImportFile(file: File): Promise<ImportRow[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target!.result as ArrayBuffer)
+        const wb = XLSX.read(data, { type: 'array' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: '' })
+        const parsed: ImportRow[] = rows.map(r => ({
+          name:          (r['name'] || r['Name'] || '').toString().trim(),
+          email:         (r['email'] || r['Email'] || '').toString().trim(),
+          phone:         (r['phone'] || r['Phone'] || '').toString().trim(),
+          goal:          (r['goal'] || r['Goal'] || '').toString().trim(),
+          category:      (r['category'] || r['Category'] || '').toString().trim(),
+          group_name:    (r['group_name'] || r['Group Name'] || r['group'] || '').toString().trim(),
+          invite_method: ((r['invite_method'] || r['Invite Method'] || 'manual').toString().toLowerCase().trim() === 'email' ? 'email' : 'manual') as ImportMethod,
+        })).filter(r => r.name)
+        resolve(parsed)
+      } catch (err: any) {
+        reject(new Error('Could not read file: ' + err.message))
+      }
+    }
+    reader.onerror = () => reject(new Error('File read error'))
+    reader.readAsArrayBuffer(file)
+  })
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+      className="ml-1.5 p-1 rounded text-gray-400 hover:text-brand-600 transition-colors"
+      title="Copy link"
+    >
+      {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+    </button>
+  )
+}
+
+function BulkImportModal({ onClose }: { onClose: () => void }) {
+  const create = useCreateClient()
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  type Step = 'upload' | 'preview' | 'results'
+  const [step, setStep]         = useState<Step>('upload')
+  const [rows, setRows]         = useState<ImportRow[]>([])
+  const [results, setResults]   = useState<ImportResult[]>([])
+  const [parseError, setParseError] = useState<string | null>(null)
+  const [importing, setImporting]   = useState(false)
+  const [progress, setProgress]     = useState(0)
+
+  const portalBase = window.location.origin + '/portal/'
+
+  async function handleFile(file: File) {
+    setParseError(null)
+    try {
+      const parsed = await parseImportFile(file)
+      if (parsed.length === 0) { setParseError('No valid rows found. Make sure the file has a "name" column.'); return }
+      setRows(parsed)
+      setStep('preview')
+    } catch (err: any) {
+      setParseError(err.message)
+    }
+  }
+
+  function onFileDrop(e: React.DragEvent) {
+    e.preventDefault()
+    const file = e.dataTransfer.files[0]
+    if (file) handleFile(file)
+  }
+
+  async function runImport() {
+    setImporting(true)
+    setProgress(0)
+    const out: ImportResult[] = []
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+      try {
+        if (row.invite_method === 'email' && !row.email) throw new Error('Email required for email invite')
+        const client = await create.mutateAsync({
+          name:      row.name,
+          email:     row.email || undefined,
+          phone:     row.phone || undefined,
+          goal:      row.goal || undefined,
+          category:  row.category || undefined,
+          status:    row.invite_method === 'email' ? 'pending' : 'active',
+        })
+        out.push({ ...row, status: 'success', clientId: client.id })
+      } catch (err: any) {
+        out.push({ ...row, status: 'error', error: err.message })
+      }
+      setProgress(Math.round(((i + 1) / rows.length) * 100))
+    }
+    setResults(out)
+    setImporting(false)
+    setStep('results')
+  }
+
+  const successCount = results.filter(r => r.status === 'success').length
+  const errorCount   = results.filter(r => r.status === 'error').length
+  const emailClients = results.filter(r => r.status === 'success' && r.invite_method === 'email')
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={importing ? undefined : onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col z-10">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center">
+              <Upload size={16} className="text-brand-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Bulk Import Clients</h2>
+              <p className="text-xs text-gray-400">
+                {step === 'upload'  && 'Upload a spreadsheet to import multiple clients at once'}
+                {step === 'preview' && `${rows.length} client${rows.length !== 1 ? 's' : ''} ready to import`}
+                {step === 'results' && `Import complete — ${successCount} added`}
+              </p>
+            </div>
+          </div>
+          {!importing && (
+            <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+              <X size={18} />
+            </button>
+          )}
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+
+          {/* ── Upload step ─────────────────────────── */}
+          {step === 'upload' && (
+            <div className="space-y-5">
+              {/* Download template */}
+              <div className="flex items-center justify-between p-4 bg-brand-50 rounded-xl border border-brand-100">
+                <div>
+                  <p className="text-sm font-semibold text-brand-800">Download Template</p>
+                  <p className="text-xs text-brand-600 mt-0.5">
+                    Fill in the spreadsheet then upload it below
+                  </p>
+                </div>
+                <button
+                  onClick={downloadTemplate}
+                  className="flex items-center gap-2 px-3 py-2 bg-white border border-brand-200 text-brand-700 text-xs font-semibold rounded-lg hover:bg-brand-50 transition-colors shadow-sm"
+                >
+                  <Download size={14} />
+                  Download (.xlsx)
+                </button>
+              </div>
+
+              {/* Template column guide */}
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Template Columns</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {[
+                    { col: 'name',          req: true,  desc: 'Full name' },
+                    { col: 'email',         req: false, desc: 'Required for email invite' },
+                    { col: 'phone',         req: false, desc: 'Mobile number' },
+                    { col: 'goal',          req: false, desc: 'e.g. Weight Loss' },
+                    { col: 'category',      req: false, desc: 'e.g. Premium' },
+                    { col: 'group_name',    req: false, desc: 'Group or cohort' },
+                    { col: 'invite_method', req: true,  desc: '"email" or "manual"' },
+                  ].map(({ col, req, desc }) => (
+                    <div key={col} className="flex items-start gap-2">
+                      <code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 font-mono text-gray-700 flex-shrink-0">{col}</code>
+                      <span className="text-gray-500 leading-relaxed">{desc}{req && <span className="text-rose-500 ml-1">*</span>}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-gray-400">
+                  <span className="font-semibold text-brand-600">email</span> — creates client + marks as Pending, so you can share their portal link<br />
+                  <span className="font-semibold text-gray-600">manual</span> — creates client as Active with no invite
+                </p>
+              </div>
+
+              {/* Drop zone */}
+              <div
+                onDrop={onFileDrop}
+                onDragOver={e => e.preventDefault()}
+                onClick={() => fileRef.current?.click()}
+                className="flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-brand-300 hover:bg-brand-50/30 transition-all"
+              >
+                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Upload size={20} className="text-gray-400" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-gray-700">Drop your file here or click to browse</p>
+                  <p className="text-xs text-gray-400 mt-1">Supports .xlsx, .xls, .csv</p>
+                </div>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  className="hidden"
+                  onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]) }}
+                />
+              </div>
+
+              {parseError && (
+                <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">
+                  <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+                  {parseError}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Preview step ─────────────────────────── */}
+          {step === 'preview' && (
+            <div className="space-y-4">
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
+                  <p className="text-2xl font-bold text-emerald-700">{rows.filter(r => r.invite_method === 'manual').length}</p>
+                  <div className="flex items-center justify-center gap-1.5 mt-1">
+                    <UserCheck size={13} className="text-emerald-600" />
+                    <p className="text-xs font-semibold text-emerald-600">Manual (Active)</p>
+                  </div>
+                </div>
+                <div className="p-3 bg-brand-50 rounded-xl border border-brand-100 text-center">
+                  <p className="text-2xl font-bold text-brand-700">{rows.filter(r => r.invite_method === 'email').length}</p>
+                  <div className="flex items-center justify-center gap-1.5 mt-1">
+                    <Mail size={13} className="text-brand-600" />
+                    <p className="text-xs font-semibold text-brand-600">Email Invite (Pending)</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Table preview */}
+              <div className="border border-gray-100 rounded-xl overflow-hidden">
+                <div className="overflow-x-auto max-h-72">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-100 sticky top-0">
+                        <th className="px-3 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide">Name</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide">Email</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide">Goal</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide">Invite</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide">Validation</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {rows.map((r, i) => {
+                        const warn = r.invite_method === 'email' && !r.email ? 'Email required' : null
+                        return (
+                          <tr key={i} className={clsx('hover:bg-gray-50/60', warn && 'bg-rose-50/40')}>
+                            <td className="px-3 py-2.5 font-medium text-gray-800">{r.name}</td>
+                            <td className="px-3 py-2.5 text-gray-500">{r.email || '—'}</td>
+                            <td className="px-3 py-2.5 text-gray-500">{r.goal || '—'}</td>
+                            <td className="px-3 py-2.5">
+                              {r.invite_method === 'email'
+                                ? <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-50 text-brand-700 rounded-full font-semibold"><Mail size={10} /> Email</span>
+                                : <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-semibold"><UserCheck size={10} /> Manual</span>
+                              }
+                            </td>
+                            <td className="px-3 py-2.5">
+                              {warn
+                                ? <span className="flex items-center gap-1 text-rose-600"><AlertCircle size={12} />{warn}</span>
+                                : <span className="flex items-center gap-1 text-emerald-600"><CheckCircle2 size={12} />Ready</span>
+                              }
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {rows.some(r => r.invite_method === 'email' && !r.email) && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
+                  <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                  Rows with email invite method but no email will fail. Add an email or change their method to manual.
+                </div>
+              )}
+
+              {importing && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>Importing clients…</span>
+                    <span>{progress}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-brand-500 to-violet-500 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Results step ─────────────────────────── */}
+          {step === 'results' && (
+            <div className="space-y-4">
+              {/* Summary */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
+                  <CheckCircle2 size={20} className="mx-auto mb-1 text-emerald-600" />
+                  <p className="text-2xl font-bold text-emerald-700">{successCount}</p>
+                  <p className="text-xs font-semibold text-emerald-600">Imported</p>
+                </div>
+                <div className={clsx('p-4 rounded-xl border text-center', errorCount > 0 ? 'bg-rose-50 border-rose-100' : 'bg-gray-50 border-gray-100')}>
+                  <AlertCircle size={20} className={clsx('mx-auto mb-1', errorCount > 0 ? 'text-rose-500' : 'text-gray-300')} />
+                  <p className={clsx('text-2xl font-bold', errorCount > 0 ? 'text-rose-700' : 'text-gray-400')}>{errorCount}</p>
+                  <p className={clsx('text-xs font-semibold', errorCount > 0 ? 'text-rose-600' : 'text-gray-400')}>Failed</p>
+                </div>
+              </div>
+
+              {/* Portal links for email-invite clients */}
+              {emailClients.length > 0 && (
+                <div className="border border-brand-100 rounded-xl overflow-hidden">
+                  <div className="bg-brand-50 px-4 py-3 border-b border-brand-100">
+                    <div className="flex items-center gap-2">
+                      <Mail size={14} className="text-brand-600" />
+                      <p className="text-sm font-semibold text-brand-800">Portal Links — Share with Clients</p>
+                    </div>
+                    <p className="text-xs text-brand-600 mt-0.5">Copy each link and send via email or message</p>
+                  </div>
+                  <div className="divide-y divide-gray-50 max-h-48 overflow-y-auto">
+                    {emailClients.map((r, i) => (
+                      <div key={i} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50/60">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">{r.name}</p>
+                          <p className="text-xs text-gray-400">{r.email}</p>
+                        </div>
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="text-xs text-gray-400 truncate max-w-[160px]">{portalBase}{r.clientId}</span>
+                          <CopyButton text={portalBase + r.clientId} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Errors */}
+              {errorCount > 0 && (
+                <div className="border border-rose-100 rounded-xl overflow-hidden">
+                  <div className="bg-rose-50 px-4 py-2.5 border-b border-rose-100">
+                    <p className="text-xs font-semibold text-rose-700">Failed Rows</p>
+                  </div>
+                  <div className="divide-y divide-gray-50 max-h-36 overflow-y-auto">
+                    {results.filter(r => r.status === 'error').map((r, i) => (
+                      <div key={i} className="flex items-center justify-between px-4 py-2.5">
+                        <p className="text-sm font-medium text-gray-700">{r.name}</p>
+                        <p className="text-xs text-rose-600">{r.error}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3 flex-shrink-0">
+          {step === 'upload' && (
+            <>
+              <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+                Cancel
+              </button>
+              <button onClick={downloadTemplate} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-brand-600 bg-brand-50 rounded-xl hover:bg-brand-100 transition-colors">
+                <Download size={15} />
+                Get Template
+              </button>
+            </>
+          )}
+          {step === 'preview' && (
+            <>
+              <button onClick={() => { setStep('upload'); setRows([]) }} disabled={importing} className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 disabled:opacity-50 transition-colors">
+                Back
+              </button>
+              <button
+                onClick={runImport}
+                disabled={importing || rows.length === 0}
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-60 transition-all shadow-sm shadow-brand-500/20"
+              >
+                {importing
+                  ? <><Loader2 size={15} className="animate-spin" />Importing…</>
+                  : <><Upload size={15} />Import {rows.length} Client{rows.length !== 1 ? 's' : ''}</>
+                }
+              </button>
+            </>
+          )}
+          {step === 'results' && (
+            <button onClick={onClose} className="ml-auto px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all">
+              Done
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Clients page ─────────────────────────────────────────────
 export default function Clients() {
   const [search, setSearch]         = useState('')
@@ -239,6 +668,7 @@ export default function Clients() {
   const [viewMode, setViewMode]     = useState<ViewMode>('table')
   const [showFilters, setShowFilters] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
 
   const { data: clients = [], isLoading } = useClients({
     status: statusFilter,
@@ -247,7 +677,8 @@ export default function Clients() {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-4">
-      {showAddModal && <AddClientModal onClose={() => setShowAddModal(false)} />}
+      {showAddModal    && <AddClientModal   onClose={() => setShowAddModal(false)} />}
+      {showImportModal && <BulkImportModal onClose={() => setShowImportModal(false)} />}
 
       {/* Page header */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -273,6 +704,13 @@ export default function Clients() {
           >
             <Filter size={16} />
             Filters
+          </button>
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-all shadow-sm"
+          >
+            <Upload size={16} />
+            Import
           </button>
           <button
             onClick={() => setShowAddModal(true)}
