@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import type React from 'react'
 import { useParams } from 'react-router-dom'
 import {
   Dumbbell, CheckCircle2, Clock, Calendar, ChevronDown, ChevronUp,
   Loader2, Target, ClipboardList, ArrowLeft, Lock,
   BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight, ChevronLeft,
-  X, Home, MoreHorizontal, MessageCircle, Settings, Send, GripVertical,
+  X, Home, Menu, MessageCircle, Settings, Send, GripVertical,
   Users2, Heart, BookOpen, Video, Headphones, FileText, AlignLeft, ExternalLink,
   Download, Eye, EyeOff, Check, Repeat2,
 } from 'lucide-react'
@@ -337,7 +338,7 @@ function AccountabilityView({ data }: { data: PortalAccountabilityData | null })
         </div>
       </div>
 
-      <div className="px-4 pb-28 space-y-6 mt-5">
+      <div className="px-4 pb-8 space-y-6 mt-5">
 
         {/* Active commitments */}
         {openSessions.length > 0 ? (
@@ -1413,7 +1414,7 @@ function CommunityView({ clientId }: { clientId: string }) {
   const selectedModule = modules.find(m => m.id === selectedModuleId) ?? null
 
   return (
-    <div className="min-h-screen bg-[#15152a] pb-28">
+    <div className="min-h-screen bg-[#15152a] pb-8">
 
       {/* Sticky top nav */}
       <div className="sticky top-0 z-20 bg-[#15152a]/95 backdrop-blur-xl">
@@ -1786,7 +1787,7 @@ function CommunityView({ clientId }: { clientId: string }) {
             </div>
           </div>
 
-          <div className="px-4 py-5 pb-28 max-w-2xl mx-auto">
+          <div className="px-4 py-5 pb-8 max-w-2xl mx-auto">
             {/* Video — embed (YouTube/Vimeo/Loom) or direct file */}
             {openLesson.content_type === 'video' && openLesson.content_url && (
               <div className="rounded-2xl overflow-hidden aspect-video bg-black mb-5">
@@ -2152,7 +2153,7 @@ function PlanView({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] pb-28">
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] pb-8">
 
       {/* ── Task metric input sheet ── */}
       {metricTask && (
@@ -2439,7 +2440,7 @@ function WorkoutsView({ data, clientId, onMarkComplete }: {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-6 pb-28">
+      <div className="max-w-lg mx-auto px-4 py-5 space-y-6 pb-8">
         {/* Active program schedule */}
         {data.program && (
           <ProgramScheduleCard
@@ -2699,7 +2700,7 @@ function HistoryView({ clientId }: { clientId: string }) {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-3 pb-28">
+      <div className="max-w-lg mx-auto px-4 py-5 space-y-3 pb-8">
         {loading ? (
           <LoadingCard label="Loading history" />
         ) : entries.length === 0 ? (
@@ -2977,7 +2978,7 @@ function MetricsView({ clientId }: { clientId: string }) {
         </button>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-4 pb-28">
+      <div className="max-w-lg mx-auto px-4 py-5 space-y-4 pb-8">
         {loading ? (
           <LoadingCard label="Loading metrics" />
         ) : entries.length === 0 ? (
@@ -3137,7 +3138,7 @@ function NutritionView({ clientId }: { clientId: string }) {
         </div>
       </div>
 
-      <div className="px-4 pt-5 pb-28 space-y-4">
+      <div className="px-4 pt-5 pb-8 space-y-4">
         {loading ? (
           <div className="flex justify-center pt-16">
             <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
@@ -3365,7 +3366,7 @@ function MessagesView({ clientId, onUnreadChange }: {
       </div>
 
       {/* Input */}
-      <div className="px-4 pb-28 pt-3 border-t border-white/8 bg-[#0a0a1a]/60 backdrop-blur-md flex-shrink-0">
+      <div className="px-4 pb-8 pt-3 border-t border-white/8 bg-[#0a0a1a]/60 backdrop-blur-md flex-shrink-0">
         <div className="flex items-center gap-3 bg-white/8 border border-white/12 rounded-2xl px-4 py-3 focus-within:border-brand-400/50 transition-all">
           <input
             value={draft}
@@ -3556,216 +3557,156 @@ function HabitsView({ clientId }: { clientId: string }) {
   )
 }
 
-// ─── More sheet (slide-up) ─────────────────────────────────────
-function MoreSheet({
-  onClose, onNavigate, portalSections, hasUnreadMessages,
+// ─── Portal side navigation ────────────────────────────────────
+function PortalSideNav({
+  activeSection, hasUnreadMessages, portalSections, onNav, clientName,
 }: {
-  onClose: () => void
-  onNavigate: (section: ActiveSection) => void
-  portalSections: string[]
+  activeSection: ActiveSection
   hasUnreadMessages: boolean
+  portalSections: string[]
+  onNav: (s: ActiveSection) => void
+  clientName: string
 }) {
-  const items = [
-    {
-      section: 'habits' as const,
-      label: 'Habits',
-      desc: 'Daily habits & streaks',
-      icon: Repeat2,
-      gradient: 'from-emerald-500 to-teal-600',
-      glow: 'shadow-emerald-500/30',
-      bg: 'from-emerald-500/15 to-teal-600/10',
-      border: 'border-emerald-500/20',
-      alwaysUnlocked: true,
-      unread: false,
-    },
-    {
-      section: 'messages' as const,
-      label: 'Messages',
-      desc: 'Chat with your coach',
-      icon: MessageCircle,
-      gradient: 'from-sky-500 to-blue-600',
-      glow: 'shadow-sky-500/30',
-      bg: 'from-sky-500/15 to-blue-600/10',
-      border: 'border-sky-500/20',
-      alwaysUnlocked: true,
-      unread: hasUnreadMessages,
-    },
-    {
-      section: 'history' as const,
-      label: 'History',
-      desc: 'Past sessions & logs',
-      icon: History,
-      gradient: 'from-amber-500 to-orange-500',
-      glow: 'shadow-amber-500/30',
-      bg: 'from-amber-500/15 to-orange-500/10',
-      border: 'border-amber-500/20',
-      alwaysUnlocked: true,
-      unread: false,
-    },
-    {
-      section: 'nutrition' as const,
-      label: 'Nutrition',
-      desc: 'Meal plans & guidance',
-      icon: Utensils,
-      gradient: 'from-rose-500 to-pink-500',
-      glow: 'shadow-rose-500/30',
-      bg: 'from-rose-500/15 to-pink-500/10',
-      border: 'border-rose-500/20',
-      alwaysUnlocked: false,
-      unread: false,
-    },
+  const [open, setOpen] = useState(false)
+
+  const navItems: {
+    section: ActiveSection
+    label: string
+    icon: React.ElementType
+    alwaysUnlocked?: boolean
+    unread?: boolean
+  }[] = [
+    { section: null,             label: 'Home',           icon: Home,          alwaysUnlocked: true },
+    { section: 'workouts',       label: 'Workouts',       icon: Dumbbell,      alwaysUnlocked: true },
+    { section: 'plan',           label: 'Plan',           icon: Calendar,      alwaysUnlocked: true },
+    { section: 'history',        label: 'History',        icon: History,       alwaysUnlocked: true },
+    { section: 'metrics',        label: 'Metrics',        icon: TrendingUp,    alwaysUnlocked: true },
+    { section: 'nutrition',      label: 'Nutrition',      icon: Utensils },
+    { section: 'habits',         label: 'Habits',         icon: Repeat2,       alwaysUnlocked: true },
+    { section: 'messages',       label: 'Messages',       icon: MessageCircle, alwaysUnlocked: true, unread: hasUnreadMessages },
+    { section: 'accountability', label: 'Accountability', icon: Zap,           alwaysUnlocked: true },
+    { section: 'community',      label: 'Community',      icon: Users2 },
   ]
 
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      {/* Panel */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl bg-[#0d0d20] border-t border-white/10 pb-10">
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-10 h-1 rounded-full bg-white/20" />
-        </div>
-
-        <div className="px-5 pb-2 flex items-center justify-between">
-          <p className="text-white font-bold text-lg">More</p>
+  function NavContent() {
+    return (
+      <div className="h-full flex flex-col bg-[#09091a] border-r border-white/8 w-64 select-none">
+        {/* Logo */}
+        <div className="flex items-center justify-between px-4 py-5">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-violet-600 rounded-lg flex items-center justify-center shadow-lg shadow-brand-600/30">
+              <Dumbbell size={16} className="text-white" />
+            </div>
+            <span className="text-white font-bold text-base tracking-tight">FitProto</span>
+          </div>
+          {/* Mobile close button */}
           <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors"
+            onClick={() => setOpen(false)}
+            className="lg:hidden text-white/40 hover:text-white p-1 rounded transition-colors"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
-        <div className="px-4 pt-2 space-y-2">
-          {items.map(item => {
-            const Icon = item.icon
-            const unlocked = item.alwaysUnlocked || portalSections.includes(item.section)
+        {/* Client name pill */}
+        {clientName && (
+          <div className="mx-4 mb-3 px-3 py-2 rounded-lg bg-white/5 border border-white/8">
+            <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-0.5">Logged in as</p>
+            <p className="text-[13px] font-semibold text-white truncate">{clientName}</p>
+          </div>
+        )}
+
+        <div className="mx-4 h-px bg-white/8" />
+
+        {/* Nav items */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+          {navItems.map(({ section, label, icon: Icon, alwaysUnlocked, unread }) => {
+            const unlocked = alwaysUnlocked || portalSections.includes(section ?? '')
+            const active = activeSection === section
             return (
               <button
-                key={item.section}
-                onClick={() => { onNavigate(item.section); onClose() }}
+                key={label}
                 disabled={!unlocked}
+                onClick={() => { if (unlocked) { onNav(section); setOpen(false) } }}
                 className={clsx(
-                  'w-full flex items-center gap-4 rounded-2xl p-4 text-left transition-all active:scale-[0.98]',
-                  unlocked
-                    ? `bg-gradient-to-br ${item.bg} border ${item.border}`
-                    : 'bg-white/4 border border-white/8 opacity-60',
+                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 relative',
+                  active
+                    ? 'bg-gradient-to-r from-brand-600/25 to-brand-500/10 text-white border border-brand-500/20'
+                    : unlocked
+                      ? 'text-white/50 hover:bg-white/6 hover:text-white/80 border border-transparent'
+                      : 'text-white/20 border border-transparent cursor-default',
                 )}
               >
-                <div className={clsx(
-                  'w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0',
-                  unlocked ? `bg-gradient-to-br ${item.gradient} shadow-${item.glow}` : 'bg-white/10',
-                )}>
-                  <Icon size={20} className="text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={clsx('font-bold text-[15px]', unlocked ? 'text-white' : 'text-white/30')}>
-                    {item.label}
-                  </p>
-                  <p className={clsx('text-xs mt-0.5', unlocked ? 'text-white/45' : 'text-white/20')}>
-                    {item.desc}
-                  </p>
-                </div>
-                {!unlocked && (
-                  <div className="flex items-center gap-1 text-white/25">
-                    <Lock size={14} />
-                  </div>
+                {active && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-400 rounded-full" />
                 )}
-                {'unread' in item && item.unread && unlocked && (
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0" />
+                <Icon size={17} className={active ? 'text-brand-400' : unlocked ? 'text-white/40' : 'text-white/15'} />
+                <span className="flex-1 text-left">{label}</span>
+                {!unlocked && <Lock size={12} className="text-white/20" />}
+                {unread && unlocked && !active && (
+                  <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
                 )}
-                {unlocked && <ChevronRight size={18} className="text-white/30 flex-shrink-0" />}
               </button>
             )
           })}
+        </nav>
 
-          {/* Settings row */}
-          <div className="border-t border-white/8 pt-2 mt-1">
-            <button className="w-full flex items-center gap-4 rounded-2xl p-4 text-left bg-white/4 border border-white/8 opacity-60 cursor-default">
-              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center flex-shrink-0">
-                <Settings size={20} className="text-white/40" />
-              </div>
-              <div>
-                <p className="font-bold text-[15px] text-white/30">Settings</p>
-                <p className="text-xs text-white/20 mt-0.5">Coming soon</p>
-              </div>
-            </button>
-          </div>
+        <div className="mx-4 h-px bg-white/8" />
+
+        {/* Settings (locked) */}
+        <div className="px-3 py-3">
+          <button
+            disabled
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium border border-transparent text-white/20 cursor-default"
+          >
+            <Settings size={17} className="text-white/15" />
+            <span className="flex-1 text-left">Settings</span>
+            <span className="text-[9px] font-bold uppercase tracking-wide text-white/20 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded">Soon</span>
+          </button>
         </div>
       </div>
-    </>
-  )
-}
-
-// ─── Universal bottom tab bar ──────────────────────────────────
-function BottomTabBar({
-  activeSection, showMore, hasUnreadMessages, onTab, onMoreToggle,
-}: {
-  activeSection: ActiveSection
-  showMore: boolean
-  hasUnreadMessages: boolean
-  onTab: (s: ActiveSection) => void
-  onMoreToggle: () => void
-}) {
-  const tabs = [
-    { label: 'Home',      Icon: Home,      section: null as ActiveSection,          unread: false },
-    { label: 'Workouts',  Icon: Dumbbell,  section: 'workouts' as ActiveSection,    unread: false },
-    { label: 'Plan',      Icon: Calendar,  section: 'plan' as ActiveSection,        unread: false },
-    { label: 'Community', Icon: Users2,    section: 'community' as ActiveSection,   unread: false },
-  ]
-
-  // "More" is active when the sheet is open or on a non-main-tab section
-  const moreActive = showMore || activeSection === 'nutrition' || activeSection === 'history' || activeSection === 'metrics' || activeSection === 'messages' || activeSection === 'habits'
-  // Show unread badge on the More button when messages have unreads
-  const moreUnread = hasUnreadMessages && activeSection !== 'messages'
+    )
+  }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#09091a]/95 backdrop-blur-xl border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
-      <div className="flex">
-        {tabs.map(({ label, Icon, section, unread }) => {
-          const active = !moreActive && activeSection === section
-          return (
-            <button
-              key={label}
-              onClick={() => onTab(section)}
-              className="flex-1 flex flex-col items-center gap-1 py-3 transition-colors"
-            >
-              <div className="relative">
-                <Icon size={22} className={active ? 'text-brand-400' : 'text-white/35'} />
-                {unread && !active && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500 border border-[#09091a]" />
-                )}
-              </div>
-              <span className={clsx('text-[10px] font-semibold tracking-wide',
-                active ? 'text-brand-400' : 'text-white/35')}>
-                {label}
-              </span>
-            </button>
-          )
-        })}
-
-        {/* More tab */}
-        <button
-          onClick={onMoreToggle}
-          className="flex-1 flex flex-col items-center gap-1 py-3 pb-6 transition-colors"
-        >
-          <div className="relative">
-            <MoreHorizontal size={22} className={moreActive ? 'text-brand-400' : 'text-white/35'} />
-            {moreUnread && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500 border border-[#09091a]" />
-            )}
-          </div>
-          <span className={clsx('text-[10px] font-semibold tracking-wide',
-            moreActive ? 'text-brand-400' : 'text-white/35')}>
-            More
-          </span>
-        </button>
+    <>
+      {/* Desktop fixed sidebar */}
+      <div className="hidden lg:block fixed inset-y-0 left-0 z-30">
+        <NavContent />
       </div>
-    </div>
+
+      {/* Mobile top bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-[#09091a]/95 backdrop-blur-xl border-b border-white/8 flex items-center px-4 h-14">
+        <button
+          onClick={() => setOpen(true)}
+          className="w-9 h-9 rounded-lg bg-white/8 flex items-center justify-center text-white/60 hover:text-white transition-colors"
+        >
+          <Menu size={20} />
+        </button>
+        <div className="flex-1 flex items-center justify-center gap-2">
+          <div className="w-6 h-6 bg-gradient-to-br from-brand-500 to-violet-600 rounded-md flex items-center justify-center">
+            <Dumbbell size={13} className="text-white" />
+          </div>
+          <span className="text-white font-bold text-sm tracking-tight">FitProto</span>
+        </div>
+        {hasUnreadMessages && (
+          <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+        )}
+      </div>
+
+      {/* Mobile drawer */}
+      {open && (
+        <>
+          <div
+            className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+          />
+          <div className="lg:hidden fixed inset-y-0 left-0 z-50">
+            <NavContent />
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
@@ -3846,7 +3787,6 @@ export default function ClientPortal() {
   const [notFound, setNotFound]             = useState(false)
   const [activeSection, setActiveSection]     = useState<ActiveSection>(null)
   const [mountedSections, setMountedSections] = useState<Set<string>>(new Set())
-  const [showMore, setShowMore]               = useState(false)
   const [tasks, setTasks]                   = useState<PortalTask[]>([])
   const [habits, setHabits]                 = useState<PortalHabit[]>([])
   const [accountability, setAccountability] = useState<PortalAccountabilityData | null>(null)
@@ -3899,7 +3839,6 @@ export default function ClientPortal() {
     }
     if (section !== null) setMountedSections(prev => new Set([...prev, section]))
     setActiveSection(section)
-    setShowMore(false)
   }
 
   // Background poll — checks for new coach messages regardless of active tab
@@ -3995,8 +3934,22 @@ export default function ClientPortal() {
   ]
   const motiv = MOTIV[todayDate.getDay()]
 
+  const clientName = data?.name ?? ''
+
   return (
-    <div className="relative">
+    <div className="flex min-h-screen">
+      {/* ── Side nav ── */}
+      <PortalSideNav
+        activeSection={activeSection}
+        hasUnreadMessages={hasUnreadMessages}
+        portalSections={unlocked}
+        onNav={goTo}
+        clientName={clientName}
+      />
+
+      {/* ── Main content ── */}
+      <div className="flex-1 min-w-0 lg:ml-64 pt-14 lg:pt-0">
+
       {/* ── Log workout overlay (highest z) ── */}
       {loggingWorkout && (
         <PortalLogOverlay
@@ -4004,16 +3957,6 @@ export default function ClientPortal() {
           clientId={clientId!}
           onClose={() => setLoggingWorkout(null)}
           onDone={(id) => { markComplete(id); setLoggingWorkout(null) }}
-        />
-      )}
-
-      {/* ── More sheet ── */}
-      {showMore && (
-        <MoreSheet
-          onClose={() => setShowMore(false)}
-          onNavigate={goTo}
-          portalSections={unlocked}
-          hasUnreadMessages={hasUnreadMessages}
         />
       )}
 
@@ -4085,7 +4028,7 @@ export default function ClientPortal() {
       {/* ── Dashboard (home) ── */}
       {activeSection === null && (
         <div className="min-h-screen bg-[#f1f5f9]">
-          <div className="pb-28">
+          <div className="pb-8">
 
             {/* Greeting */}
             <div className="px-5 pt-14 pb-4">
@@ -4318,14 +4261,7 @@ export default function ClientPortal() {
         </div>
       )}
 
-      {/* ── Universal bottom tab bar ── */}
-      <BottomTabBar
-        activeSection={activeSection}
-        showMore={showMore}
-        hasUnreadMessages={hasUnreadMessages}
-        onTab={goTo}
-        onMoreToggle={() => setShowMore(v => !v)}
-      />
+      </div>{/* end main content */}
     </div>
   )
 }
