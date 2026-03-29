@@ -3,13 +3,14 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import type { DbQuestionnaireTemplate, DbQuestionnaireResponse } from '@/lib/database.types'
 
-export type QuestionType = 'text' | 'textarea' | 'yes_no'
+export type QuestionType = 'text' | 'textarea' | 'yes_no' | 'checkbox_group'
 
 export interface QuestionnaireQuestion {
   id: string
   text: string
   type: QuestionType
   required: boolean
+  options?: string[]
 }
 
 const templateKeys = {
@@ -111,7 +112,7 @@ export function useSaveQuestionnaireResponse() {
     }: {
       leadId: string
       type: 'preq' | 'consult'
-      answers: Record<string, string | boolean>
+      answers: Record<string, string | boolean | string[]>
       existingId?: string
     }) => {
       if (existingId) {

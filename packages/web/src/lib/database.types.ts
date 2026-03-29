@@ -310,7 +310,7 @@ export interface DbQuestionnaireTemplate {
   org_id: string
   type: 'preq' | 'consult'
   title: string
-  questions: { id: string; text: string; type: string; required: boolean }[]
+  questions: { id: string; text: string; type: string; required: boolean; options?: string[] }[]
   created_at: string
   updated_at: string
 }

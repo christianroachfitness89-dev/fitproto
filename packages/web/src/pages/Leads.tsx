@@ -102,9 +102,10 @@ function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
     { key: 'consult' as const, label: 'Consultation' },
   ]
   const QTYPES: { value: QuestionType; label: string }[] = [
-    { value: 'text',     label: 'Short answer' },
-    { value: 'textarea', label: 'Long answer' },
-    { value: 'yes_no',   label: 'Yes / No' },
+    { value: 'text',           label: 'Short answer' },
+    { value: 'textarea',       label: 'Long answer' },
+    { value: 'yes_no',         label: 'Yes / No' },
+    { value: 'checkbox_group', label: 'Checkboxes' },
   ]
 
   return (
@@ -159,7 +160,7 @@ function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
                 <div className="flex items-center gap-3">
                   <select
                     value={q.type}
-                    onChange={e => updateQuestion(q.id, { type: e.target.value as QuestionType })}
+                    onChange={e => updateQuestion(q.id, { type: e.target.value as QuestionType, options: e.target.value === 'checkbox_group' ? (q.options ?? ['']) : undefined })}
                     className="flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all"
                   >
                     {QTYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -174,6 +175,41 @@ function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
                     Required
                   </label>
                 </div>
+                {q.type === 'checkbox_group' && (
+                  <div className="space-y-1.5 pt-1">
+                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Checkbox options</p>
+                    {(q.options ?? ['']).map((opt, oi) => (
+                      <div key={oi} className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={e => {
+                            const opts = [...(q.options ?? [''])]
+                            opts[oi] = e.target.value
+                            updateQuestion(q.id, { options: opts })
+                          }}
+                          className="flex-1 px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                          placeholder={`Option ${oi + 1}`}
+                        />
+                        <button
+                          onClick={() => {
+                            const opts = (q.options ?? ['']).filter((_, j) => j !== oi)
+                            updateQuestion(q.id, { options: opts.length ? opts : [''] })
+                          }}
+                          className="p-1 text-gray-300 hover:text-rose-400 transition-colors"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => updateQuestion(q.id, { options: [...(q.options ?? ['']), ''] })}
+                      className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+                    >
+                      + Add option
+                    </button>
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => removeQuestion(q.id)}
@@ -586,7 +622,7 @@ function QuestionnaireModal({
   const saveResponse = useSaveQuestionnaireResponse()
   const updateLead   = useUpdateLead()
 
-  const [answers, setAnswers] = useState<Record<string, string | boolean>>({})
+  const [answers, setAnswers] = useState<Record<string, string | boolean | string[]>>({})
   const [initialised, setInitialised] = useState(false)
 
   // populate from existing response once loaded
@@ -650,7 +686,30 @@ function QuestionnaireModal({
                   {i + 1}. {q.text || <span className="text-gray-400 italic">Untitled question</span>}
                   {q.required && <span className="text-rose-400 ml-1">*</span>}
                 </label>
-                {q.type === 'yes_no' ? (
+                {q.type === 'checkbox_group' ? (
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                    {(q.options ?? []).filter(Boolean).map(opt => {
+                      const selected = (answers[q.id] as string[] | undefined) ?? []
+                      const checked = selected.includes(opt)
+                      return (
+                        <label key={opt} className="flex items-center gap-2 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              const next = checked
+                                ? selected.filter(o => o !== opt)
+                                : [...selected, opt]
+                              setAnswers(a => ({ ...a, [q.id]: next }))
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0 cursor-pointer"
+                          />
+                          <span className="text-sm text-gray-700 group-hover:text-gray-900">{opt}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                ) : q.type === 'yes_no' ? (
                   <div className="flex gap-2">
                     {(['Yes', 'No'] as const).map(opt => (
                       <button
