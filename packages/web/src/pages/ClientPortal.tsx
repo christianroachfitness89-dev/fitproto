@@ -2511,9 +2511,9 @@ function SessionDetailView({ entry, clientId, onBack }: {
   })
 
   return (
-    <div className="fixed inset-0 z-30 bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] flex flex-col">
+    <div className="fixed inset-0 lg:left-64 z-30 bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-12 pb-5 border-b border-white/8 flex-shrink-0">
+      <div className="flex items-center gap-3 px-4 pt-14 lg:pt-6 pb-5 border-b border-white/8 flex-shrink-0">
         <button onClick={onBack}
           className="w-10 h-10 rounded-2xl bg-white/8 border border-white/10 hover:bg-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all">
           <ArrowLeft size={18} />
@@ -3440,7 +3440,7 @@ function HabitsView({ clientId }: { clientId: string }) {
   const total = habits.length
 
   return (
-    <div className="fixed inset-0 z-30 bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f23] via-[#1a1a35] to-[#1e1040] flex flex-col">
 
       {/* Metric input sheet */}
       {metricHabit && (
