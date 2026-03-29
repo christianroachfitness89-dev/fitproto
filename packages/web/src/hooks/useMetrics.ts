@@ -48,6 +48,35 @@ export function useCheckIns(clientId: string) {
   })
 }
 
+export function useAllCheckIns() {
+  const { profile } = useAuth()
+  const orgId = profile?.org_id
+
+  return useQuery({
+    queryKey: ['check_ins_all', orgId],
+    queryFn: async () => {
+      const { data: clients, error: clientsErr } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('org_id', orgId!)
+      if (clientsErr) throw clientsErr
+
+      const ids = (clients ?? []).map((c: { id: string }) => c.id)
+      if (!ids.length) return []
+
+      const { data, error } = await supabase
+        .from('check_ins')
+        .select('*')
+        .in('client_id', ids)
+        .order('checked_in_at', { ascending: false })
+        .limit(500)
+      if (error) throw error
+      return (data ?? []) as DbCheckIn[]
+    },
+    enabled: !!orgId,
+  })
+}
+
 export function useCreateCheckIn() {
   const { profile } = useAuth()
   const qc = useQueryClient()
@@ -78,7 +107,10 @@ export function useCreateCheckIn() {
       if (error) throw error
       return data as DbCheckIn
     },
-    onSuccess: (data) => qc.invalidateQueries({ queryKey: ['check_ins', data.client_id] }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['check_ins', data.client_id] })
+      qc.invalidateQueries({ queryKey: ['check_ins_all'] })
+    },
   })
 }
 
@@ -90,7 +122,10 @@ export function useDeleteCheckIn() {
       if (error) throw error
       return clientId
     },
-    onSuccess: (clientId) => qc.invalidateQueries({ queryKey: ['check_ins', clientId] }),
+    onSuccess: (clientId) => {
+      qc.invalidateQueries({ queryKey: ['check_ins', clientId] })
+      qc.invalidateQueries({ queryKey: ['check_ins_all'] })
+    },
   })
 }
 

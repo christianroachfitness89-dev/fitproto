@@ -150,7 +150,7 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
   const [showSettings, setShowSettings]   = useState(false)
   const location = useLocation()
   const isLibraryActive  = location.pathname.startsWith('/library')
-  const isClientsActive  = location.pathname.startsWith('/clients')
+  const isClientsActive  = location.pathname.startsWith('/clients') || location.pathname === '/clients/check-ins'
   const isBusinessActive = location.pathname.startsWith('/leads')
   const { profile, signOut } = useAuth()
   const { data: conversations } = useConversations()
@@ -236,13 +236,28 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
                 <span className="flex-1">All Clients</span>
               </NavLink>
 
+              {/* Check-ins — active */}
+              <NavLink
+                to="/clients/check-ins"
+                className={({ isActive }) =>
+                  clsx(
+                    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all',
+                    isActive
+                      ? 'text-brand-300 bg-brand-500/10'
+                      : 'text-gray-500 hover:text-gray-300 hover:bg-sidebar-hover'
+                  )
+                }
+              >
+                <ClipboardList size={14} />
+                <span className="flex-1">Check-ins</span>
+              </NavLink>
+
               {/* Locked placeholders */}
               {([
-                { icon: <ClipboardList size={14} />, label: 'Check-ins'          },
-                { icon: <TrendingUp    size={14} />, label: 'Progress & Metrics' },
-                { icon: <Utensils      size={14} />, label: 'Nutrition Plans'    },
-                { icon: <Users2        size={14} />, label: 'Groups & Tags'      },
-                { icon: <CreditCard    size={14} />, label: 'Billing & Plans'    },
+                { icon: <TrendingUp size={14} />, label: 'Progress & Metrics' },
+                { icon: <Utensils   size={14} />, label: 'Nutrition Plans'    },
+                { icon: <Users2     size={14} />, label: 'Groups & Tags'      },
+                { icon: <CreditCard size={14} />, label: 'Billing & Plans'    },
               ] as { icon: React.ReactNode; label: string }[]).map(item => (
                 <div key={item.label}
                   className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-gray-700 cursor-default select-none">
