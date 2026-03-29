@@ -3619,7 +3619,7 @@ function PortalSideNav({
         <div className="mx-4 h-px bg-white/8" />
 
         {/* Nav items */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-0.5">
           {navItems.map(({ section, label, icon: Icon, alwaysUnlocked, unread }) => {
             const unlocked = alwaysUnlocked || portalSections.includes(section ?? '')
             const active = activeSection === section
