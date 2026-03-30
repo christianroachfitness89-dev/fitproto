@@ -157,8 +157,8 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
             <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 size={32} className="text-emerald-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">{result} exercises imported!</h3>
-            <p className="text-sm text-gray-500 mb-6">Your exercise library has been updated.</p>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{result} exercises synced!</h3>
+            <p className="text-sm text-gray-500 mb-6">New exercises were added and existing ones updated — no duplicates created.</p>
             <button onClick={onClose}
               className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl">
               Done
@@ -168,8 +168,8 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
           <>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Import Exercises from CSV</h2>
-                <p className="text-xs text-gray-500 mt-0.5">Upload your exercise database CSV file</p>
+                <h2 className="text-lg font-bold text-gray-900">Sync Exercises from CSV</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Adds new exercises and updates existing ones by name — safe to re-upload anytime</p>
               </div>
               <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18} /></button>
             </div>
@@ -248,8 +248,8 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all"
               >
                 {bulkImport.isPending
-                  ? <><Loader2 size={15} className="animate-spin" /> Importing…</>
-                  : <><Upload size={14} /> Import {preview?.length ?? ''} Exercises</>
+                  ? <><Loader2 size={15} className="animate-spin" /> Syncing…</>
+                  : <><Upload size={14} /> Sync {preview?.length ?? ''} Exercises</>
                 }
               </button>
             </div>
@@ -564,7 +564,7 @@ function ExercisesList() {
         <div className="flex items-center gap-2">
           <button onClick={() => setShowImport(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 shadow-sm transition-all">
-            <Upload size={15} />Import CSV
+            <Upload size={15} />Sync CSV
           </button>
           <button onClick={() => setShowModal(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all">

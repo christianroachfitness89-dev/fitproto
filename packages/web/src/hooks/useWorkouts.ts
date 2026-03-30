@@ -54,14 +54,20 @@ export function useBulkImportExercises() {
       const orgId = profile?.org_id
       if (!orgId) throw new Error('Session not ready')
       const payload = rows.map(r => ({ ...r, org_id: orgId }))
-      // Insert in batches of 200 to stay within Supabase limits
-      let inserted = 0
+      // Upsert in batches of 200 — updates existing exercises matched by (org_id, name),
+      // inserts new ones. Never creates duplicates.
+      let processed = 0
       for (let i = 0; i < payload.length; i += 200) {
-        const { error } = await supabase.from('exercises').insert(payload.slice(i, i + 200) as any)
+        const { error } = await supabase
+          .from('exercises')
+          .upsert(payload.slice(i, i + 200) as any, {
+            onConflict: 'org_id,name',
+            ignoreDuplicates: false,
+          })
         if (error) throw error
-        inserted += Math.min(200, payload.length - i)
+        processed += Math.min(200, payload.length - i)
       }
-      return inserted
+      return processed
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises'] }),
   })
