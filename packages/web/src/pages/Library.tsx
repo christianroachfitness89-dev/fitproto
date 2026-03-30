@@ -576,22 +576,76 @@ function WorkoutModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+// ─── Checkbox filter group ────────────────────────────────────
+function CheckboxGroup({
+  label, options, selected, onChange,
+}: {
+  label: string
+  options: string[]
+  selected: string[]
+  onChange: (v: string[]) => void
+}) {
+  if (options.length === 0) return null
+  function toggle(opt: string) {
+    onChange(selected.includes(opt) ? selected.filter(x => x !== opt) : [...selected, opt])
+  }
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{label}</p>
+      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+        {options.map(opt => (
+          <label key={opt} className="flex items-center gap-2.5 cursor-pointer group">
+            <div className={clsx(
+              'w-4 h-4 rounded flex items-center justify-center border transition-all flex-shrink-0',
+              selected.includes(opt)
+                ? 'bg-brand-600 border-brand-600'
+                : 'border-gray-300 group-hover:border-brand-400',
+            )}>
+              {selected.includes(opt) && (
+                <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                  <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </div>
+            <input type="checkbox" checked={selected.includes(opt)} onChange={() => toggle(opt)} className="sr-only" />
+            <span className="text-sm text-gray-700 group-hover:text-gray-900 truncate">{opt}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Exercises list ───────────────────────────────────────────
 function ExercisesList() {
-  const [search, setSearch]       = useState('')
-  const [showModal, setShowModal] = useState(false)
-  const [showImport, setShowImport] = useState(false)
+  const [search, setSearch]           = useState('')
+  const [showModal, setShowModal]     = useState(false)
+  const [showImport, setShowImport]   = useState(false)
   const [editExercise, setEditExercise] = useState<DbExercise | null>(null)
-  const [categoryFilter, setCategoryFilter] = useState('')
+  const [catFilters,  setCatFilters]  = useState<string[]>([])
+  const [musFilers,   setMusFilters]  = useState<string[]>([])
+  const [eqpFilters,  setEqpFilters]  = useState<string[]>([])
 
   const { data: exercises = [], isLoading } = useExercises(search.length >= 2 ? search : undefined)
   const deleteExercise = useDeleteExercise()
 
-  const categories = [...new Set(exercises.map(e => e.category).filter(Boolean))] as string[]
+  const categories  = [...new Set(exercises.map(e => e.category).filter(Boolean))].sort() as string[]
+  const muscles     = [...new Set(exercises.map(e => e.muscle_group).filter(Boolean))].sort() as string[]
+  const equipment   = [...new Set(exercises.map(e => e.equipment).filter(Boolean))].sort() as string[]
 
-  const filtered = categoryFilter
-    ? exercises.filter(e => e.category === categoryFilter)
-    : exercises
+  const activeCount = catFilters.length + musFilers.length + eqpFilters.length
+
+  const filtered = exercises.filter(e =>
+    (catFilters.length  === 0 || catFilters.includes(e.category    ?? '')) &&
+    (musFilers.length   === 0 || musFilers.includes(e.muscle_group ?? '')) &&
+    (eqpFilters.length  === 0 || eqpFilters.includes(e.equipment   ?? ''))
+  )
+
+  function clearAll() {
+    setCatFilters([])
+    setMusFilters([])
+    setEqpFilters([])
+  }
 
   return (
     <div className="space-y-4">
@@ -601,25 +655,18 @@ function ExercisesList() {
 
       <div className="flex items-center gap-2">
         <SearchBar value={search} onChange={setSearch} placeholder="Search exercises…" />
-        {categories.length > 0 && (
-          <FilterPopover activeCount={categoryFilter ? 1 : 0}>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Category</p>
-            <div className="flex flex-wrap gap-1.5">
-              <button onClick={() => setCategoryFilter('')}
-                className={clsx('px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
-                  categoryFilter === '' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>
-                All
+        <FilterPopover activeCount={activeCount}>
+          <div className="space-y-4 w-64">
+            <CheckboxGroup label="Category"     options={categories} selected={catFilters} onChange={setCatFilters} />
+            <CheckboxGroup label="Muscle Group" options={muscles}    selected={musFilers}  onChange={setMusFilters} />
+            <CheckboxGroup label="Equipment"    options={equipment}  selected={eqpFilters} onChange={setEqpFilters} />
+            {activeCount > 0 && (
+              <button onClick={clearAll} className="w-full py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 transition-colors text-center">
+                Clear all filters
               </button>
-              {categories.map(cat => (
-                <button key={cat} onClick={() => setCategoryFilter(cat === categoryFilter ? '' : cat)}
-                  className={clsx('px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
-                    categoryFilter === cat ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </FilterPopover>
-        )}
+            )}
+          </div>
+        </FilterPopover>
         <button onClick={() => setShowImport(true)}
           className="flex items-center gap-2 px-3 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 shadow-sm transition-all flex-shrink-0">
           <Upload size={15} /><span className="hidden sm:inline">Sync CSV</span>
