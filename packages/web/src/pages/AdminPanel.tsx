@@ -567,7 +567,9 @@ function ExercisesTab() {
         body_region:      null,
         mechanics:        null,
       }))
-    if (valid.length) await supabase.from('global_template_exercises').insert(valid as any)
+    if (valid.length) await supabase
+      .from('global_template_exercises')
+      .upsert(valid as any, { onConflict: 'name', ignoreDuplicates: false })
   }
 
   return (
