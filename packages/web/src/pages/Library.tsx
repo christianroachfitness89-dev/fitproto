@@ -1,9 +1,9 @@
-import { useState, useRef, type MouseEvent } from 'react'
+import { useState, useRef, useEffect, type MouseEvent } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Search, Plus, Dumbbell,
   Clock, BarChart3, X, Loader2, Trash2, ChevronRight, Send, CheckCircle2,
-  Upload, AlertCircle, Pencil,
+  Upload, AlertCircle, Pencil, SlidersHorizontal,
 } from 'lucide-react'
 import clsx from 'clsx'
 import {
@@ -34,6 +34,66 @@ function DifficultyBadge({ level }: { level: Difficulty | null }) {
     )}>
       {level.charAt(0).toUpperCase() + level.slice(1)}
     </span>
+  )
+}
+
+// ─── Shared toolbar components ───────────────────────────────
+function SearchBar({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <div className="relative flex-1 min-w-0">
+      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder ?? 'Search…'}
+        className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 shadow-sm transition-all"
+      />
+      {value && (
+        <button onClick={() => onChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+          <X size={13} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+function FilterPopover({ activeCount, children }: { activeCount: number; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handler(e: globalThis.MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative flex-shrink-0">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={clsx(
+          'flex items-center gap-2 px-3 py-2.5 text-sm font-medium rounded-xl border transition-all',
+          open || activeCount > 0
+            ? 'bg-brand-50 border-brand-200 text-brand-700'
+            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50',
+        )}
+      >
+        <SlidersHorizontal size={15} />
+        <span className="hidden sm:inline">Filter</span>
+        {activeCount > 0 && (
+          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] font-bold leading-none">
+            {activeCount}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 z-20 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 min-w-[240px]">
+          {children}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -539,38 +599,35 @@ function ExercisesList() {
       {editExercise && <ExerciseModal exercise={editExercise} onClose={() => setEditExercise(null)} />}
       {showImport   && <CsvImportModal onClose={() => setShowImport(false)} />}
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exercises..."
-            className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 shadow-sm" />
-        </div>
+      <div className="flex items-center gap-2">
+        <SearchBar value={search} onChange={setSearch} placeholder="Search exercises…" />
         {categories.length > 0 && (
-          <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 flex-wrap">
-            <button onClick={() => setCategoryFilter('')}
-              className={clsx('px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
-                categoryFilter === '' ? 'bg-brand-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50')}>
-              All
-            </button>
-            {categories.map(cat => (
-              <button key={cat} onClick={() => setCategoryFilter(cat === categoryFilter ? '' : cat)}
+          <FilterPopover activeCount={categoryFilter ? 1 : 0}>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Category</p>
+            <div className="flex flex-wrap gap-1.5">
+              <button onClick={() => setCategoryFilter('')}
                 className={clsx('px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
-                  categoryFilter === cat ? 'bg-brand-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50')}>
-                {cat}
+                  categoryFilter === '' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>
+                All
               </button>
-            ))}
-          </div>
+              {categories.map(cat => (
+                <button key={cat} onClick={() => setCategoryFilter(cat === categoryFilter ? '' : cat)}
+                  className={clsx('px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
+                    categoryFilter === cat ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </FilterPopover>
         )}
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowImport(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 shadow-sm transition-all">
-            <Upload size={15} />Sync CSV
-          </button>
-          <button onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all">
-            <Plus size={15} />New Exercise
-          </button>
-        </div>
+        <button onClick={() => setShowImport(true)}
+          className="flex items-center gap-2 px-3 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 shadow-sm transition-all flex-shrink-0">
+          <Upload size={15} /><span className="hidden sm:inline">Sync CSV</span>
+        </button>
+        <button onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all flex-shrink-0">
+          <Plus size={15} /><span className="hidden sm:inline">New Exercise</span>
+        </button>
       </div>
 
       {isLoading ? (
@@ -784,15 +841,11 @@ function WorkoutsList() {
       {showModal && <WorkoutModal onClose={() => setShowModal(false)} />}
       {assigning && <AssignToClientModal workout={assigning} onClose={() => setAssigning(null)} />}
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search workouts..."
-            className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 shadow-sm" />
-        </div>
+      <div className="flex items-center gap-2">
+        <SearchBar value={search} onChange={setSearch} placeholder="Search workouts…" />
         <button onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all">
-          <Plus size={15} />New Workout
+          className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all flex-shrink-0">
+          <Plus size={15} /><span className="hidden sm:inline">New Workout</span>
         </button>
       </div>
 
@@ -923,16 +976,12 @@ function ProgramsList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 justify-between">
-        <div className="relative max-w-sm flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search programs..."
-            className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 shadow-sm" />
-        </div>
+      <div className="flex items-center gap-2">
+        <SearchBar value={search} onChange={setSearch} placeholder="Search programs…" />
         <button onClick={handleCreate} disabled={createProgram.isPending}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all disabled:opacity-60">
+          className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all disabled:opacity-60 flex-shrink-0">
           {createProgram.isPending ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-          New Program
+          <span className="hidden sm:inline">New Program</span>
         </button>
       </div>
 

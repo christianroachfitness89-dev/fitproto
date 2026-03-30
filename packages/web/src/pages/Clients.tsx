@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  Search, UserPlus, ChevronDown, ArrowUpDown,
-  MessageSquare, MoreHorizontal, Filter, LayoutGrid, List,
+  Search, UserPlus, ArrowUpDown,
+  MessageSquare, MoreHorizontal, LayoutGrid, List,
   Loader2, X, Users, Upload, Download, CheckCircle2, AlertCircle,
   Copy, Check, Mail, UserCheck, Archive, Trash2, AlertTriangle,
+  SlidersHorizontal,
 } from 'lucide-react'
 import clsx from 'clsx'
 import * as XLSX from 'xlsx'
@@ -13,6 +14,66 @@ import type { DbClient } from '@/lib/database.types'
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'pending'
 type ViewMode = 'table' | 'grid'
+
+// ─── Shared toolbar components ────────────────────────────────
+function SearchBar({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <div className="relative flex-1 min-w-0">
+      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder ?? 'Search…'}
+        className="w-full pl-9 pr-8 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 shadow-sm transition-all"
+      />
+      {value && (
+        <button onClick={() => onChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+          <X size={13} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+function FilterPopover({ activeCount, children }: { activeCount: number; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative flex-shrink-0">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={clsx(
+          'flex items-center gap-2 px-3 py-2.5 text-sm font-medium rounded-xl border transition-all',
+          open || activeCount > 0
+            ? 'bg-brand-50 border-brand-200 text-brand-700'
+            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50',
+        )}
+      >
+        <SlidersHorizontal size={15} />
+        <span className="hidden sm:inline">Filter</span>
+        {activeCount > 0 && (
+          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] font-bold">
+            {activeCount}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 z-20 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 min-w-[220px]">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function StatusBadge({ status }: { status: DbClient['status'] }) {
   return (
@@ -795,7 +856,6 @@ export default function Clients() {
   const [search, setSearch]         = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [viewMode, setViewMode]     = useState<ViewMode>('table')
-  const [showFilters, setShowFilters] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
 
@@ -809,88 +869,51 @@ export default function Clients() {
       {showAddModal    && <AddClientModal   onClose={() => setShowAddModal(false)} />}
       {showImportModal && <BulkImportModal onClose={() => setShowImportModal(false)} />}
 
-      {/* Page header */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h2 className="text-xl font-bold text-gray-900">
-          All Clients{' '}
-          <span className="text-gray-400 font-normal text-base">
-            ({isLoading ? '…' : clients.length})
-          </span>
-        </h2>
-        <div className="flex items-center gap-2">
+      {/* Toolbar */}
+      <div className="flex items-center gap-2">
+        <div className="flex-shrink-0">
+          <h2 className="text-xl font-bold text-gray-900 leading-none">
+            Clients <span className="text-gray-400 font-normal text-base">{!isLoading && `(${clients.length})`}</span>
+          </h2>
+        </div>
+        <div className="flex items-center gap-2 ml-auto">
+          <SearchBar value={search} onChange={setSearch} placeholder="Search clients…" />
+          <FilterPopover activeCount={statusFilter !== 'all' ? 1 : 0}>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Status</p>
+            <div className="flex flex-wrap gap-1.5">
+              {(['all', 'active', 'inactive', 'pending'] as StatusFilter[]).map(s => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={clsx(
+                    'px-3 py-1.5 text-xs font-medium rounded-lg capitalize transition-colors',
+                    statusFilter === s ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  )}
+                >
+                  {s === 'all' ? 'All' : s}
+                </button>
+              ))}
+            </div>
+          </FilterPopover>
           <button
             onClick={() => setViewMode(v => v === 'table' ? 'grid' : 'table')}
-            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+            className="p-2.5 rounded-xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition-colors flex-shrink-0"
           >
-            {viewMode === 'table' ? <LayoutGrid size={20} /> : <List size={20} />}
-          </button>
-          <button
-            onClick={() => setShowFilters(f => !f)}
-            className={clsx(
-              'flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors',
-              showFilters ? 'bg-brand-50 text-brand-600' : 'text-gray-600 hover:bg-gray-100'
-            )}
-          >
-            <Filter size={16} />
-            Filters
+            {viewMode === 'table' ? <LayoutGrid size={16} /> : <List size={16} />}
           </button>
           <button
             onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-all shadow-sm"
+            className="flex items-center gap-2 px-3 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-all shadow-sm flex-shrink-0"
           >
-            <Upload size={16} />
-            Import
+            <Upload size={15} /><span className="hidden sm:inline">Import</span>
           </button>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all shadow-sm shadow-brand-500/20"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all shadow-sm shadow-brand-500/20 flex-shrink-0"
           >
-            <UserPlus size={16} />
-            Add Client
+            <UserPlus size={15} /><span className="hidden sm:inline">Add Client</span>
           </button>
         </div>
-      </div>
-
-      {/* Filters */}
-      {showFilters && (
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1">
-            {(['all', 'active', 'inactive', 'pending'] as StatusFilter[]).map(s => (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={clsx(
-                  'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors capitalize',
-                  statusFilter === s ? 'bg-brand-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
-                )}
-              >
-                {s === 'all' ? 'All' : s}
-              </button>
-            ))}
-          </div>
-
-          {['Category', 'Group'].map(f => (
-            <button
-              key={f}
-              className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              {f}: <span className="font-medium">All</span>
-              <ChevronDown size={14} />
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Search */}
-      <div className="relative w-full sm:max-w-sm">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search clients..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all shadow-sm"
-        />
       </div>
 
       {/* Loading */}
