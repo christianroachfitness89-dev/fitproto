@@ -8,7 +8,7 @@ import {
 import clsx from 'clsx'
 import {
   useExercises, useCreateExercise, useUpdateExercise, useDeleteExercise, useBulkImportExercises,
-  useWorkouts,  useCreateWorkout,  useDeleteWorkout,
+  useWorkouts,  useDeleteWorkout,
   usePrograms,  useCreateProgram, useDeleteProgram, useUpdateProgram,
 } from '@/hooks/useWorkouts'
 import { useClients } from '@/hooks/useClients'
@@ -488,94 +488,6 @@ function ExerciseModal({ onClose, exercise }: { onClose: () => void; exercise?: 
 }
 
 // ─── Workout modal ────────────────────────────────────────────
-function WorkoutModal({ onClose }: { onClose: () => void }) {
-  const navigate = useNavigate()
-  const create = useCreateWorkout()
-  const [form, setForm] = useState({
-    name: '', description: '', category: '',
-    difficulty: '' as Difficulty | '',
-    duration_minutes: '',
-  })
-  const [error, setError] = useState<string | null>(null)
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!form.name.trim()) { setError('Name is required'); return }
-    setError(null)
-    try {
-      const workout = await create.mutateAsync({
-        name:             form.name,
-        description:      form.description      || null,
-        category:         form.category         || null,
-        difficulty:       (form.difficulty as Difficulty) || null,
-        duration_minutes: form.duration_minutes ? parseInt(form.duration_minutes) : null,
-      })
-      navigate(`/library/workouts/${workout.id}`)
-    } catch (err: any) {
-      setError(err.message)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-900">New Workout</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18} /></button>
-        </div>
-        {error && <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">{error}</div>}
-        <form onSubmit={submit} className="space-y-3">
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Workout Name *</label>
-            <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required
-              placeholder="e.g. Upper Body Strength A"
-              className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Description</label>
-            <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              rows={2} placeholder="Brief description..."
-              className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 resize-none" />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Category</label>
-              <input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                placeholder="Strength..."
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Difficulty</label>
-              <select value={form.difficulty} onChange={e => setForm(f => ({ ...f, difficulty: e.target.value as Difficulty | '' }))}
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 bg-white">
-                <option value="">—</option>
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Duration (min)</label>
-              <input type="number" min="1" value={form.duration_minutes} onChange={e => setForm(f => ({ ...f, duration_minutes: e.target.value }))}
-                placeholder="45"
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
-            </div>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
-            <button type="submit" disabled={create.isPending}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-60 transition-all">
-              {create.isPending ? <Loader2 size={15} className="animate-spin" /> : 'Create Workout'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
 // ─── Checkbox filter group ────────────────────────────────────
 function CheckboxGroup({
   label, options, selected, onChange,
@@ -877,7 +789,6 @@ function AssignToClientModal({ workout, onClose }: { workout: DbWorkout; onClose
 function WorkoutsList() {
   const navigate = useNavigate()
   const [search, setSearch]       = useState('')
-  const [showModal, setShowModal] = useState(false)
   const [assigning, setAssigning] = useState<DbWorkout | null>(null)
 
   const { data: workouts = [], isLoading } = useWorkouts(search.length >= 2 ? search : undefined)
@@ -885,12 +796,11 @@ function WorkoutsList() {
 
   return (
     <div className="space-y-4">
-      {showModal && <WorkoutModal onClose={() => setShowModal(false)} />}
       {assigning && <AssignToClientModal workout={assigning} onClose={() => setAssigning(null)} />}
 
       <div className="flex items-center gap-2">
         <SearchBar value={search} onChange={setSearch} placeholder="Search workouts…" />
-        <button onClick={() => setShowModal(true)}
+        <button onClick={() => navigate('/library/workouts/new')}
           className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all flex-shrink-0">
           <Plus size={15} /><span className="hidden sm:inline">New Workout</span>
         </button>
@@ -907,7 +817,7 @@ function WorkoutsList() {
           </div>
           <p className="font-semibold text-gray-700 mb-1">No workouts yet</p>
           <p className="text-sm text-gray-400 mb-4">Create your first workout template</p>
-          <button onClick={() => setShowModal(true)}
+          <button onClick={() => navigate('/library/workouts/new')}
             className="px-4 py-2 bg-brand-50 text-brand-600 text-sm font-semibold rounded-xl hover:bg-brand-100 transition-colors">
             + New Workout
           </button>
@@ -963,7 +873,7 @@ function WorkoutsList() {
           ))}
 
           {/* Create new card */}
-          <button onClick={() => setShowModal(true)}
+          <button onClick={() => navigate('/library/workouts/new')}
             className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-5 hover:border-brand-300 hover:bg-brand-50/30 transition-all group flex flex-col items-center justify-center min-h-[180px] gap-2">
             <div className="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-brand-100 flex items-center justify-center transition-colors">
               <Plus size={20} className="text-gray-400 group-hover:text-brand-600" />

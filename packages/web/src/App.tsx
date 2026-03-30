@@ -154,6 +154,7 @@ export default function App() {
               <Route path="library/tasks" element={<TasksLibrary />} />
               <Route path="library/habits" element={<HabitsLibrary />} />
               <Route path="library/metrics" element={<MetricsLibrary />} />
+              <Route path="library/workouts/new" element={<WorkoutBuilder />} />
               <Route path="library/workouts/:id" element={<WorkoutBuilder />} />
               <Route path="library/programs/:id" element={<ProgramBuilder />} />
               <Route path="library/:section" element={<Library />} />
