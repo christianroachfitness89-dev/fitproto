@@ -79,6 +79,24 @@ export function useDeleteExercise() {
   })
 }
 
+export function useUpdateExercise() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<DbExercise> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('exercises')
+        .update(updates as any)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data as DbExercise
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises'] }),
+  })
+}
+
 // ─── Workouts ─────────────────────────────────────────────────
 export function useWorkouts(search?: string) {
   const { profile } = useAuth()

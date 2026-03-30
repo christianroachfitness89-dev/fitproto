@@ -3,11 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   Search, Plus, Dumbbell,
   Clock, BarChart3, X, Loader2, Trash2, ChevronRight, Send, CheckCircle2,
-  Upload, AlertCircle,
+  Upload, AlertCircle, Pencil,
 } from 'lucide-react'
 import clsx from 'clsx'
 import {
-  useExercises, useCreateExercise, useDeleteExercise, useBulkImportExercises,
+  useExercises, useCreateExercise, useUpdateExercise, useDeleteExercise, useBulkImportExercises,
   useWorkouts,  useCreateWorkout,  useDeleteWorkout,
   usePrograms,  useCreateProgram, useDeleteProgram, useUpdateProgram,
 } from '@/hooks/useWorkouts'
@@ -260,12 +260,22 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-// ─── Exercise modal ───────────────────────────────────────────
-function ExerciseModal({ onClose }: { onClose: () => void }) {
+// ─── Exercise modal (create + edit) ──────────────────────────
+function ExerciseModal({ onClose, exercise }: { onClose: () => void; exercise?: DbExercise }) {
+  const isEdit = !!exercise
   const create = useCreateExercise()
+  const update = useUpdateExercise()
+  const isPending = create.isPending || update.isPending
+
   const [form, setForm] = useState({
-    name: '', category: '', muscle_group: '', equipment: '', instructions: '',
-    metric_type: 'reps_weight' as ExerciseMetricType,
+    name:         exercise?.name         ?? '',
+    category:     exercise?.category     ?? '',
+    muscle_group: exercise?.muscle_group ?? '',
+    equipment:    exercise?.equipment    ?? '',
+    instructions: exercise?.instructions ?? '',
+    video_url:    exercise?.video_url    ?? '',
+    difficulty:   (exercise?.difficulty  ?? '') as Difficulty | '',
+    metric_type:  exercise?.metric_type  ?? 'reps_weight' as ExerciseMetricType,
   })
   const [error, setError] = useState<string | null>(null)
 
@@ -274,24 +284,38 @@ function ExerciseModal({ onClose }: { onClose: () => void }) {
     if (!form.name.trim()) { setError('Name is required'); return }
     setError(null)
     try {
-      await create.mutateAsync({
-        name:                  form.name,
-        category:              form.category     || null,
-        muscle_group:          form.muscle_group || null,
-        equipment:             form.equipment    || null,
-        instructions:          form.instructions || null,
-        video_url:             null,
-        metric_type:           form.metric_type,
-        secondary_muscle:      null,
-        tertiary_muscle:       null,
-        video_explanation_url: null,
-        difficulty:            null,
-        body_region:           null,
-        mechanics:             null,
-        laterality:            null,
-        posture:               null,
-        movement_pattern:      null,
-      })
+      if (isEdit) {
+        await update.mutateAsync({
+          id:           exercise.id,
+          name:         form.name,
+          category:     form.category     || null,
+          muscle_group: form.muscle_group || null,
+          equipment:    form.equipment    || null,
+          instructions: form.instructions || null,
+          video_url:    form.video_url    || null,
+          difficulty:   (form.difficulty as Difficulty) || null,
+          metric_type:  form.metric_type,
+        })
+      } else {
+        await create.mutateAsync({
+          name:                  form.name,
+          category:              form.category     || null,
+          muscle_group:          form.muscle_group || null,
+          equipment:             form.equipment    || null,
+          instructions:          form.instructions || null,
+          video_url:             form.video_url    || null,
+          difficulty:            (form.difficulty as Difficulty) || null,
+          metric_type:           form.metric_type,
+          secondary_muscle:      null,
+          tertiary_muscle:       null,
+          video_explanation_url: null,
+          body_region:           null,
+          mechanics:             null,
+          laterality:            null,
+          posture:               null,
+          movement_pattern:      null,
+        })
+      }
       onClose()
     } catch (err: any) {
       setError(err.message)
@@ -303,12 +327,12 @@ function ExerciseModal({ onClose }: { onClose: () => void }) {
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 z-10">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-900">New Exercise</h2>
+          <h2 className="text-lg font-bold text-gray-900">{isEdit ? 'Edit Exercise' : 'New Exercise'}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18} /></button>
         </div>
         {error && <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">{error}</div>}
         <form onSubmit={submit} className="space-y-4">
-          {/* Metric type picker — most important field, set it first */}
+          {/* Metric type picker */}
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">How is this exercise measured? *</label>
             <div className="grid grid-cols-2 gap-2">
@@ -340,6 +364,7 @@ function ExerciseModal({ onClose }: { onClose: () => void }) {
               placeholder="e.g. Barbell Back Squat"
               className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
           </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Category</label>
@@ -354,24 +379,46 @@ function ExerciseModal({ onClose }: { onClose: () => void }) {
                 className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Equipment</label>
+              <input value={form.equipment} onChange={e => setForm(f => ({ ...f, equipment: e.target.value }))}
+                placeholder="Barbell, Dumbbells..."
+                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Difficulty</label>
+              <select value={form.difficulty} onChange={e => setForm(f => ({ ...f, difficulty: e.target.value as Difficulty | '' }))}
+                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 bg-white">
+                <option value="">—</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </div>
+          </div>
+
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Equipment</label>
-            <input value={form.equipment} onChange={e => setForm(f => ({ ...f, equipment: e.target.value }))}
-              placeholder="Barbell, Dumbbells, Bodyweight..."
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Video URL</label>
+            <input value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))}
+              placeholder="https://youtube.com/watch?v=..."
               className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
           </div>
+
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Instructions</label>
             <textarea value={form.instructions} onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))}
               rows={2} placeholder="Step-by-step instructions..."
               className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 resize-none" />
           </div>
+
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose}
               className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
-            <button type="submit" disabled={create.isPending}
+            <button type="submit" disabled={isPending}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-60 transition-all">
-              {create.isPending ? <Loader2 size={15} className="animate-spin" /> : 'Create Exercise'}
+              {isPending ? <Loader2 size={15} className="animate-spin" /> : isEdit ? 'Save Changes' : 'Create Exercise'}
             </button>
           </div>
         </form>
@@ -474,6 +521,7 @@ function ExercisesList() {
   const [search, setSearch]       = useState('')
   const [showModal, setShowModal] = useState(false)
   const [showImport, setShowImport] = useState(false)
+  const [editExercise, setEditExercise] = useState<DbExercise | null>(null)
   const [categoryFilter, setCategoryFilter] = useState('')
 
   const { data: exercises = [], isLoading } = useExercises(search.length >= 2 ? search : undefined)
@@ -487,8 +535,9 @@ function ExercisesList() {
 
   return (
     <div className="space-y-4">
-      {showModal  && <ExerciseModal onClose={() => setShowModal(false)} />}
-      {showImport && <CsvImportModal onClose={() => setShowImport(false)} />}
+      {showModal    && <ExerciseModal onClose={() => setShowModal(false)} />}
+      {editExercise && <ExerciseModal exercise={editExercise} onClose={() => setEditExercise(null)} />}
+      {showImport   && <CsvImportModal onClose={() => setShowImport(false)} />}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
@@ -573,13 +622,23 @@ function ExercisesList() {
                     <td className="px-4 py-4 text-sm text-gray-600">{ex.muscle_group ?? '—'}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">{ex.equipment ?? '—'}</td>
                     <td className="px-4 py-4">
-                      <button
-                        onClick={() => deleteExercise.mutate(ex.id)}
-                        disabled={deleteExercise.isPending}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-50 text-gray-300 hover:text-rose-500 transition-all disabled:opacity-50"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => setEditExercise(ex)}
+                          className="p-1.5 rounded-lg hover:bg-brand-50 text-gray-300 hover:text-brand-600 transition-all"
+                          title="Edit exercise"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => deleteExercise.mutate(ex.id)}
+                          disabled={deleteExercise.isPending}
+                          className="p-1.5 rounded-lg hover:bg-rose-50 text-gray-300 hover:text-rose-500 transition-all disabled:opacity-50"
+                          title="Delete exercise"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )})}
