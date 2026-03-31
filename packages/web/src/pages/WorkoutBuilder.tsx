@@ -271,58 +271,112 @@ function ExercisePicker({
   onClose: () => void
 }) {
   const [search, setSearch] = useState('')
-  const { data: exercises = [], isLoading } = useExercises(search.length >= 1 ? search : undefined)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const { data: exercises = [], isLoading } = useExercises(search || undefined)
   const unit = useUnitSystem()
   const metricLabels = buildMetricLabels(unit)
 
+  useEffect(() => { inputRef.current?.focus() }, [])
+
+  // Group by category for browsing when no search active
+  const grouped = !search
+    ? exercises.reduce<Record<string, typeof exercises>>((acc, ex) => {
+        const cat = ex.category || 'Other'
+        ;(acc[cat] ||= []).push(ex)
+        return acc
+      }, {})
+    : null
+
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg z-10 overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                autoFocus
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search exercises..."
-                className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
-              />
-            </div>
-            <button onClick={onClose} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100">
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-        <div className="max-h-80 overflow-y-auto">
-          {isLoading ? (
-            <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
-          ) : exercises.length === 0 ? (
-            <div className="py-10 text-center text-sm text-gray-400">No exercises found</div>
-          ) : (
-            exercises.map(ex => (
-              <button
-                key={ex.id}
-                onClick={() => { onPick({ id: ex.id, name: ex.name }); onClose() }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-brand-50 transition-colors border-b border-gray-50 last:border-0"
-              >
-                <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center flex-shrink-0 text-base">
-                  {metricLabels[ex.metric_type]?.icon ?? '🏋️'}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-800">{ex.name}</p>
-                  <p className="text-xs text-gray-400">
-                    {[ex.muscle_group, ex.category, metricLabels[ex.metric_type]?.label].filter(Boolean).join(' · ')}
-                  </p>
-                </div>
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
+
+      {/* Slide-in panel */}
+      <div className="fixed right-0 top-0 bottom-0 z-50 w-full sm:w-96 bg-white shadow-2xl flex flex-col">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100 flex-shrink-0">
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              ref={inputRef}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search exercises…"
+              className="w-full pl-9 pr-8 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+                <X size={13} />
               </button>
+            )}
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex-shrink-0">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="px-3 py-2 border-b border-gray-50 flex-shrink-0">
+          <p className="text-xs text-gray-400">
+            {isLoading ? 'Loading…' : `${exercises.length} exercise${exercises.length !== 1 ? 's' : ''}`}
+          </p>
+        </div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto">
+          {isLoading ? (
+            <div className="flex justify-center py-12"><Loader2 size={22} className="animate-spin text-gray-300" /></div>
+          ) : exercises.length === 0 ? (
+            <div className="py-12 text-center text-sm text-gray-400">No exercises found</div>
+          ) : grouped ? (
+            // Grouped by category when not searching
+            Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([cat, exs]) => (
+              <div key={cat}>
+                <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 bg-gray-50 sticky top-0">
+                  {cat}
+                </p>
+                {exs.map(ex => (
+                  <ExercisePickerRow key={ex.id} ex={ex} icon={metricLabels[ex.metric_type]?.icon ?? '🏋️'}
+                    subtitle={[ex.muscle_group, metricLabels[ex.metric_type]?.label].filter(Boolean).join(' · ')}
+                    onPick={() => { onPick({ id: ex.id, name: ex.name }); onClose() }} />
+                ))}
+              </div>
+            ))
+          ) : (
+            // Flat list when searching
+            exercises.map(ex => (
+              <ExercisePickerRow key={ex.id} ex={ex} icon={metricLabels[ex.metric_type]?.icon ?? '🏋️'}
+                subtitle={[ex.muscle_group, ex.category, metricLabels[ex.metric_type]?.label].filter(Boolean).join(' · ')}
+                onPick={() => { onPick({ id: ex.id, name: ex.name }); onClose() }} />
             ))
           )}
         </div>
       </div>
-    </div>
+    </>
+  )
+}
+
+function ExercisePickerRow({
+  ex, icon, subtitle, onPick,
+}: {
+  ex: { id: string; name: string }
+  icon: string
+  subtitle: string
+  onPick: () => void
+}) {
+  return (
+    <button
+      onClick={onPick}
+      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-brand-50 active:bg-brand-100 transition-colors border-b border-gray-50 last:border-0"
+    >
+      <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center flex-shrink-0 text-base">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-gray-800 truncate">{ex.name}</p>
+        {subtitle && <p className="text-xs text-gray-400 truncate">{subtitle}</p>}
+      </div>
+    </button>
   )
 }
 
