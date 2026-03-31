@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, Plus, Trash2, ChevronUp, ChevronDown,
   Search, X, Loader2, Dumbbell, Clock, TrendingUp,
-  ChevronDown as Expand, LayoutList, ChevronRight,
+  ChevronDown as Expand, LayoutList, ChevronRight, SlidersHorizontal,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { supabase } from '@/lib/supabase'
@@ -271,15 +271,43 @@ function ExercisePicker({
   onClose: () => void
 }) {
   const [search, setSearch] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+  const [catFilters, setCatFilters] = useState<string[]>([])
+  const [musFilters, setMusFilters] = useState<string[]>([])
+  const [eqpFilters, setEqpFilters] = useState<string[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
-  const { data: exercises = [], isLoading } = useExercises(search || undefined)
+
+  const { data: allExercises = [], isLoading } = useExercises(search || undefined)
   const unit = useUnitSystem()
   const metricLabels = buildMetricLabels(unit)
 
   useEffect(() => { inputRef.current?.focus() }, [])
 
-  // Group by category for browsing when no search active
-  const grouped = !search
+  // Derive unique filter options from full list
+  const categories   = [...new Set(allExercises.map(e => e.category).filter(Boolean) as string[])].sort()
+  const muscleGroups = [...new Set(allExercises.map(e => e.muscle_group).filter(Boolean) as string[])].sort()
+  const equipments   = [...new Set(allExercises.map(e => e.equipment).filter(Boolean) as string[])].sort()
+
+  // Apply active filters
+  const exercises = allExercises.filter(ex => {
+    if (catFilters.length && !catFilters.includes(ex.category ?? '')) return false
+    if (musFilters.length && !musFilters.includes(ex.muscle_group ?? '')) return false
+    if (eqpFilters.length && !eqpFilters.includes(ex.equipment ?? '')) return false
+    return true
+  })
+
+  const activeFilterCount = catFilters.length + musFilters.length + eqpFilters.length
+
+  function clearFilters() {
+    setCatFilters([]); setMusFilters([]); setEqpFilters([])
+  }
+
+  function toggleFilter(list: string[], setList: (v: string[]) => void, val: string) {
+    setList(list.includes(val) ? list.filter(x => x !== val) : [...list, val])
+  }
+
+  // Group by category when no search active and no category filter
+  const grouped = !search && catFilters.length === 0
     ? exercises.reduce<Record<string, typeof exercises>>((acc, ex) => {
         const cat = ex.category || 'Other'
         ;(acc[cat] ||= []).push(ex)
@@ -294,8 +322,9 @@ function ExercisePicker({
 
       {/* Slide-in panel */}
       <div className="fixed right-0 top-0 bottom-0 z-50 w-full sm:w-96 bg-white shadow-2xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100 flex-shrink-0">
+
+        {/* Search + close */}
+        <div className="flex items-center gap-2 px-4 py-4 border-b border-gray-100 flex-shrink-0">
           <div className="relative flex-1">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
@@ -311,14 +340,51 @@ function ExercisePicker({
               </button>
             )}
           </div>
+
+          {/* Filter toggle */}
+          <button
+            onClick={() => setShowFilters(f => !f)}
+            className={clsx(
+              'flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-xl border transition-all flex-shrink-0',
+              showFilters || activeFilterCount > 0
+                ? 'bg-brand-50 border-brand-200 text-brand-700'
+                : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50',
+            )}
+          >
+            <SlidersHorizontal size={15} />
+            {activeFilterCount > 0 && (
+              <span className="flex items-center justify-center w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] font-bold leading-none">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+
           <button onClick={onClose} className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex-shrink-0">
             <X size={18} />
           </button>
         </div>
 
-        <div className="px-3 py-2 border-b border-gray-50 flex-shrink-0">
+        {/* Filter panel */}
+        {showFilters && (
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex-shrink-0 space-y-3">
+            <PickerFilterGroup label="Category" options={categories} selected={catFilters}
+              onToggle={v => toggleFilter(catFilters, setCatFilters, v)} />
+            <PickerFilterGroup label="Muscle Group" options={muscleGroups} selected={musFilters}
+              onToggle={v => toggleFilter(musFilters, setMusFilters, v)} />
+            <PickerFilterGroup label="Equipment" options={equipments} selected={eqpFilters}
+              onToggle={v => toggleFilter(eqpFilters, setEqpFilters, v)} />
+            {activeFilterCount > 0 && (
+              <button onClick={clearFilters} className="text-xs text-brand-600 hover:text-brand-800 font-medium">
+                Clear all filters
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Count row */}
+        <div className="px-4 py-2 border-b border-gray-50 flex-shrink-0">
           <p className="text-xs text-gray-400">
-            {isLoading ? 'Loading…' : `${exercises.length} exercise${exercises.length !== 1 ? 's' : ''}`}
+            {isLoading ? 'Loading…' : `${exercises.length} exercise${exercises.length !== 1 ? 's' : ''}${activeFilterCount > 0 ? ' (filtered)' : ''}`}
           </p>
         </div>
 
@@ -327,9 +393,13 @@ function ExercisePicker({
           {isLoading ? (
             <div className="flex justify-center py-12"><Loader2 size={22} className="animate-spin text-gray-300" /></div>
           ) : exercises.length === 0 ? (
-            <div className="py-12 text-center text-sm text-gray-400">No exercises found</div>
+            <div className="py-12 text-center">
+              <p className="text-sm text-gray-400 mb-2">No exercises match</p>
+              {activeFilterCount > 0 && (
+                <button onClick={clearFilters} className="text-xs text-brand-600 hover:underline">Clear filters</button>
+              )}
+            </div>
           ) : grouped ? (
-            // Grouped by category when not searching
             Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([cat, exs]) => (
               <div key={cat}>
                 <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 bg-gray-50 sticky top-0">
@@ -343,7 +413,6 @@ function ExercisePicker({
               </div>
             ))
           ) : (
-            // Flat list when searching
             exercises.map(ex => (
               <ExercisePickerRow key={ex.id} ex={ex} icon={metricLabels[ex.metric_type]?.icon ?? '🏋️'}
                 subtitle={[ex.muscle_group, ex.category, metricLabels[ex.metric_type]?.label].filter(Boolean).join(' · ')}
@@ -353,6 +422,38 @@ function ExercisePicker({
         </div>
       </div>
     </>
+  )
+}
+
+function PickerFilterGroup({
+  label, options, selected, onToggle,
+}: {
+  label: string
+  options: string[]
+  selected: string[]
+  onToggle: (v: string) => void
+}) {
+  if (options.length === 0) return null
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">{label}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map(opt => (
+          <button
+            key={opt}
+            onClick={() => onToggle(opt)}
+            className={clsx(
+              'px-2.5 py-1 rounded-lg text-xs font-medium border transition-all',
+              selected.includes(opt)
+                ? 'bg-brand-600 border-brand-600 text-white'
+                : 'bg-white border-gray-200 text-gray-600 hover:border-brand-300 hover:text-brand-700',
+            )}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
