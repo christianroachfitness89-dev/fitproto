@@ -21,7 +21,7 @@ import type { DbLead, LeadStatus, CallLog, CallOutcome } from '@/lib/database.ty
 
 // ─── Status config ────────────────────────────────────────────
 const STAGES: { status: LeadStatus; label: string; color: string; dot: string }[] = [
-  { status: 'new',               label: 'New',          color: 'bg-gray-100 text-gray-700 border-gray-200',       dot: 'bg-gray-400'    },
+  { status: 'new',               label: 'New',          color: 'bg-[#161b27] text-[#8a9ab5] border-[#242d40]',       dot: 'bg-[#3a4a62]'    },
   { status: 'called',            label: 'Called',        color: 'bg-sky-50 text-sky-700 border-sky-200',           dot: 'bg-sky-400'     },
   { status: 'booked',            label: 'Booked',        color: 'bg-violet-50 text-violet-700 border-violet-200',  dot: 'bg-violet-400'  },
   { status: 'preq_completed',    label: 'PreQ Done',     color: 'bg-indigo-50 text-indigo-700 border-indigo-200',  dot: 'bg-indigo-400'  },
@@ -111,14 +111,14 @@ function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh] z-10">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh] z-10">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#242d40]">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Questionnaire Templates</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Set up questions for PreQ and Consult</p>
+            <h2 className="text-base font-bold text-[#e8edf5]">Questionnaire Templates</h2>
+            <p className="text-xs text-[#4a5a75] mt-0.5">Set up questions for PreQ and Consult</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:text-[#8a9ab5] hover:bg-[#161b27]">
             <X size={18} />
           </button>
         </div>
@@ -131,7 +131,7 @@ function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
               onClick={() => setTab(t.key)}
               className={clsx(
                 'px-4 py-2 text-sm font-semibold rounded-lg transition-all',
-                tab === t.key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                tab === t.key ? 'bg-amber-400 text-white' : 'bg-[#161b27] text-[#4a5a75] hover:bg-[#1e2535]'
               )}
             >
               {t.label}
@@ -142,30 +142,30 @@ function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
         {/* Question list */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
           {qs.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-6">
+            <p className="text-sm text-[#3a4a62] text-center py-6">
               No questions yet. Add your first one below.
             </p>
           )}
           {qs.map((q, i) => (
-            <div key={q.id} className="flex items-start gap-2 bg-gray-50 rounded-xl p-3 border border-gray-200">
-              <span className="text-gray-300 mt-2.5 flex-shrink-0 cursor-grab"><GripVertical size={14} /></span>
+            <div key={q.id} className="flex items-start gap-2 bg-[#0d1117] rounded-xl p-3 border border-[#242d40]">
+              <span className="text-[#2e3a52] mt-2.5 flex-shrink-0 cursor-grab"><GripVertical size={14} /></span>
               <div className="flex-1 space-y-2">
                 <input
                   type="text"
                   value={q.text}
                   onChange={e => updateQuestion(q.id, { text: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                  className="w-full px-3 py-2 text-sm border border-[#242d40] rounded-lg bg-[#161b27] focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition-all"
                   placeholder={`Question ${i + 1}`}
                 />
                 <div className="flex items-center gap-3">
                   <select
                     value={q.type}
                     onChange={e => updateQuestion(q.id, { type: e.target.value as QuestionType, options: e.target.value === 'checkbox_group' ? (q.options ?? ['']) : undefined })}
-                    className="flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all"
+                    className="flex-1 text-xs px-2 py-1.5 border border-[#242d40] rounded-lg bg-[#161b27] focus:outline-none focus:ring-2 focus:ring-amber-400/30 transition-all"
                   >
                     {QTYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
-                  <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+                  <label className="flex items-center gap-1.5 text-xs text-[#4a5a75] cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={q.required}
@@ -177,7 +177,7 @@ function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
                 </div>
                 {q.type === 'checkbox_group' && (
                   <div className="space-y-1.5 pt-1">
-                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Checkbox options</p>
+                    <p className="text-[11px] font-semibold text-[#4a5a75] uppercase tracking-wider">Checkbox options</p>
                     {(q.options ?? ['']).map((opt, oi) => (
                       <div key={oi} className="flex items-center gap-1.5">
                         <input
@@ -188,7 +188,7 @@ function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
                             opts[oi] = e.target.value
                             updateQuestion(q.id, { options: opts })
                           }}
-                          className="flex-1 px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                          className="flex-1 px-2.5 py-1.5 text-xs border border-[#242d40] rounded-lg bg-[#161b27] focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition-all"
                           placeholder={`Option ${oi + 1}`}
                         />
                         <button
@@ -196,7 +196,7 @@ function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
                             const opts = (q.options ?? ['']).filter((_, j) => j !== oi)
                             updateQuestion(q.id, { options: opts.length ? opts : [''] })
                           }}
-                          className="p-1 text-gray-300 hover:text-rose-400 transition-colors"
+                          className="p-1 text-[#2e3a52] hover:text-rose-400 transition-colors"
                         >
                           <X size={12} />
                         </button>
@@ -204,7 +204,7 @@ function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
                     ))}
                     <button
                       onClick={() => updateQuestion(q.id, { options: [...(q.options ?? ['']), ''] })}
-                      className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+                      className="text-[11px] font-semibold text-amber-400 hover:text-amber-400 transition-colors"
                     >
                       + Add option
                     </button>
@@ -213,7 +213,7 @@ function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
               </div>
               <button
                 onClick={() => removeQuestion(q.id)}
-                className="p-1.5 text-gray-300 hover:text-rose-400 transition-colors flex-shrink-0"
+                className="p-1.5 text-[#2e3a52] hover:text-rose-400 transition-colors flex-shrink-0"
               >
                 <Trash2 size={14} />
               </button>
@@ -222,22 +222,22 @@ function SetupTemplatesModal({ onClose }: { onClose: () => void }) {
 
           <button
             onClick={addQuestion}
-            className="w-full py-2.5 text-sm font-semibold text-brand-600 bg-brand-50 border border-dashed border-brand-300 rounded-xl hover:bg-brand-100 transition-colors"
+            className="w-full py-2.5 text-sm font-semibold text-amber-400 bg-amber-400/10 border border-dashed border-amber-400/30 rounded-xl hover:bg-amber-400/10 transition-colors"
           >
             + Add Question
           </button>
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
+        <div className="flex gap-3 px-6 py-4 border-t border-[#242d40]">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={upsert.isPending}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-50 transition-all"
           >
             {upsert.isPending
               ? <><Loader2 size={14} className="animate-spin" /> Saving…</>
@@ -345,17 +345,17 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 z-10 text-center">
+        <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-sm p-8 z-10 text-center">
           <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 size={28} className="text-emerald-600" />
           </div>
-          <h2 className="text-lg font-bold text-gray-900 mb-1">Import Complete</h2>
-          <p className="text-gray-500 text-sm mb-6">
+          <h2 className="text-lg font-bold text-[#e8edf5] mb-1">Import Complete</h2>
+          <p className="text-[#4a5a75] text-sm mb-6">
             <span className="font-semibold text-emerald-600">{imported}</span> lead{imported !== 1 ? 's' : ''} added to the pool.
             {invalidCount > 0 && <span className="text-rose-500"> {invalidCount} row{invalidCount !== 1 ? 's' : ''} skipped.</span>}
           </p>
           <button onClick={onClose}
-            className="w-full py-2.5 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition-colors">
+            className="w-full py-2.5 text-sm font-semibold text-white bg-amber-400 hover:bg-amber-400 rounded-xl transition-colors">
             Done
           </button>
         </div>
@@ -366,30 +366,30 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] z-10">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] z-10">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#242d40]">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Import Leads</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Upload an Excel or CSV file to add leads in bulk</p>
+            <h2 className="text-base font-bold text-[#e8edf5]">Import Leads</h2>
+            <p className="text-xs text-[#4a5a75] mt-0.5">Upload an Excel or CSV file to add leads in bulk</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:text-[#8a9ab5] hover:bg-[#161b27]">
             <X size={18} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {/* Template download */}
-          <div className="flex items-center justify-between p-4 bg-brand-50 border border-brand-200 rounded-xl">
+          <div className="flex items-center justify-between p-4 bg-amber-400/10 border border-amber-400/20 rounded-xl">
             <div className="flex items-center gap-3">
-              <FileSpreadsheet size={20} className="text-brand-600 flex-shrink-0" />
+              <FileSpreadsheet size={20} className="text-amber-400 flex-shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-brand-800">Download Template</p>
-                <p className="text-xs text-brand-600">Get the Excel template with correct column headers</p>
+                <p className="text-sm font-semibold text-amber-400">Download Template</p>
+                <p className="text-xs text-amber-400">Get the Excel template with correct column headers</p>
               </div>
             </div>
             <button onClick={downloadTemplate}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors flex-shrink-0">
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-amber-400 hover:bg-amber-400 rounded-lg transition-colors flex-shrink-0">
               <Download size={13} /> Download
             </button>
           </div>
@@ -402,13 +402,13 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
               onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
               className={clsx(
                 'flex flex-col items-center justify-center gap-3 p-10 border-2 border-dashed rounded-xl cursor-pointer transition-all',
-                dragOver ? 'border-brand-400 bg-brand-50' : 'border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/40'
+                dragOver ? 'border-amber-400 bg-amber-400/10' : 'border-[#242d40] bg-[#0d1117] hover:border-amber-400/30 hover:bg-amber-400/10/40'
               )}
             >
-              <Upload size={28} className={dragOver ? 'text-brand-500' : 'text-gray-300'} />
+              <Upload size={28} className={dragOver ? 'text-amber-400' : 'text-[#2e3a52]'} />
               <div className="text-center">
-                <p className="text-sm font-semibold text-gray-600">Drop your file here, or <span className="text-brand-600">browse</span></p>
-                <p className="text-xs text-gray-400 mt-1">Supports .xlsx, .xls, .csv</p>
+                <p className="text-sm font-semibold text-[#8a9ab5]">Drop your file here, or <span className="text-amber-400">browse</span></p>
+                <p className="text-xs text-[#3a4a62] mt-1">Supports .xlsx, .xls, .csv</p>
               </div>
               <input type="file" accept=".xlsx,.xls,.csv" className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
@@ -418,26 +418,26 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <p className="text-sm font-semibold text-gray-700">{rows.length} rows found</p>
+                  <p className="text-sm font-semibold text-[#8a9ab5]">{rows.length} rows found</p>
                   {validCount > 0   && <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">{validCount} valid</span>}
                   {invalidCount > 0 && <span className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">{invalidCount} invalid</span>}
                 </div>
                 <button onClick={() => setRows([])}
-                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                  className="text-xs text-[#3a4a62] hover:text-[#8a9ab5] transition-colors">
                   Clear
                 </button>
               </div>
 
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <div className="grid grid-cols-[auto_1fr_1fr_1fr_1fr] gap-0 text-[11px] font-semibold text-gray-500 uppercase tracking-wide bg-gray-50 px-3 py-2 border-b border-gray-200">
+              <div className="border border-[#242d40] rounded-xl overflow-hidden">
+                <div className="grid grid-cols-[auto_1fr_1fr_1fr_1fr] gap-0 text-[11px] font-semibold text-[#4a5a75] uppercase tracking-wide bg-[#0d1117] px-3 py-2 border-b border-[#242d40]">
                   <span className="w-6" />
                   <span>Name</span><span>Email</span><span>Phone</span><span>Source</span>
                 </div>
-                <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+                <div className="max-h-64 overflow-y-auto divide-y divide-[#1e2535]">
                   {rows.map((row, i) => (
                     <div key={i}
                       className={clsx('grid grid-cols-[auto_1fr_1fr_1fr_1fr] gap-0 items-center px-3 py-2.5 text-xs',
-                        row.valid ? 'bg-white' : 'bg-rose-50'
+                        row.valid ? 'bg-[#161b27]' : 'bg-rose-50'
                       )}>
                       <div className="w-6 flex-shrink-0">
                         {row.valid
@@ -445,12 +445,12 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
                           : <AlertCircle  size={13} className="text-rose-400" />
                         }
                       </div>
-                      <span className={clsx('truncate font-medium', row.valid ? 'text-gray-800' : 'text-rose-600')}>
+                      <span className={clsx('truncate font-medium', row.valid ? 'text-[#e8edf5]' : 'text-rose-600')}>
                         {row.name || <span className="italic text-rose-400">missing</span>}
                       </span>
-                      <span className="truncate text-gray-500">{row.email || '—'}</span>
-                      <span className="truncate text-gray-500">{row.phone || '—'}</span>
-                      <span className="truncate text-gray-500">{row.source || '—'}</span>
+                      <span className="truncate text-[#4a5a75]">{row.email || '—'}</span>
+                      <span className="truncate text-[#4a5a75]">{row.phone || '—'}</span>
+                      <span className="truncate text-[#4a5a75]">{row.source || '—'}</span>
                     </div>
                   ))}
                 </div>
@@ -460,15 +460,15 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
+        <div className="flex gap-3 px-6 py-4 border-t border-[#242d40]">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">
             Cancel
           </button>
           <button
             onClick={handleImport}
             disabled={validCount === 0 || importing}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-50 transition-all"
           >
             {importing
               ? <><Loader2 size={14} className="animate-spin" /> Importing…</>
@@ -512,13 +512,13 @@ function AddLeadModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Add Lead</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Add a new prospect to your pipeline</p>
+            <h2 className="text-lg font-bold text-[#e8edf5]">Add Lead</h2>
+            <p className="text-xs text-[#4a5a75] mt-0.5">Add a new prospect to your pipeline</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:text-[#8a9ab5] hover:bg-[#161b27]">
             <X size={18} />
           </button>
         </div>
@@ -532,12 +532,12 @@ function AddLeadModal({ onClose }: { onClose: () => void }) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name *</label>
+            <label className="block text-sm font-medium text-[#8a9ab5] mb-1.5">Full Name *</label>
             <input
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+              className="w-full px-3 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition-all"
               placeholder="Jane Smith"
               required
               autoFocus
@@ -545,56 +545,56 @@ function AddLeadModal({ onClose }: { onClose: () => void }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+              <label className="block text-sm font-medium text-[#8a9ab5] mb-1.5">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                className="w-full px-3 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition-all"
                 placeholder="jane@example.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
+              <label className="block text-sm font-medium text-[#8a9ab5] mb-1.5">Phone</label>
               <input
                 type="tel"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                className="w-full px-3 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition-all"
                 placeholder="+1 555 000 0000"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Source</label>
+            <label className="block text-sm font-medium text-[#8a9ab5] mb-1.5">Source</label>
             <input
               type="text"
               value={source}
               onChange={e => setSource(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+              className="w-full px-3 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition-all"
               placeholder="instagram, referral, website…"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes</label>
+            <label className="block text-sm font-medium text-[#8a9ab5] mb-1.5">Notes</label>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all resize-none"
+              className="w-full px-3 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition-all resize-none"
               placeholder="Goals, context, how they found you…"
             />
           </div>
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+              className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">
               Cancel
             </button>
             <button
               type="submit"
               disabled={createLead.isPending || !name.trim()}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-50 transition-all"
             >
               {createLead.isPending ? <Loader2 size={15} className="animate-spin" /> : <><Plus size={15} /> Add Lead</>}
             </button>
@@ -651,16 +651,16 @@ function QuestionnaireModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] z-10">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] z-10">
         {/* Header */}
-        <div className="flex items-start gap-3 px-6 py-4 border-b border-gray-100">
+        <div className="flex items-start gap-3 px-6 py-4 border-b border-[#242d40]">
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-0.5">
+            <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-0.5">
               {title}
             </p>
-            <h2 className="text-base font-bold text-gray-900 truncate">{lead.name}</h2>
+            <h2 className="text-base font-bold text-[#e8edf5] truncate">{lead.name}</h2>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex-shrink-0">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:text-[#8a9ab5] hover:bg-[#161b27] flex-shrink-0">
             <X size={18} />
           </button>
         </div>
@@ -669,21 +669,21 @@ function QuestionnaireModal({
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {loading ? (
             <div className="flex items-center justify-center py-10">
-              <Loader2 size={20} className="animate-spin text-brand-500" />
+              <Loader2 size={20} className="animate-spin text-amber-400" />
             </div>
           ) : questions.length === 0 ? (
             <div className="text-center py-8">
-              <ClipboardList size={32} className="mx-auto text-gray-300 mb-3" />
-              <p className="text-sm font-semibold text-gray-700 mb-1">No questions set up yet</p>
-              <p className="text-xs text-gray-400">
+              <ClipboardList size={32} className="mx-auto text-[#2e3a52] mb-3" />
+              <p className="text-sm font-semibold text-[#8a9ab5] mb-1">No questions set up yet</p>
+              <p className="text-xs text-[#3a4a62]">
                 Add questions to the {title} template, or mark this as complete now.
               </p>
             </div>
           ) : (
             questions.map((q, i) => (
               <div key={q.id}>
-                <label className="block text-sm font-medium text-gray-800 mb-1.5">
-                  {i + 1}. {q.text || <span className="text-gray-400 italic">Untitled question</span>}
+                <label className="block text-sm font-medium text-[#e8edf5] mb-1.5">
+                  {i + 1}. {q.text || <span className="text-[#3a4a62] italic">Untitled question</span>}
                   {q.required && <span className="text-rose-400 ml-1">*</span>}
                 </label>
                 {q.type === 'checkbox_group' ? (
@@ -702,9 +702,9 @@ function QuestionnaireModal({
                                 : [...selected, opt]
                               setAnswers(a => ({ ...a, [q.id]: next }))
                             }}
-                            className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0 cursor-pointer"
+                            className="w-4 h-4 rounded border-[#2e3a52] text-amber-400 focus:ring-amber-400 focus:ring-offset-0 cursor-pointer"
                           />
-                          <span className="text-sm text-gray-700 group-hover:text-gray-900">{opt}</span>
+                          <span className="text-sm text-[#8a9ab5] group-hover:text-[#e8edf5]">{opt}</span>
                         </label>
                       )
                     })}
@@ -719,8 +719,8 @@ function QuestionnaireModal({
                         className={clsx(
                           'flex-1 py-2 text-sm font-semibold rounded-xl border-2 transition-all',
                           answers[q.id] === (opt === 'Yes')
-                            ? 'border-brand-500 bg-brand-50 text-brand-700'
-                            : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                            ? 'border-amber-400 bg-amber-400/10 text-amber-400'
+                            : 'border-[#242d40] text-[#4a5a75] hover:border-[#2e3a52]'
                         )}
                       >
                         {opt}
@@ -732,7 +732,7 @@ function QuestionnaireModal({
                     value={(answers[q.id] as string) ?? ''}
                     onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))}
                     rows={3}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all resize-none"
+                    className="w-full px-3 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition-all resize-none"
                     placeholder="Enter your answer…"
                   />
                 ) : (
@@ -740,7 +740,7 @@ function QuestionnaireModal({
                     type="text"
                     value={(answers[q.id] as string) ?? ''}
                     onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                    className="w-full px-3 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition-all"
                     placeholder="Enter your answer…"
                   />
                 )}
@@ -750,15 +750,15 @@ function QuestionnaireModal({
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
+        <div className="flex gap-3 px-6 py-4 border-t border-[#242d40]">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saveResponse.isPending || updateLead.isPending || loading}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-50 transition-all"
           >
             {(saveResponse.isPending || updateLead.isPending)
               ? <><Loader2 size={14} className="animate-spin" /> Saving…</>
@@ -897,14 +897,14 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
     <>
       <div className="fixed inset-0 z-40 flex justify-end">
         <div className="absolute inset-0 bg-black/20" onClick={onClose} />
-        <div className="relative w-full max-w-md bg-white shadow-2xl flex flex-col h-full overflow-y-auto">
+        <div className="relative w-full max-w-md bg-[#161b27] shadow-2xl flex flex-col h-full overflow-y-auto">
           {/* Header */}
-          <div className="flex items-start gap-3 p-5 border-b border-gray-100">
+          <div className="flex items-start gap-3 p-5 border-b border-[#242d40]">
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-gray-900 truncate">{lead.name}</h2>
+              <h2 className="text-lg font-bold text-[#e8edf5] truncate">{lead.name}</h2>
               <div className="mt-1.5"><StatusBadge status={lead.status} /></div>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex-shrink-0">
+            <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:text-[#8a9ab5] hover:bg-[#161b27] flex-shrink-0">
               <X size={18} />
             </button>
           </div>
@@ -913,22 +913,22 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
             {/* Contact info */}
             <div className="space-y-2">
               {lead.email && (
-                <a href={`mailto:${lead.email}`} className="flex items-center gap-2.5 text-sm text-gray-600 hover:text-brand-600 transition-colors">
-                  <Mail size={14} className="text-gray-400 flex-shrink-0" />{lead.email}
+                <a href={`mailto:${lead.email}`} className="flex items-center gap-2.5 text-sm text-[#8a9ab5] hover:text-amber-400 transition-colors">
+                  <Mail size={14} className="text-[#3a4a62] flex-shrink-0" />{lead.email}
                 </a>
               )}
               {lead.phone && (
-                <a href={`tel:${lead.phone}`} className="flex items-center gap-2.5 text-sm text-gray-600 hover:text-brand-600 transition-colors">
-                  <Phone size={14} className="text-gray-400 flex-shrink-0" />{lead.phone}
+                <a href={`tel:${lead.phone}`} className="flex items-center gap-2.5 text-sm text-[#8a9ab5] hover:text-amber-400 transition-colors">
+                  <Phone size={14} className="text-[#3a4a62] flex-shrink-0" />{lead.phone}
                 </a>
               )}
               {lead.source && (
-                <div className="flex items-center gap-2.5 text-sm text-gray-500">
-                  <Tag size={14} className="text-gray-400 flex-shrink-0" />
-                  Source: <span className="font-medium text-gray-700 ml-1">{lead.source}</span>
+                <div className="flex items-center gap-2.5 text-sm text-[#4a5a75]">
+                  <Tag size={14} className="text-[#3a4a62] flex-shrink-0" />
+                  Source: <span className="font-medium text-[#8a9ab5] ml-1">{lead.source}</span>
                 </div>
               )}
-              <div className="flex items-center gap-2.5 text-sm text-gray-400">
+              <div className="flex items-center gap-2.5 text-sm text-[#3a4a62]">
                 <Calendar size={14} className="flex-shrink-0" />
                 Added {new Date(lead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </div>
@@ -952,12 +952,12 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                   <div>
                     <p className="text-xs font-semibold text-sky-700 uppercase tracking-wider">Call Log</p>
                     {callLogs.length > 0 && (
-                      <p className="text-xs text-gray-400 mt-0.5">{callLogs.length} attempt{callLogs.length > 1 ? 's' : ''} logged</p>
+                      <p className="text-xs text-[#3a4a62] mt-0.5">{callLogs.length} attempt{callLogs.length > 1 ? 's' : ''} logged</p>
                     )}
                   </div>
                   {!showCallForm && (
                     <button onClick={() => setShowCallForm(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-sky-700 bg-white border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors">
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-sky-700 bg-[#161b27] border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors">
                       <PhoneCall size={12} /> Log Call
                     </button>
                   )}
@@ -969,14 +969,14 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                     {callLogs.map((log, i) => {
                       const outcomeLabel = CALL_OUTCOMES.find(o => o.value === log.outcome)?.label ?? log.outcome
                       return (
-                        <div key={i} className="flex items-center justify-between text-xs bg-white border border-sky-100 rounded-lg px-3 py-2">
-                          <span className="text-gray-500">
+                        <div key={i} className="flex items-center justify-between text-xs bg-[#161b27] border border-sky-100 rounded-lg px-3 py-2">
+                          <span className="text-[#4a5a75]">
                             {new Date(log.called_at).toLocaleString('en-AU', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
                           </span>
                           <span className={clsx('font-semibold',
                             log.outcome === 'scheduled' ? 'text-emerald-600' :
                             log.outcome === 'answered'  ? 'text-sky-600'     :
-                            'text-gray-500'
+                            'text-[#4a5a75]'
                           )}>
                             {outcomeLabel}
                           </span>
@@ -988,21 +988,21 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
 
                 {/* Log call form */}
                 {showCallForm && (
-                  <div className="bg-white border border-sky-200 rounded-xl p-3 space-y-3">
+                  <div className="bg-[#161b27] border border-sky-200 rounded-xl p-3 space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Date</label>
+                        <label className="block text-xs font-medium text-[#8a9ab5] mb-1">Date</label>
                         <input type="date" value={callDate} onChange={e => setCallDate(e.target.value)}
-                          className="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sky-400/30 focus:border-sky-400 transition-all" />
+                          className="w-full px-2.5 py-2 text-sm border border-[#242d40] rounded-lg bg-[#161b27] focus:outline-none focus:ring-2 focus:ring-sky-400/30 focus:border-sky-400 transition-all" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Time</label>
+                        <label className="block text-xs font-medium text-[#8a9ab5] mb-1">Time</label>
                         <input type="time" value={callTime} onChange={e => setCallTime(e.target.value)}
-                          className="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sky-400/30 focus:border-sky-400 transition-all" />
+                          className="w-full px-2.5 py-2 text-sm border border-[#242d40] rounded-lg bg-[#161b27] focus:outline-none focus:ring-2 focus:ring-sky-400/30 focus:border-sky-400 transition-all" />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Outcome</label>
+                      <label className="block text-xs font-medium text-[#8a9ab5] mb-1">Outcome</label>
                       <div className="grid grid-cols-2 gap-1.5">
                         {CALL_OUTCOMES.map(o => (
                           <button key={o.value} type="button" onClick={() => setCallOutcome(o.value)}
@@ -1014,7 +1014,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                                   : o.value === 'not_interested'
                                     ? 'border-orange-500 bg-orange-50 text-orange-700'
                                     : 'border-sky-500 bg-sky-50 text-sky-700'
-                                : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                                : 'border-[#242d40] text-[#4a5a75] hover:border-[#2e3a52]'
                             )}>
                             {o.label}
                           </button>
@@ -1023,15 +1023,15 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                     </div>
                     {callOutcome === 'not_interested' && (
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Follow-up Date <span className="text-rose-500">*</span></label>
+                        <label className="block text-xs font-medium text-[#8a9ab5] mb-1">Follow-up Date <span className="text-rose-500">*</span></label>
                         <input type="date" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)}
-                          className="w-full px-2.5 py-2 text-sm border border-orange-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-orange-400/30 focus:border-orange-400 transition-all" />
+                          className="w-full px-2.5 py-2 text-sm border border-orange-200 rounded-lg bg-[#161b27] focus:outline-none focus:ring-2 focus:ring-orange-400/30 focus:border-orange-400 transition-all" />
                         <p className="text-[11px] text-orange-600 mt-1">Lead will move to the Follow Up pool on save.</p>
                       </div>
                     )}
                     <div className="flex gap-2">
                       <button onClick={() => setShowCallForm(false)}
-                        className="flex-1 py-2 text-xs font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                        className="flex-1 py-2 text-xs font-semibold text-[#8a9ab5] bg-[#161b27] rounded-lg hover:bg-[#1e2535] transition-colors">
                         Cancel
                       </button>
                       <button onClick={handleLogCall}
@@ -1051,7 +1051,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                       <CalendarClock size={15} /> Move to Booked / Scheduled →
                     </button>
                   ) : (
-                    <p className="text-center text-xs text-gray-400 py-1">
+                    <p className="text-center text-xs text-[#3a4a62] py-1">
                       Log a call with outcome <span className="font-semibold text-emerald-600">Scheduled ✓</span> to proceed
                     </p>
                   )
@@ -1061,9 +1061,9 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
 
             {/* ── Next Step (contextual — Booked / PreQ Done) ── */}
             {nextStep && !showScheduleForm && (
-              <div className="border border-brand-200 bg-brand-50/50 rounded-xl p-4">
-                <p className="text-xs font-semibold text-brand-600 uppercase tracking-wider mb-1">Next Step</p>
-                <p className="text-xs text-gray-500 mb-3">{nextStep.description}</p>
+              <div className="border border-amber-400/20 bg-amber-400/10/50 rounded-xl p-4">
+                <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1">Next Step</p>
+                <p className="text-xs text-[#4a5a75] mb-3">{nextStep.description}</p>
                 <button
                   onClick={nextStep.action}
                   disabled={updateLead.isPending}
@@ -1083,32 +1083,32 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
               <div className="border border-violet-200 bg-violet-50/40 rounded-xl p-4 space-y-4">
                 <div>
                   <p className="text-xs font-semibold text-violet-700 uppercase tracking-wider mb-1">Schedule Consult</p>
-                  <p className="text-xs text-gray-500">Set the date and time for this consult.</p>
+                  <p className="text-xs text-[#4a5a75]">Set the date and time for this consult.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Date</label>
+                    <label className="block text-xs font-medium text-[#8a9ab5] mb-1">Date</label>
                     <input
                       type="date"
                       value={consultDate}
                       onChange={e => setConsultDate(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-400 transition-all"
+                      className="w-full px-3 py-2 text-sm border border-[#242d40] rounded-xl bg-[#161b27] focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-400 transition-all"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Time</label>
+                    <label className="block text-xs font-medium text-[#8a9ab5] mb-1">Time</label>
                     <input
                       type="time"
                       value={consultTime}
                       onChange={e => setConsultTime(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-400 transition-all"
+                      className="w-full px-3 py-2 text-sm border border-[#242d40] rounded-xl bg-[#161b27] focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-400 transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-xs font-medium text-gray-600 mb-2">Added to calendar?</p>
+                  <p className="text-xs font-medium text-[#8a9ab5] mb-2">Added to calendar?</p>
                   <div className="flex gap-2">
                     {(['Yes', 'No'] as const).map(opt => (
                       <button
@@ -1119,7 +1119,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                           'flex-1 py-2 text-sm font-semibold rounded-xl border-2 transition-all',
                           calendarBooked === (opt === 'Yes')
                             ? 'border-violet-500 bg-violet-50 text-violet-700'
-                            : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                            : 'border-[#242d40] text-[#3a4a62] hover:border-[#2e3a52]'
                         )}
                       >
                         {opt}
@@ -1131,7 +1131,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowScheduleForm(false)}
-                    className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                    className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] border border-[#242d40] rounded-xl hover:bg-[#0d1117] transition-colors"
                   >
                     Cancel
                   </button>
@@ -1151,10 +1151,10 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
 
             {/* ── Consult Outcome (after consult done) ── */}
             {lead.status === 'consult_completed' && (
-              <div className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-3">
+              <div className="border border-[#242d40] rounded-xl p-4 bg-[#0d1117] space-y-3">
                 <div>
-                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-0.5">Consult Outcome</p>
-                  <p className="text-xs text-gray-500">Did this lead convert?</p>
+                  <p className="text-xs font-semibold text-[#8a9ab5] uppercase tracking-wider mb-0.5">Consult Outcome</p>
+                  <p className="text-xs text-[#4a5a75]">Did this lead convert?</p>
                 </div>
 
                 {/* Convert path */}
@@ -1162,7 +1162,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                   showConvertConfirm ? (
                     <div className="flex gap-2">
                       <button onClick={() => setShowConvertConfirm(false)}
-                        className="flex-1 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">
+                        className="flex-1 py-2.5 text-xs font-semibold text-[#8a9ab5] bg-[#161b27] border border-[#242d40] rounded-xl hover:bg-[#161b27] transition-colors">
                         Cancel
                       </button>
                       <button onClick={handleConvert} disabled={convertLead.isPending}
@@ -1185,7 +1185,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                       <select
                         value={lostReason}
                         onChange={e => setLostReason(e.target.value)}
-                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 transition-all"
+                        className="w-full px-3 py-2.5 text-sm border border-[#242d40] rounded-xl bg-[#161b27] focus:outline-none focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 transition-all"
                       >
                         <option value="">Select a reason…</option>
                         <option value="Price / budget concerns">Price / budget concerns</option>
@@ -1199,7 +1199,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                       </select>
                       <div className="flex gap-2">
                         <button onClick={() => setShowLostForm(false)}
-                          className="flex-1 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">
+                          className="flex-1 py-2.5 text-xs font-semibold text-[#8a9ab5] bg-[#161b27] border border-[#242d40] rounded-xl hover:bg-[#161b27] transition-colors">
                           Back
                         </button>
                         <button
@@ -1212,7 +1212,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                     </div>
                   ) : (
                     <button onClick={() => setShowLostForm(true)}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-rose-600 bg-white border border-rose-200 hover:bg-rose-50 rounded-xl transition-colors">
+                      className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-rose-600 bg-[#161b27] border border-rose-200 hover:bg-rose-400/10 rounded-xl transition-colors">
                       No — Not Converted
                     </button>
                   )
@@ -1268,12 +1268,12 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                 </div>
                 <div className="space-y-2">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Update Follow-up Date</label>
+                    <label className="block text-xs font-medium text-[#8a9ab5] mb-1">Update Follow-up Date</label>
                     <input
                       type="date"
                       defaultValue={lead.follow_up_date ?? ''}
                       onChange={e => updateLead.mutate({ id: lead.id, follow_up_date: e.target.value || null })}
-                      className="w-full px-3 py-2 text-sm border border-orange-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-orange-400/30 focus:border-orange-400 transition-all"
+                      className="w-full px-3 py-2 text-sm border border-orange-200 rounded-xl bg-[#161b27] focus:outline-none focus:ring-2 focus:ring-orange-400/30 focus:border-orange-400 transition-all"
                     />
                   </div>
                 </div>
@@ -1287,7 +1287,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
                 <button
                   onClick={() => handleStatusChange('lost')}
                   disabled={updateLead.isPending}
-                  className="w-full py-2 text-xs font-semibold text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors disabled:opacity-50"
+                  className="w-full py-2 text-xs font-semibold text-rose-500 hover:text-rose-700 hover:bg-rose-400/10 rounded-xl transition-colors disabled:opacity-50"
                 >
                   Mark as Lost
                 </button>
@@ -1297,7 +1297,7 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
             {/* ── Manual stage jump ────────────────────── */}
             {lead.status !== 'converted' && lead.status !== 'lost' && lead.status !== 'follow_up' && otherStages.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Jump to Stage</p>
+                <p className="text-xs font-semibold text-[#3a4a62] uppercase tracking-wider mb-2">Jump to Stage</p>
                 <div className="flex flex-wrap gap-2">
                   {otherStages.map(s => (
                     <button key={s.status} onClick={() => handleStatusChange(s.status)} disabled={updateLead.isPending}
@@ -1315,32 +1315,32 @@ function LeadPanel({ lead, onClose }: { lead: DbLead; onClose: () => void }) {
 
             {/* Notes */}
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Notes</p>
+              <p className="text-xs font-semibold text-[#4a5a75] uppercase tracking-wider mb-2">Notes</p>
               <textarea
                 value={notes}
                 onChange={e => { setNotes(e.target.value); setNotesTouched(true) }}
                 rows={4}
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all resize-none"
+                className="w-full px-3 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition-all resize-none"
                 placeholder="Goals, context, follow-up reminders…"
               />
               <button onClick={handleSaveNotes} disabled={saving || !notesTouched}
-                className="mt-2 w-full py-2 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-40 transition-all">
+                className="mt-2 w-full py-2 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-40 transition-all">
                 {saving ? 'Saving…' : 'Save Notes'}
               </button>
             </div>
           </div>
 
           {/* Delete */}
-          <div className="p-5 border-t border-gray-100">
+          <div className="p-5 border-t border-[#242d40]">
             {showDeleteConfirm ? (
               <div className="flex gap-2">
-                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
+                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">Cancel</button>
                 <button onClick={handleDelete} disabled={deleteLead.isPending} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-rose-600 rounded-xl hover:bg-rose-700 disabled:opacity-50 transition-colors">
                   {deleteLead.isPending ? <Loader2 size={14} className="animate-spin" /> : <><Trash2 size={14} /> Delete Lead</>}
                 </button>
               </div>
             ) : (
-              <button onClick={() => setShowDeleteConfirm(true)} className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors">
+              <button onClick={() => setShowDeleteConfirm(true)} className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-rose-500 hover:text-rose-700 hover:bg-rose-400/10 rounded-xl transition-colors">
                 <Trash2 size={14} /> Delete Lead
               </button>
             )}
@@ -1366,28 +1366,28 @@ function LeadCard({ lead, onClick }: { lead: DbLead; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-white border border-gray-200 rounded-xl p-4 hover:border-brand-300 hover:shadow-sm transition-all group"
+      className="w-full text-left bg-[#161b27] border border-[#242d40] rounded-xl p-4 hover:border-amber-400/30 hover:shadow-sm transition-all group"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 truncate group-hover:text-brand-600 transition-colors">{lead.name}</p>
+          <p className="font-semibold text-[#e8edf5] truncate group-hover:text-amber-400 transition-colors">{lead.name}</p>
           {(lead.email || lead.phone) && (
-            <p className="text-xs text-gray-400 mt-0.5 truncate">
+            <p className="text-xs text-[#3a4a62] mt-0.5 truncate">
               {lead.email ?? lead.phone}
             </p>
           )}
           {lead.source && (
-            <p className="text-xs text-gray-400 mt-0.5">via {lead.source}</p>
+            <p className="text-xs text-[#3a4a62] mt-0.5">via {lead.source}</p>
           )}
           {lead.notes && (
-            <p className="text-xs text-gray-500 mt-1.5 line-clamp-2">{lead.notes}</p>
+            <p className="text-xs text-[#4a5a75] mt-1.5 line-clamp-2">{lead.notes}</p>
           )}
         </div>
-        <ChevronRight size={16} className="text-gray-300 group-hover:text-brand-400 flex-shrink-0 mt-0.5 transition-colors" />
+        <ChevronRight size={16} className="text-[#2e3a52] group-hover:text-amber-400 flex-shrink-0 mt-0.5 transition-colors" />
       </div>
       <div className="mt-3 flex items-center justify-between">
         <StatusBadge status={lead.status} />
-        <span className="text-[11px] text-gray-400">
+        <span className="text-[11px] text-[#3a4a62]">
           {lead.status === 'follow_up' && lead.follow_up_date
             ? `Follow up ${new Date(lead.follow_up_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
             : new Date(lead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -1452,15 +1452,15 @@ export default function Leads() {
   const convertedLeads = leads.filter(l => l.status === 'converted')
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full bg-[#0d1117]">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-[#161b27] border-b border-[#242d40] px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">
+            <h1 className="text-xl font-bold text-[#e8edf5]">
               {pool === 'followup' ? 'Follow Up Pool' : 'Lead Pipeline'}
             </h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm text-[#4a5a75] mt-0.5">
               {pool === 'followup'
                 ? `${followUpLeads.length} lead${followUpLeads.length !== 1 ? 's' : ''} awaiting follow up`
                 : `${activeLeads.length} active · ${convertedLeads.length} converted`}
@@ -1470,19 +1470,19 @@ export default function Leads() {
             <button
               onClick={() => setShowTemplates(true)}
               title="Setup questionnaire templates"
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] hover:bg-[#1e2535] rounded-xl transition-colors"
             >
               <Settings2 size={15} /> Templates
             </button>
             <button
               onClick={() => setShowBulkImport(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] hover:bg-[#1e2535] rounded-xl transition-colors"
             >
               <Upload size={15} /> Import
             </button>
             <button
               onClick={() => setShowAdd(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-300 hover:from-amber-400 hover:to-amber-300 text-white text-sm font-semibold rounded-xl transition-all shadow-sm"
             >
               <Plus size={16} /> Add Lead
             </button>
@@ -1495,7 +1495,7 @@ export default function Leads() {
             onClick={() => setPool('pipeline')}
             className={clsx(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
-              pool === 'pipeline' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              pool === 'pipeline' ? 'bg-[#0d1117] text-white' : 'bg-[#161b27] text-[#4a5a75] hover:bg-[#1e2535]'
             )}
           >
             Pipeline
@@ -1505,10 +1505,10 @@ export default function Leads() {
             onClick={() => setPool('followup')}
             className={clsx(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
-              pool === 'followup' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              pool === 'followup' ? 'bg-orange-500 text-white' : 'bg-[#161b27] text-[#4a5a75] hover:bg-[#1e2535]'
             )}
           >
-            <span className={clsx('w-1.5 h-1.5 rounded-full', pool === 'followup' ? 'bg-white/70' : 'bg-orange-400')} />
+            <span className={clsx('w-1.5 h-1.5 rounded-full', pool === 'followup' ? 'bg-[#161b27]/70' : 'bg-orange-400')} />
             Follow Up
             {followUpLeads.length > 0 && (
               <span className={clsx('opacity-80', pool !== 'followup' && 'text-orange-600')}>{followUpLeads.length}</span>
@@ -1524,8 +1524,8 @@ export default function Leads() {
               className={clsx(
                 'flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
                 activeStage === 'all'
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  ? 'bg-[#0d1117] text-white'
+                  : 'bg-[#161b27] text-[#4a5a75] hover:bg-[#1e2535]'
               )}
             >
               All <span className="ml-1 opacity-60">{pipelineLeads.length}</span>
@@ -1537,8 +1537,8 @@ export default function Leads() {
                 className={clsx(
                   'flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
                   activeStage === s.status
-                    ? 'bg-gray-900 text-white'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    ? 'bg-[#0d1117] text-white'
+                    : 'bg-[#161b27] text-[#4a5a75] hover:bg-[#1e2535]'
                 )}
               >
                 <span className={clsx('w-1.5 h-1.5 rounded-full', s.dot)} />
@@ -1555,15 +1555,15 @@ export default function Leads() {
       </div>
 
       {/* Search */}
-      <div className="px-6 py-3 bg-white border-b border-gray-100">
+      <div className="px-6 py-3 bg-[#161b27] border-b border-[#242d40]">
         <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3a4a62]" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search leads by name, email, or phone…"
-            className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+            className="w-full pl-9 pr-4 py-2 text-sm bg-[#0d1117] border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition-all"
           />
         </div>
       </div>
@@ -1572,19 +1572,19 @@ export default function Leads() {
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 size={22} className="animate-spin text-brand-500" />
+            <Loader2 size={22} className="animate-spin text-amber-400" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
-              <UserCheck size={24} className="text-gray-400" />
+            <div className="w-14 h-14 bg-[#161b27] rounded-2xl flex items-center justify-center mb-4">
+              <UserCheck size={24} className="text-[#3a4a62]" />
             </div>
-            <p className="text-base font-semibold text-gray-700">
+            <p className="text-base font-semibold text-[#8a9ab5]">
               {pool === 'followup'
                 ? 'No follow-up leads'
                 : leads.length === 0 ? 'No leads yet' : 'No leads match your filter'}
             </p>
-            <p className="text-sm text-gray-400 mt-1 max-w-xs">
+            <p className="text-sm text-[#3a4a62] mt-1 max-w-xs">
               {pool === 'followup'
                 ? 'When a lead says "Not Interested" on a call, they\'ll appear here with a follow-up date.'
                 : leads.length === 0
@@ -1594,7 +1594,7 @@ export default function Leads() {
             {leads.length === 0 && pool === 'pipeline' && (
               <button
                 onClick={() => setShowAdd(true)}
-                className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all"
+                className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-300 text-white text-sm font-semibold rounded-xl hover:from-amber-400 hover:to-amber-300 transition-all"
               >
                 <Plus size={16} /> Add First Lead
               </button>
@@ -1615,7 +1615,7 @@ export default function Leads() {
 
       {/* Pipeline summary bar */}
       {leads.length > 0 && pool === 'pipeline' && (
-        <div className="bg-white border-t border-gray-200 px-6 py-3">
+        <div className="bg-[#161b27] border-t border-[#242d40] px-6 py-3">
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
             {PIPELINE_STAGES.filter(s => s.status !== 'lost').map((s, i) => {
               const count = counts[s.status]
@@ -1624,16 +1624,16 @@ export default function Leads() {
                 <div key={s.status} className="flex items-center gap-1 flex-shrink-0">
                   <div className="flex items-center gap-1.5">
                     <span className={clsx('w-2 h-2 rounded-full', s.dot)} />
-                    <span className="text-xs text-gray-500">{s.label}</span>
-                    <span className="text-xs font-bold text-gray-700">{count}</span>
+                    <span className="text-xs text-[#4a5a75]">{s.label}</span>
+                    <span className="text-xs font-bold text-[#8a9ab5]">{count}</span>
                   </div>
-                  {!isLast && <ChevronRight size={12} className="text-gray-300 mx-1" />}
+                  {!isLast && <ChevronRight size={12} className="text-[#2e3a52] mx-1" />}
                 </div>
               )
             })}
             {counts['lost'] > 0 && (
               <>
-                <span className="text-gray-200 mx-2">·</span>
+                <span className="text-[#8a9ab5] mx-2">·</span>
                 <span className="text-xs text-rose-400">{counts['lost']} lost</span>
               </>
             )}

@@ -87,7 +87,7 @@ const PORTAL_SECTIONS: {
     label:       'Workouts',
     desc:        'Assigned sessions & logging',
     icon:        Dumbbell,
-    gradient:    'from-violet-500 to-brand-500',
+    gradient:    'from-violet-500 to-amber-300',
     activeRing:  'ring-violet-400/40',
   },
   {
@@ -164,10 +164,10 @@ function CoursesSection({ client }: { client: DbClient }) {
     setSaving(null)
   }
 
-  if (loading) return <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-gray-300" /></div>
+  if (loading) return <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-[#2e3a52]" /></div>
   if (modules.length === 0) return (
-    <div className="text-center py-6 text-sm text-gray-400">
-      No courses created yet. <a href="/community" className="text-brand-600 font-semibold hover:underline">Create one in Community</a>.
+    <div className="text-center py-6 text-sm text-[#3a4a62]">
+      No courses created yet. <a href="/community" className="text-amber-400 font-semibold hover:underline">Create one in Community</a>.
     </div>
   )
 
@@ -181,21 +181,21 @@ function CoursesSection({ client }: { client: DbClient }) {
         const pct       = total > 0 ? Math.round((done / total) * 100) : 0
         return (
           <div key={m.id} className={clsx('flex items-center gap-3 px-4 py-3 rounded-xl border transition-all',
-            enrolled ? 'border-brand-200 bg-brand-50/40' : 'border-gray-200')}>
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+            enrolled ? 'border-amber-400/20 bg-amber-400/10/40' : 'border-[#242d40]')}>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-amber-300 flex items-center justify-center flex-shrink-0">
               <BookOpen size={14} className="text-white" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-gray-700 truncate">{m.title}</p>
+                <p className="text-sm font-semibold text-[#8a9ab5] truncate">{m.title}</p>
                 {isAll && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 flex items-center gap-0.5"><Globe size={8} /> All</span>}
               </div>
               {enrolled && total > 0 && (
                 <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-brand-500 rounded-full" style={{ width: `${pct}%` }} />
+                  <div className="flex-1 h-1 bg-[#1e2535] rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
                   </div>
-                  <span className="text-[10px] text-gray-400 flex-shrink-0">{done}/{total}</span>
+                  <span className="text-[10px] text-[#3a4a62] flex-shrink-0">{done}/{total}</span>
                 </div>
               )}
             </div>
@@ -203,8 +203,8 @@ function CoursesSection({ client }: { client: DbClient }) {
               <button onClick={() => toggleEnroll(m.id)} disabled={saving === m.id}
                 className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex-shrink-0',
                   enrolled
-                    ? 'bg-brand-100 text-brand-700 hover:bg-red-50 hover:text-red-600'
-                    : 'bg-gray-100 text-gray-600 hover:bg-brand-50 hover:text-brand-700')}>
+                    ? 'bg-amber-400/10 text-amber-400 hover:bg-red-50 hover:text-red-600'
+                    : 'bg-[#161b27] text-[#8a9ab5] hover:bg-amber-400/10 hover:text-amber-400')}>
                 {saving === m.id ? <Loader2 size={11} className="animate-spin" />
                   : enrolled ? <><UserCheck size={11} /> Enrolled</> : <><Plus size={11} /> Enroll</>}
               </button>
@@ -231,8 +231,8 @@ function PortalAccessCard({ client }: { client: DbClient }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-gray-800">Client Portal Access</h3>
-        <span className="text-xs text-gray-400">
+        <h3 className="font-semibold text-[#e8edf5]">Client Portal Access</h3>
+        <span className="text-xs text-[#3a4a62]">
           {sections.length} / {PORTAL_SECTIONS.length} sections on
         </span>
       </div>
@@ -249,17 +249,17 @@ function PortalAccessCard({ client }: { client: DbClient }) {
                 'relative rounded-2xl border p-4 text-left transition-all group',
                 on
                   ? `bg-gradient-to-br ${gradient} bg-opacity-10 border-transparent ring-2 ${activeRing} shadow-md`
-                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100',
+                  : 'bg-[#0d1117] border-[#242d40] hover:bg-[#161b27]',
               )}
             >
               {/* Toggle pill */}
               <div className={clsx(
                 'absolute top-3 right-3 w-8 h-4 rounded-full transition-colors flex items-center px-0.5',
-                on ? 'bg-white/30' : 'bg-gray-200',
+                on ? 'bg-[#161b27]/30' : 'bg-[#1e2535]',
               )}>
                 <div className={clsx(
                   'w-3 h-3 rounded-full transition-all',
-                  on ? 'translate-x-4 bg-white shadow' : 'translate-x-0 bg-white shadow',
+                  on ? 'translate-x-4 bg-[#161b27] shadow' : 'translate-x-0 bg-[#161b27] shadow',
                 )} />
               </div>
 
@@ -267,24 +267,24 @@ function PortalAccessCard({ client }: { client: DbClient }) {
               <div className={clsx(
                 'w-9 h-9 rounded-xl flex items-center justify-center mb-2.5',
                 on
-                  ? 'bg-white/25'
-                  : 'bg-gray-200',
+                  ? 'bg-[#161b27]/25'
+                  : 'bg-[#1e2535]',
               )}>
                 {on
                   ? <Icon size={18} className="text-white" />
-                  : <Icon size={18} className="text-gray-400" />}
+                  : <Icon size={18} className="text-[#3a4a62]" />}
               </div>
 
-              <p className={clsx('text-sm font-semibold leading-tight', on ? 'text-white' : 'text-gray-700')}>
+              <p className={clsx('text-sm font-semibold leading-tight', on ? 'text-white' : 'text-[#8a9ab5]')}>
                 {label}
               </p>
-              <p className={clsx('text-[11px] mt-0.5 leading-snug', on ? 'text-white/70' : 'text-gray-400')}>
+              <p className={clsx('text-[11px] mt-0.5 leading-snug', on ? 'text-white/70' : 'text-[#3a4a62]')}>
                 {desc}
               </p>
 
               {!on && (
                 <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Lock size={10} className="text-gray-300" />
+                  <Lock size={10} className="text-[#2e3a52]" />
                 </div>
               )}
             </button>
@@ -315,7 +315,7 @@ function AddTaskRow({ clientId }: { clientId: string }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="w-full text-left text-sm text-brand-600 font-semibold hover:text-brand-700 transition-colors py-3 flex items-center gap-1.5"
+        className="w-full text-left text-sm text-amber-400 font-semibold hover:text-amber-400 transition-colors py-3 flex items-center gap-1.5"
       >
         <Plus size={14} /> Add task
       </button>
@@ -329,23 +329,23 @@ function AddTaskRow({ clientId }: { clientId: string }) {
         value={title}
         onChange={e => setTitle(e.target.value)}
         placeholder="Task title..."
-        className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
+        className="w-full text-sm px-3 py-2 border border-[#242d40] rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400"
       />
       <div className="flex gap-2">
         <input
           type="date"
           value={dueDate}
           onChange={e => setDueDate(e.target.value)}
-          className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
+          className="flex-1 text-sm px-3 py-2 border border-[#242d40] rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400"
         />
         <button
           type="submit"
           disabled={create.isPending}
-          className="px-3 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 disabled:opacity-60"
+          className="px-3 py-2 bg-amber-400 text-white text-sm font-medium rounded-lg hover:bg-amber-400 disabled:opacity-60"
         >
           {create.isPending ? <Loader2 size={14} className="animate-spin" /> : 'Add'}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="px-3 py-2 text-gray-400 hover:text-gray-600">
+        <button type="button" onClick={() => setOpen(false)} className="px-3 py-2 text-[#3a4a62] hover:text-[#8a9ab5]">
           <X size={14} />
         </button>
       </div>
@@ -391,10 +391,10 @@ function EditClientModal({ client, onClose }: { client: DbClient; onClose: () =>
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-900">Edit Client</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100">
+          <h2 className="text-lg font-bold text-[#e8edf5]">Edit Client</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:text-[#8a9ab5] hover:bg-[#161b27]">
             <X size={18} />
           </button>
         </div>
@@ -403,45 +403,45 @@ function EditClientModal({ client, onClose }: { client: DbClient; onClose: () =>
 
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Full Name *</label>
+            <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Full Name *</label>
             <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" required />
+              className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" required />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Email</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Email</label>
               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Phone</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Phone</label>
               <input type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Primary Goal</label>
+            <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Primary Goal</label>
             <input type="text" value={form.goal} onChange={e => setForm(f => ({ ...f, goal: e.target.value }))}
               placeholder="Weight Loss, Muscle Gain..."
-              className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+              className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Category</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Category</label>
               <input type="text" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
                 placeholder="Premium..."
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Group</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Group</label>
               <input type="text" value={form.group_name} onChange={e => setForm(f => ({ ...f, group_name: e.target.value }))}
                 placeholder="Morning..."
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Status</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Status</label>
               <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as DbClient['status'] }))}
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 bg-white">
+                className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 bg-[#161b27]">
                 <option value="active">Active</option>
                 <option value="pending">Pending</option>
                 <option value="inactive">Inactive</option>
@@ -450,11 +450,11 @@ function EditClientModal({ client, onClose }: { client: DbClient; onClose: () =>
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+              className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">
               Cancel
             </button>
             <button type="submit" disabled={update.isPending}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-60 transition-all">
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-60 transition-all">
               {update.isPending ? <Loader2 size={15} className="animate-spin" /> : 'Save Changes'}
             </button>
           </div>
@@ -512,49 +512,49 @@ function AssignProgramModal({ clientId, onClose }: { clientId: string; onClose: 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 flex flex-col max-h-[90vh]">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-900">Assign Program</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18} /></button>
+          <h2 className="text-lg font-bold text-[#e8edf5]">Assign Program</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:text-[#8a9ab5] hover:bg-[#161b27]"><X size={18} /></button>
         </div>
         {error && <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">{error}</div>}
         <div className="relative mb-3">
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search programs..."
-            className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+            className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
         </div>
         <div className="flex-1 overflow-y-auto space-y-1.5 mb-4 min-h-0" style={{ maxHeight: 260 }}>
           {isLoading ? (
-            <div className="flex items-center justify-center py-10"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+            <div className="flex items-center justify-center py-10"><Loader2 size={20} className="animate-spin text-[#2e3a52]" /></div>
           ) : filtered.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No programs found</p>
+            <p className="text-sm text-[#3a4a62] text-center py-8">No programs found</p>
           ) : filtered.map(p => (
             <button key={p.id} type="button" onClick={() => setSelected(p.id)}
               className={clsx('w-full text-left px-4 py-3 rounded-xl border-2 transition-all',
-                selected === p.id ? 'border-brand-500 bg-brand-50' : 'border-transparent bg-gray-50 hover:bg-gray-100')}>
+                selected === p.id ? 'border-amber-400 bg-amber-400/10' : 'border-transparent bg-[#0d1117] hover:bg-[#161b27]')}>
               <div className="flex items-center gap-3">
                 <div className={clsx('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                  selected === p.id ? 'bg-brand-600' : 'bg-gray-200')}>
-                  <BarChart2 size={15} className={selected === p.id ? 'text-white' : 'text-gray-500'} />
+                  selected === p.id ? 'bg-amber-400' : 'bg-[#1e2535]')}>
+                  <BarChart2 size={15} className={selected === p.id ? 'text-white' : 'text-[#4a5a75]'} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-semibold text-[#e8edf5] truncate">{p.name}</p>
+                  <p className="text-xs text-[#4a5a75]">
                     {p.duration_weeks ? `${p.duration_weeks} weeks` : ''}
                     {p.difficulty ? ` · ${p.difficulty}` : ''}
                   </p>
                 </div>
-                {selected === p.id && <CheckCircle2 size={16} className="text-brand-600 flex-shrink-0" />}
+                {selected === p.id && <CheckCircle2 size={16} className="text-amber-400 flex-shrink-0" />}
               </div>
             </button>
           ))}
         </div>
-        <form onSubmit={submit} className="flex gap-3 border-t border-gray-100 pt-4">
+        <form onSubmit={submit} className="flex gap-3 border-t border-[#242d40] pt-4">
           <button type="button" onClick={onClose}
-            className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">
             Cancel
           </button>
           <button type="submit" disabled={!selected || assign.isPending}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all">
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-50 transition-all">
             {assign.isPending ? <Loader2 size={15} className="animate-spin" /> : <><Send size={14} /> Assign</>}
           </button>
         </form>
@@ -574,45 +574,45 @@ function ProgramSection({ clientId }: { clientId: string }) {
     <div className="mt-4">
       {showAssign && <AssignProgramModal clientId={clientId} onClose={() => setShowAssign(false)} />}
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-gray-800">Assigned Program</h3>
+        <h3 className="font-semibold text-[#e8edf5]">Assigned Program</h3>
         <button onClick={() => setShowAssign(true)}
-          className="flex items-center gap-1 text-xs text-brand-600 font-medium hover:text-brand-700">
+          className="flex items-center gap-1 text-xs text-amber-400 font-medium hover:text-amber-400">
           <Plus size={12} />{assignment ? 'Change' : 'Assign'}
         </button>
       </div>
       {isLoading ? (
-        <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-center">
-          <Loader2 size={16} className="animate-spin text-gray-300" />
+        <div className="bg-[#0d1117] rounded-xl p-4 flex items-center justify-center">
+          <Loader2 size={16} className="animate-spin text-[#2e3a52]" />
         </div>
       ) : assignment?.program ? (
-        <div className="bg-brand-50 border border-brand-100 rounded-xl p-4">
+        <div className="bg-amber-400/10 border border-amber-400/10 rounded-xl p-4">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-brand-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <BarChart2 size={15} className="text-brand-600" />
+            <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <BarChart2 size={15} className="text-amber-400" />
             </div>
             <div className="flex-1 min-w-0">
               <button onClick={() => navigate(`/library/programs/${assignment.program!.id}`)}
-                className="text-sm font-semibold text-brand-700 hover:underline truncate block text-left">
+                className="text-sm font-semibold text-amber-400 hover:underline truncate block text-left">
                 {assignment.program.name}
               </button>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-[#4a5a75] mt-0.5">
                 {assignment.program.duration_weeks ? `${assignment.program.duration_weeks} weeks` : ''}
                 {assignment.program.difficulty ? ` · ${assignment.program.difficulty}` : ''}
               </p>
             </div>
             <button onClick={() => unassign.mutate(assignment.id)} disabled={unassign.isPending}
               title="Remove program"
-              className="text-gray-300 hover:text-rose-400 transition-colors p-1 flex-shrink-0">
+              className="text-[#2e3a52] hover:text-rose-400 transition-colors p-1 flex-shrink-0">
               {unassign.isPending ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
             </button>
           </div>
         </div>
       ) : (
-        <div className="bg-gray-50 rounded-xl p-4 text-center">
-          <Dumbbell size={24} className="mx-auto text-gray-300 mb-2" />
-          <p className="text-sm text-gray-500">No program assigned</p>
+        <div className="bg-[#0d1117] rounded-xl p-4 text-center">
+          <Dumbbell size={24} className="mx-auto text-[#2e3a52] mb-2" />
+          <p className="text-sm text-[#4a5a75]">No program assigned</p>
           <button onClick={() => setShowAssign(true)}
-            className="mt-1 text-xs text-brand-600 font-medium hover:text-brand-700">
+            className="mt-1 text-xs text-amber-400 font-medium hover:text-amber-400">
             Assign a program
           </button>
         </div>
@@ -655,10 +655,10 @@ function AssignWorkoutModal({ clientId, defaultDate, onClose }: { clientId: stri
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 flex flex-col max-h-[90vh]">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-900">Assign Workout</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18} /></button>
+          <h2 className="text-lg font-bold text-[#e8edf5]">Assign Workout</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:text-[#8a9ab5] hover:bg-[#161b27]"><X size={18} /></button>
         </div>
 
         {error && <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">{error}</div>}
@@ -668,7 +668,7 @@ function AssignWorkoutModal({ clientId, defaultDate, onClose }: { clientId: stri
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search workouts..."
-            className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
+            className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400"
           />
         </div>
 
@@ -676,10 +676,10 @@ function AssignWorkoutModal({ clientId, defaultDate, onClose }: { clientId: stri
         <div className="flex-1 overflow-y-auto space-y-1.5 mb-4 min-h-0" style={{ maxHeight: 260 }}>
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
-              <Loader2 size={20} className="animate-spin text-gray-300" />
+              <Loader2 size={20} className="animate-spin text-[#2e3a52]" />
             </div>
           ) : filtered.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No workouts found</p>
+            <p className="text-sm text-[#3a4a62] text-center py-8">No workouts found</p>
           ) : filtered.map(w => (
             <button
               key={w.id}
@@ -688,49 +688,49 @@ function AssignWorkoutModal({ clientId, defaultDate, onClose }: { clientId: stri
               className={clsx(
                 'w-full text-left px-4 py-3 rounded-xl border-2 transition-all',
                 selected === w.id
-                  ? 'border-brand-500 bg-brand-50'
-                  : 'border-transparent bg-gray-50 hover:bg-gray-100',
+                  ? 'border-amber-400 bg-amber-400/10'
+                  : 'border-transparent bg-[#0d1117] hover:bg-[#161b27]',
               )}
             >
               <div className="flex items-center gap-3">
                 <div className={clsx('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                  selected === w.id ? 'bg-brand-600' : 'bg-gray-200')}>
-                  <Dumbbell size={15} className={selected === w.id ? 'text-white' : 'text-gray-500'} />
+                  selected === w.id ? 'bg-amber-400' : 'bg-[#1e2535]')}>
+                  <Dumbbell size={15} className={selected === w.id ? 'text-white' : 'text-[#4a5a75]'} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{w.name}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-semibold text-[#e8edf5] truncate">{w.name}</p>
+                  <p className="text-xs text-[#4a5a75]">
                     {(w as any).workout_exercises?.length ?? 0} exercises
                     {w.duration_minutes ? ` · ${w.duration_minutes} min` : ''}
                     {w.difficulty ? ` · ${w.difficulty}` : ''}
                   </p>
                 </div>
-                {selected === w.id && <CheckCircle2 size={16} className="text-brand-600 flex-shrink-0" />}
+                {selected === w.id && <CheckCircle2 size={16} className="text-amber-400 flex-shrink-0" />}
               </div>
             </button>
           ))}
         </div>
 
-        <form onSubmit={submit} className="space-y-3 border-t border-gray-100 pt-4">
+        <form onSubmit={submit} className="space-y-3 border-t border-[#242d40] pt-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Due Date</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Due Date</label>
               <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                className="w-full px-3 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Notes</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Notes</label>
               <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional..."
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                className="w-full px-3 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
             </div>
           </div>
           <div className="flex gap-3">
             <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+              className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">
               Cancel
             </button>
             <button type="submit" disabled={!selected || assign.isPending}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all">
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-50 transition-all">
               {assign.isPending ? <Loader2 size={15} className="animate-spin" /> : <><Send size={14} /> Assign</>}
             </button>
           </div>
@@ -742,9 +742,9 @@ function AssignWorkoutModal({ clientId, defaultDate, onClose }: { clientId: stri
 
 // ─── Status helpers ───────────────────────────────────────────
 const STATUS_STYLES: Record<DbClientWorkoutWithWorkout['status'], string> = {
-  assigned:  'bg-brand-50 text-brand-700',
+  assigned:  'bg-amber-400/10 text-amber-400',
   completed: 'bg-emerald-50 text-emerald-700',
-  skipped:   'bg-gray-100 text-gray-500',
+  skipped:   'bg-[#161b27] text-[#4a5a75]',
 }
 
 // ─── Rest timer (coach modal) ─────────────────────────────────
@@ -765,9 +765,9 @@ function CoachRestTimer({ restSeconds, label, onDone }: { restSeconds: number; l
   const display = mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : `${secs}`
 
   return (
-    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/95 backdrop-blur-sm rounded-2xl">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Rest Period</p>
-      <p className="text-sm text-gray-600 font-medium mb-6 text-center max-w-[200px]">{label}</p>
+    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#161b27]/95 backdrop-blur-sm rounded-2xl">
+      <p className="text-xs font-semibold text-[#3a4a62] uppercase tracking-widest mb-1">Rest Period</p>
+      <p className="text-sm text-[#8a9ab5] font-medium mb-6 text-center max-w-[200px]">{label}</p>
       <div className="relative w-36 h-36">
         <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
           <circle cx="60" cy="60" r={radius} stroke="#f3f4f6" strokeWidth="8" fill="none" />
@@ -785,27 +785,27 @@ function CoachRestTimer({ restSeconds, label, onDone }: { restSeconds: number; l
           </defs>
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-4xl font-bold text-gray-900 tabular-nums leading-none">{display}</span>
-          <span className="text-gray-400 text-xs mt-0.5">seconds</span>
+          <span className="text-4xl font-bold text-[#e8edf5] tabular-nums leading-none">{display}</span>
+          <span className="text-[#3a4a62] text-xs mt-0.5">seconds</span>
         </div>
       </div>
       {/* ±15 s controls */}
       <div className="mt-8 flex items-center gap-3">
         <button
           onClick={() => setRemaining(r => Math.max(0, r - 15))}
-          className="w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold transition-colors flex items-center justify-center"
+          className="w-11 h-11 rounded-xl bg-[#161b27] hover:bg-[#1e2535] text-[#8a9ab5] text-sm font-bold transition-colors flex items-center justify-center"
         >
           −15
         </button>
         <button
           onClick={onDone}
-          className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold rounded-xl transition-colors"
+          className="px-5 py-2.5 bg-[#161b27] hover:bg-[#1e2535] text-[#8a9ab5] text-sm font-semibold rounded-xl transition-colors"
         >
           Skip
         </button>
         <button
           onClick={() => setRemaining(r => r + 15)}
-          className="w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold transition-colors flex items-center justify-center"
+          className="w-11 h-11 rounded-xl bg-[#161b27] hover:bg-[#1e2535] text-[#8a9ab5] text-sm font-bold transition-colors flex items-center justify-center"
         >
           +15
         </button>
@@ -893,7 +893,7 @@ function LogSessionModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] z-10">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] z-10">
         {/* Rest timer overlay */}
         {restTimer && (
           <CoachRestTimer
@@ -903,25 +903,25 @@ function LogSessionModal({
           />
         )}
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#242d40]">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Log Session</h2>
-            <p className="text-sm text-gray-500 mt-0.5">{assignment.workout.name}</p>
+            <h2 className="text-lg font-bold text-[#e8edf5]">Log Session</h2>
+            <p className="text-sm text-[#4a5a75] mt-0.5">{assignment.workout.name}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"><X size={18} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:bg-[#161b27]"><X size={18} /></button>
         </div>
 
         {/* Date picker */}
-        <div className="px-6 py-3 border-b border-gray-50 flex items-center gap-4">
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</label>
+        <div className="px-6 py-3 border-b border-[#1e2535] flex items-center gap-4">
+          <label className="text-xs font-semibold text-[#4a5a75] uppercase tracking-wide">Date</label>
           <input type="date" value={completedAt} onChange={e => setCompletedAt(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+            className="px-3 py-1.5 text-sm border border-[#242d40] rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400/20" />
         </div>
 
         {/* Exercises */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
           {isLoading ? (
-            <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+            <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-[#2e3a52]" /></div>
           ) : (workout?.workout_exercises ?? []).map(ex => {
             const metric = ex.exercise?.metric_type ?? 'reps_weight'
             const isWeighted  = metric === 'reps_weight'
@@ -933,14 +933,14 @@ function LogSessionModal({
             return (
               <div key={ex.id}>
                 <div className="flex items-center gap-2 mb-2">
-                  <p className="text-sm font-semibold text-gray-800">{ex.exercise_name}</p>
-                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                  <p className="text-sm font-semibold text-[#e8edf5]">{ex.exercise_name}</p>
+                  <span className="text-xs text-[#3a4a62] bg-[#161b27] px-2 py-0.5 rounded-full">
                     {ex.workout_sets.length} sets
                     {ex.exercise?.muscle_group ? ` · ${ex.exercise.muscle_group}` : ''}
                   </span>
                 </div>
                 {/* Column headers */}
-                <div className={clsx('grid gap-2 text-xs font-semibold text-gray-400 uppercase tracking-wide px-2 mb-1.5', colClass)}>
+                <div className={clsx('grid gap-2 text-xs font-semibold text-[#3a4a62] uppercase tracking-wide px-2 mb-1.5', colClass)}>
                   <span>#</span>
                   {isWeighted && <><span>Reps</span><span>Weight ({wLabel})</span></>}
                   {isTimed    && <span>Duration (s)</span>}
@@ -955,16 +955,16 @@ function LogSessionModal({
                     const e    = entries[key] ?? { reps: '', weight: '', duration: '', distance: '', rpe: '' }
                     const done = doneSets.has(key)
                     const inp  = clsx(
-                      'px-2 py-1.5 text-sm text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 w-full',
-                      done ? 'border-emerald-200 bg-emerald-50 opacity-70' : 'border-gray-200 bg-white',
+                      'px-2 py-1.5 text-sm text-center border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400/20 w-full',
+                      done ? 'border-emerald-200 bg-emerald-50 opacity-70' : 'border-[#242d40] bg-[#161b27]',
                     )
                     return (
                       <div key={s.set_number}
                         className={clsx('grid gap-2 items-center rounded-xl px-2 py-2 transition-colors',
-                          done ? 'bg-emerald-50' : 'bg-gray-50',
+                          done ? 'bg-emerald-50' : 'bg-[#0d1117]',
                           colClass)}>
                         <span className={clsx('text-xs font-bold text-center',
-                          done ? 'text-emerald-500' : 'text-gray-400')}>
+                          done ? 'text-emerald-500' : 'text-[#3a4a62]')}>
                           {s.set_number}
                         </span>
                         {isWeighted && (
@@ -1003,7 +1003,7 @@ function LogSessionModal({
                             'w-9 h-9 rounded-xl flex items-center justify-center transition-all flex-shrink-0',
                             done
                               ? 'bg-emerald-500 text-white shadow-sm'
-                              : 'bg-white border border-gray-200 text-gray-300 hover:border-emerald-300 hover:text-emerald-500',
+                              : 'bg-[#161b27] border border-[#242d40] text-[#2e3a52] hover:border-emerald-300 hover:text-emerald-500',
                           )}
                         >
                           <CheckCircle2 size={15} />
@@ -1018,15 +1018,15 @@ function LogSessionModal({
         </div>
 
         {/* Notes + submit */}
-        <div className="px-6 py-4 border-t border-gray-100 space-y-3">
+        <div className="px-6 py-4 border-t border-[#242d40] space-y-3">
           {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-xl">{error}</p>}
           <input value={notes} onChange={e => setNotes(e.target.value)}
             placeholder="Session notes (optional)..."
-            className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+            className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20" />
           <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
+            <button onClick={onClose} className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">Cancel</button>
             <button onClick={submit} disabled={logSession.isPending || saved || isLoading}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all">
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-50 transition-all">
               {logSession.isPending
                 ? <><Loader2 size={15} className="animate-spin" />Saving…</>
                 : saved
@@ -1055,21 +1055,21 @@ function AssignmentCard({
 
   return (
     <div className={clsx(
-      'group relative flex flex-col bg-white rounded-xl border transition-all hover:shadow-sm',
-      a.status === 'completed' ? 'border-emerald-200' : a.status === 'skipped' ? 'border-gray-200 opacity-60' : 'border-gray-200',
+      'group relative flex flex-col bg-[#161b27] rounded-xl border transition-all hover:shadow-sm',
+      a.status === 'completed' ? 'border-emerald-200' : a.status === 'skipped' ? 'border-[#242d40] opacity-60' : 'border-[#242d40]',
       compact ? 'p-2' : 'p-3.5',
     )}>
       <div className="flex items-start gap-2">
         <div className={clsx('rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5',
           compact ? 'w-6 h-6' : 'w-8 h-8',
-          a.status === 'completed' ? 'bg-emerald-100' : 'bg-brand-100')}>
+          a.status === 'completed' ? 'bg-emerald-100' : 'bg-amber-400/10')}>
           {a.status === 'completed'
             ? <CheckCircle2 size={compact ? 12 : 15} className="text-emerald-600" />
-            : <Dumbbell size={compact ? 12 : 15} className="text-brand-600" />}
+            : <Dumbbell size={compact ? 12 : 15} className="text-amber-400" />}
         </div>
         <div className="flex-1 min-w-0">
           <p className={clsx('font-semibold truncate', compact ? 'text-xs' : 'text-sm',
-            a.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-800')}>
+            a.status === 'completed' ? 'text-[#3a4a62] line-through' : 'text-[#e8edf5]')}>
             {a.workout.name}
           </p>
           {!compact && (
@@ -1077,8 +1077,8 @@ function AssignmentCard({
               <span className={clsx('text-xs px-1.5 py-0.5 rounded-full font-medium', STATUS_STYLES[a.status])}>
                 {a.status}
               </span>
-              {a.workout.difficulty && <span className="text-xs text-gray-400">{a.workout.difficulty}</span>}
-              {a.notes && <span className="text-xs text-gray-400 italic truncate max-w-[160px]">{a.notes}</span>}
+              {a.workout.difficulty && <span className="text-xs text-[#3a4a62]">{a.workout.difficulty}</span>}
+              {a.notes && <span className="text-xs text-[#3a4a62] italic truncate max-w-[160px]">{a.notes}</span>}
             </div>
           )}
         </div>
@@ -1089,7 +1089,7 @@ function AssignmentCard({
         <div className={clsx('flex items-center gap-1 mt-2', compact ? 'justify-end' : '')}>
           <button
             onClick={() => onLog(a)}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-amber-400 bg-amber-400/10 hover:bg-amber-400/10 rounded-lg transition-colors"
           >
             <ClipboardList size={11} />Log
           </button>
@@ -1097,7 +1097,7 @@ function AssignmentCard({
             onClick={() => updateStatus.mutate({ id: a.id, status: 'completed', clientId })}
             disabled={updateStatus.isPending}
             title="Mark complete"
-            className="p-1 rounded-lg hover:bg-emerald-50 text-gray-300 hover:text-emerald-500 transition-colors"
+            className="p-1 rounded-lg hover:bg-emerald-50 text-[#2e3a52] hover:text-emerald-500 transition-colors"
           >
             <CheckCircle2 size={13} />
           </button>
@@ -1105,14 +1105,14 @@ function AssignmentCard({
             onClick={() => updateStatus.mutate({ id: a.id, status: 'skipped', clientId })}
             disabled={updateStatus.isPending}
             title="Skip"
-            className="p-1 rounded-lg hover:bg-gray-100 text-gray-300 hover:text-gray-500 transition-colors"
+            className="p-1 rounded-lg hover:bg-[#161b27] text-[#2e3a52] hover:text-[#4a5a75] transition-colors"
           >
             <SkipForward size={13} />
           </button>
           <button
             onClick={() => remove.mutate({ id: a.id, clientId })}
             disabled={remove.isPending}
-            className="p-1 rounded-lg hover:bg-rose-50 text-gray-200 hover:text-rose-400 transition-colors"
+            className="p-1 rounded-lg hover:bg-rose-400/10 text-[#8a9ab5] hover:text-rose-400 transition-colors"
           >
             <Trash2 size={13} />
           </button>
@@ -1161,12 +1161,12 @@ function WorkoutCalendar({
       {/* Week nav */}
       <div className="flex items-center justify-between mb-4">
         <button onClick={() => setWkStart(d => addDays(d, -7))}
-          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+          className="p-1.5 rounded-lg hover:bg-[#161b27] text-[#4a5a75] transition-colors">
           <ChevronLeft size={16} />
         </button>
-        <span className="text-sm font-semibold text-gray-700">{wkLabel}</span>
+        <span className="text-sm font-semibold text-[#8a9ab5]">{wkLabel}</span>
         <button onClick={() => setWkStart(d => addDays(d, 7))}
-          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+          className="p-1.5 rounded-lg hover:bg-[#161b27] text-[#4a5a75] transition-colors">
           <ChevronRight size={16} />
         </button>
       </div>
@@ -1182,12 +1182,12 @@ function WorkoutCalendar({
               {/* Day header */}
               <div className={clsx(
                 'text-center py-2 rounded-t-xl border-b mb-1',
-                isToday ? 'bg-brand-600 border-brand-600' : 'bg-gray-50 border-gray-200',
+                isToday ? 'bg-amber-400 border-amber-400' : 'bg-[#0d1117] border-[#242d40]',
               )}>
-                <p className={clsx('text-xs font-medium', isToday ? 'text-brand-100' : 'text-gray-400')}>
+                <p className={clsx('text-xs font-medium', isToday ? 'text-amber-400' : 'text-[#3a4a62]')}>
                   {DAY_NAMES[i]}
                 </p>
-                <p className={clsx('text-sm font-bold', isToday ? 'text-white' : 'text-gray-700')}>
+                <p className={clsx('text-sm font-bold', isToday ? 'text-white' : 'text-[#8a9ab5]')}>
                   {day.getDate()}
                 </p>
               </div>
@@ -1198,7 +1198,7 @@ function WorkoutCalendar({
                 ))}
                 <button
                   onClick={() => setAssignDate(ds)}
-                  className="w-full py-1 text-gray-300 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors flex items-center justify-center"
+                  className="w-full py-1 text-[#2e3a52] hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-colors flex items-center justify-center"
                 >
                   <Plus size={13} />
                 </button>
@@ -1211,7 +1211,7 @@ function WorkoutCalendar({
       {/* Unscheduled */}
       {unscheduled.length > 0 && (
         <div className="mt-6">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+          <p className="text-xs font-semibold text-[#3a4a62] uppercase tracking-wide mb-2">
             Unscheduled ({unscheduled.length})
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1296,23 +1296,23 @@ function AddToDayModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col z-10 overflow-hidden">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-md flex flex-col z-10 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#242d40]">
           <div>
-            <p className="text-xs text-gray-400 font-medium">Add to</p>
-            <h2 className="text-base font-bold text-gray-900">{label}</h2>
+            <p className="text-xs text-[#3a4a62] font-medium">Add to</p>
+            <h2 className="text-base font-bold text-[#e8edf5]">{label}</h2>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"><X size={18} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:bg-[#161b27]"><X size={18} /></button>
         </div>
 
         {/* Mode toggle */}
-        <div className="flex gap-1 p-3 border-b border-gray-100">
+        <div className="flex gap-1 p-3 border-b border-[#242d40]">
           {(['workout', 'task'] as const).map(m => (
             <button key={m} onClick={() => setMode(m)}
               className={clsx(
                 'flex-1 py-2 rounded-xl text-sm font-semibold transition-all',
-                mode === m ? 'bg-brand-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100',
+                mode === m ? 'bg-amber-400 text-white shadow-sm' : 'text-[#4a5a75] hover:bg-[#161b27]',
               )}>
               {m === 'workout' ? '🏋️ Workout' : '✅ Task'}
             </button>
@@ -1321,36 +1321,36 @@ function AddToDayModal({
 
         {mode === 'workout' ? (
           <>
-            <div className="px-4 py-3 border-b border-gray-100">
+            <div className="px-4 py-3 border-b border-[#242d40]">
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3a4a62]" />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search workouts…"
                   autoFocus
-                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
               </div>
             </div>
             <div className="max-h-72 overflow-y-auto p-3 space-y-1">
               {wLoading ? (
-                <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+                <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-[#2e3a52]" /></div>
               ) : workouts.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">
+                <p className="text-sm text-[#3a4a62] text-center py-8">
                   {search.length >= 2 ? 'No workouts match' : 'Type to search workouts'}
                 </p>
               ) : workouts.map(w => (
                 <button key={w.id} onClick={() => handleAssignWorkout(w.id)}
                   disabled={assignWorkout.isPending}
-                  className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors group disabled:opacity-50">
-                  <div className="w-8 h-8 rounded-xl bg-brand-100 flex items-center justify-center flex-shrink-0">
-                    <Dumbbell size={13} className="text-brand-600" />
+                  className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#0d1117] transition-colors group disabled:opacity-50">
+                  <div className="w-8 h-8 rounded-xl bg-amber-400/10 flex items-center justify-center flex-shrink-0">
+                    <Dumbbell size={13} className="text-amber-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{w.name}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-sm font-semibold text-[#e8edf5] truncate">{w.name}</p>
+                    <p className="text-xs text-[#3a4a62]">
                       {w.difficulty ?? 'Any level'}
                       {w.duration_minutes ? ` · ${w.duration_minutes}min` : ''}
                     </p>
                   </div>
-                  <Plus size={13} className="text-gray-300 group-hover:text-brand-500 flex-shrink-0 transition-colors" />
+                  <Plus size={13} className="text-[#2e3a52] group-hover:text-amber-400 flex-shrink-0 transition-colors" />
                 </button>
               ))}
             </div>
@@ -1362,11 +1362,11 @@ function AddToDayModal({
               onKeyDown={e => { if (e.key === 'Enter') handleAddTask() }}
               placeholder="Task title…"
               autoFocus
-              className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
+              className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400"
             />
             <button onClick={handleAddTask}
               disabled={!taskTitle.trim() || createTask.isPending}
-              className="w-full py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+              className="w-full py-2.5 bg-amber-400 text-white text-sm font-semibold rounded-xl hover:bg-amber-400 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
               {createTask.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
               Add Task
             </button>
@@ -1429,12 +1429,12 @@ function PlanTab({ clientId }: { clientId: string }) {
 
   const eventDot: Record<CalEventKind, string> = {
     program: 'bg-violet-500',
-    workout: 'bg-brand-500',
+    workout: 'bg-amber-400',
     task:    'bg-amber-400',
   }
   const eventChip: Record<CalEventKind, string> = {
     program: 'bg-violet-100 text-violet-700',
-    workout: 'bg-brand-100 text-brand-700',
+    workout: 'bg-amber-400/10 text-amber-400',
     task:    'bg-amber-100 text-amber-700',
   }
 
@@ -1449,14 +1449,14 @@ function PlanTab({ clientId }: { clientId: string }) {
         {/* Month nav */}
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-            className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
+            className="p-2 rounded-xl hover:bg-[#161b27] text-[#4a5a75] transition-colors">
             <ChevronLeft size={16} />
           </button>
-          <h3 className="font-bold text-gray-900 text-base">
+          <h3 className="font-bold text-[#e8edf5] text-base">
             {CAL_MONTH_NAMES[month.getMonth()]} {month.getFullYear()}
           </h3>
           <button onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-            className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
+            className="p-2 rounded-xl hover:bg-[#161b27] text-[#4a5a75] transition-colors">
             <ChevronRight size={16} />
           </button>
         </div>
@@ -1464,14 +1464,14 @@ function PlanTab({ clientId }: { clientId: string }) {
         {/* Day headers */}
         <div className="grid grid-cols-7 mb-1">
           {CAL_DAY_NAMES.map(d => (
-            <div key={d} className="text-center text-[11px] font-bold text-gray-400 py-1.5">{d}</div>
+            <div key={d} className="text-center text-[11px] font-bold text-[#3a4a62] py-1.5">{d}</div>
           ))}
         </div>
 
         {/* Grid */}
-        <div className="border border-gray-100 rounded-2xl overflow-hidden">
+        <div className="border border-[#242d40] rounded-2xl overflow-hidden">
           {weeks.map((week, wi) => (
-            <div key={wi} className={clsx('grid grid-cols-7', wi < 5 && 'border-b border-gray-100')}>
+            <div key={wi} className={clsx('grid grid-cols-7', wi < 5 && 'border-b border-[#242d40]')}>
               {week.map((day, di) => {
                 const key      = dateKey(day)
                 const isToday  = key === todayKey
@@ -1487,19 +1487,19 @@ function PlanTab({ clientId }: { clientId: string }) {
                   <button key={key} onClick={() => setSelected(isSel ? null : key)}
                     className={clsx(
                       'relative min-h-[72px] p-1.5 text-left transition-colors',
-                      di < 6 && 'border-r border-gray-100',
-                      isSel    ? 'bg-brand-50'
-                      : isToday ? 'bg-brand-500/5'
-                      : isWeekend ? 'bg-gray-50/50'
-                      : 'bg-white hover:bg-gray-50',
+                      di < 6 && 'border-r border-[#242d40]',
+                      isSel    ? 'bg-amber-400/10'
+                      : isToday ? 'bg-amber-400/5'
+                      : isWeekend ? 'bg-[#0d1117]/50'
+                      : 'bg-[#161b27] hover:bg-[#0d1117]',
                     )}>
                     {/* Date number */}
                     <span className={clsx(
                       'inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-bold mb-1',
-                      isToday ? 'bg-brand-600 text-white'
-                      : isSel  ? 'bg-brand-200 text-brand-800'
-                      : inMonth ? (isWeekend ? 'text-gray-400' : 'text-gray-700')
-                      : 'text-gray-300',
+                      isToday ? 'bg-amber-400 text-white'
+                      : isSel  ? 'bg-amber-400/20 text-amber-400'
+                      : inMonth ? (isWeekend ? 'text-[#3a4a62]' : 'text-[#8a9ab5]')
+                      : 'text-[#2e3a52]',
                     )}>
                       {day.getDate()}
                     </span>
@@ -1517,14 +1517,14 @@ function PlanTab({ clientId }: { clientId: string }) {
                         </div>
                       ))}
                       {overflow > 0 && (
-                        <p className="text-[9px] text-gray-400 font-medium pl-1">+{overflow} more</p>
+                        <p className="text-[9px] text-[#3a4a62] font-medium pl-1">+{overflow} more</p>
                       )}
                     </div>
 
                     {/* Add button on hover */}
                     <button
                       onClick={e => { e.stopPropagation(); setAddingTo(key) }}
-                      className="absolute top-1 right-1 w-5 h-5 rounded-md bg-brand-500 text-white opacity-0 hover:opacity-100 group-hover:opacity-100 flex items-center justify-center transition-opacity shadow-sm"
+                      className="absolute top-1 right-1 w-5 h-5 rounded-md bg-amber-400 text-white opacity-0 hover:opacity-100 group-hover:opacity-100 flex items-center justify-center transition-opacity shadow-sm"
                       style={{ opacity: isSel ? 1 : undefined }}
                       title={`Add to ${key}`}>
                       <Plus size={11} />
@@ -1539,7 +1539,7 @@ function PlanTab({ clientId }: { clientId: string }) {
         {/* Today shortcut */}
         {dateKey(new Date(month.getFullYear(), month.getMonth(), 1)) !== dateKey(new Date(today.getFullYear(), today.getMonth(), 1)) && (
           <button onClick={() => { setMonth(new Date(today.getFullYear(), today.getMonth(), 1)); setSelected(todayKey) }}
-            className="mt-3 text-xs text-brand-600 font-semibold hover:underline">
+            className="mt-3 text-xs text-amber-400 font-semibold hover:underline">
             ← Back to today
           </button>
         )}
@@ -1548,17 +1548,17 @@ function PlanTab({ clientId }: { clientId: string }) {
       {/* ── Day detail panel ── */}
       <div className="lg:w-72 xl:w-80 flex-shrink-0">
         {selected ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+          <div className="bg-[#161b27] rounded-2xl border border-[#242d40] shadow-card overflow-hidden">
             {/* Panel header */}
-            <div className="px-4 py-3.5 border-b border-gray-100 flex items-center justify-between">
+            <div className="px-4 py-3.5 border-b border-[#242d40] flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Selected</p>
-                <p className="font-bold text-gray-900 text-sm mt-0.5">
+                <p className="text-[11px] font-semibold text-[#3a4a62] uppercase tracking-wide">Selected</p>
+                <p className="font-bold text-[#e8edf5] text-sm mt-0.5">
                   {parseLocalDate(selected).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </p>
               </div>
               <button onClick={() => setAddingTo(selected)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 text-white text-xs font-semibold rounded-xl hover:bg-brand-700 transition-colors">
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 text-white text-xs font-semibold rounded-xl hover:bg-amber-400 transition-colors">
                 <Plus size={12} /> Add
               </button>
             </div>
@@ -1567,9 +1567,9 @@ function PlanTab({ clientId }: { clientId: string }) {
             <div className="p-3 space-y-2 max-h-96 overflow-y-auto">
               {selectedEvents.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-sm text-gray-400 mb-3">Nothing planned yet</p>
+                  <p className="text-sm text-[#3a4a62] mb-3">Nothing planned yet</p>
                   <button onClick={() => setAddingTo(selected)}
-                    className="text-xs text-brand-600 font-semibold hover:underline">
+                    className="text-xs text-amber-400 font-semibold hover:underline">
                     + Add something
                   </button>
                 </div>
@@ -1577,15 +1577,15 @@ function PlanTab({ clientId }: { clientId: string }) {
                 selectedEvents.map((ev, i) => (
                   <div key={i} className={clsx(
                     'flex items-start gap-2.5 px-3 py-2.5 rounded-xl',
-                    ev.status === 'completed' || ev.status === 'done' ? 'bg-emerald-50' : 'bg-gray-50',
+                    ev.status === 'completed' || ev.status === 'done' ? 'bg-emerald-50' : 'bg-[#0d1117]',
                   )}>
                     <div className={clsx('w-2 h-2 rounded-full mt-1.5 flex-shrink-0', eventDot[ev.kind])} />
                     <div className="flex-1 min-w-0">
                       <p className={clsx(
-                        'text-xs font-semibold text-gray-800 leading-tight',
-                        (ev.status === 'completed' || ev.status === 'done') && 'line-through text-gray-400',
+                        'text-xs font-semibold text-[#e8edf5] leading-tight',
+                        (ev.status === 'completed' || ev.status === 'done') && 'line-through text-[#3a4a62]',
                       )}>{ev.label}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5 capitalize">
+                      <p className="text-[10px] text-[#3a4a62] mt-0.5 capitalize">
                         {ev.kind === 'program' ? 'Program session'
                          : ev.kind === 'workout' ? (ev.status ?? 'assigned')
                          : (ev.status === 'done' ? 'Completed' : 'Task')}
@@ -1600,18 +1600,18 @@ function PlanTab({ clientId }: { clientId: string }) {
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6 text-center">
-            <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <Calendar size={18} className="text-brand-400" />
+          <div className="bg-[#161b27] rounded-2xl border border-[#242d40] shadow-card p-6 text-center">
+            <div className="w-10 h-10 bg-amber-400/10 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <Calendar size={18} className="text-amber-400" />
             </div>
-            <p className="text-sm font-semibold text-gray-600 mb-1">Select a day</p>
-            <p className="text-xs text-gray-400">Click any date to view or add workouts and tasks</p>
+            <p className="text-sm font-semibold text-[#8a9ab5] mb-1">Select a day</p>
+            <p className="text-xs text-[#3a4a62]">Click any date to view or add workouts and tasks</p>
           </div>
         )}
 
         {/* Legend */}
-        <div className="mt-4 p-3 bg-gray-50 rounded-xl space-y-2">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Legend</p>
+        <div className="mt-4 p-3 bg-[#0d1117] rounded-xl space-y-2">
+          <p className="text-[10px] font-bold text-[#3a4a62] uppercase tracking-wide">Legend</p>
           {([
             { kind: 'program', label: 'Program session' },
             { kind: 'workout', label: 'Assigned workout' },
@@ -1619,7 +1619,7 @@ function PlanTab({ clientId }: { clientId: string }) {
           ] as const).map(({ kind, label }) => (
             <div key={kind} className="flex items-center gap-2">
               <div className={clsx('w-2.5 h-2.5 rounded-full flex-shrink-0', eventDot[kind])} />
-              <span className="text-xs text-gray-500">{label}</span>
+              <span className="text-xs text-[#4a5a75]">{label}</span>
             </div>
           ))}
         </div>
@@ -1638,7 +1638,7 @@ function WorkoutsTab({ clientId }: { clientId: string }) {
   const [logTarget, setLogTarget] = useState<DbClientWorkoutWithWorkout | null>(null)
 
   if (isLoading) {
-    return <div className="flex items-center justify-center py-16"><Loader2 size={22} className="animate-spin text-gray-300" /></div>
+    return <div className="flex items-center justify-center py-16"><Loader2 size={22} className="animate-spin text-[#2e3a52]" /></div>
   }
 
   const completed = assignments.filter(a => a.status === 'completed').length
@@ -1650,15 +1650,15 @@ function WorkoutsTab({ clientId }: { clientId: string }) {
 
       {/* Top bar */}
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-        <div className="flex items-center gap-2 bg-gray-100 p-0.5 rounded-xl">
+        <div className="flex items-center gap-2 bg-[#161b27] p-0.5 rounded-xl">
           <button onClick={() => setView('list')}
             className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
-              view === 'list' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
+              view === 'list' ? 'bg-[#161b27] text-[#e8edf5] shadow-sm' : 'text-[#4a5a75] hover:text-[#8a9ab5]')}>
             <ClipboardList size={13} />List
           </button>
           <button onClick={() => setView('schedule')}
             className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
-              view === 'schedule' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
+              view === 'schedule' ? 'bg-[#161b27] text-[#e8edf5] shadow-sm' : 'text-[#4a5a75] hover:text-[#8a9ab5]')}>
             <Calendar size={13} />Schedule
           </button>
         </div>
@@ -1669,7 +1669,7 @@ function WorkoutsTab({ clientId }: { clientId: string }) {
             </span>
           )}
           <button onClick={() => setShowAssign(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-xs font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all shadow-sm">
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-400 to-amber-300 text-white text-xs font-semibold rounded-xl hover:from-amber-400 hover:to-amber-300 transition-all shadow-sm">
             <Plus size={13} /> Assign Workout
           </button>
         </div>
@@ -1680,13 +1680,13 @@ function WorkoutsTab({ clientId }: { clientId: string }) {
         <WorkoutCalendar clientId={clientId} assignments={assignments} onLog={setLogTarget} />
       ) : assignments.length === 0 ? (
         <div className="text-center py-14">
-          <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-            <Dumbbell size={28} className="text-gray-300" />
+          <div className="w-14 h-14 rounded-2xl bg-[#161b27] flex items-center justify-center mx-auto mb-4">
+            <Dumbbell size={28} className="text-[#2e3a52]" />
           </div>
-          <p className="text-gray-500 font-medium mb-1">No workouts assigned yet</p>
-          <p className="text-xs text-gray-400 mb-4">Push a workout from your library to this client</p>
+          <p className="text-[#4a5a75] font-medium mb-1">No workouts assigned yet</p>
+          <p className="text-xs text-[#3a4a62] mb-4">Push a workout from your library to this client</p>
           <button onClick={() => setShowAssign(true)}
-            className="px-4 py-2 bg-brand-50 text-brand-600 text-sm font-semibold rounded-xl hover:bg-brand-100 transition-colors">
+            className="px-4 py-2 bg-amber-400/10 text-amber-400 text-sm font-semibold rounded-xl hover:bg-amber-400/10 transition-colors">
             + Assign Workout
           </button>
         </div>
@@ -1730,8 +1730,8 @@ function HistoryTab({ clientId }: { clientId: string }) {
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-16 gap-3">
-      <Loader2 size={24} className="text-brand-500 animate-spin" />
-      <p className="text-sm text-gray-400">Loading history…</p>
+      <Loader2 size={24} className="text-amber-400 animate-spin" />
+      <p className="text-sm text-[#3a4a62]">Loading history…</p>
     </div>
   )
 
@@ -1740,16 +1740,16 @@ function HistoryTab({ clientId }: { clientId: string }) {
       <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
         <History size={28} className="text-amber-400" />
       </div>
-      <p className="text-gray-600 font-medium">No sessions logged yet</p>
-      <p className="text-sm text-gray-400 mt-1">Completed sessions will appear here with full set data.</p>
+      <p className="text-[#8a9ab5] font-medium">No sessions logged yet</p>
+      <p className="text-sm text-[#3a4a62] mt-1">Completed sessions will appear here with full set data.</p>
     </div>
   )
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-1">
-        <h3 className="font-semibold text-gray-800">Session History</h3>
-        <span className="text-xs text-gray-400">{entries.length} sessions</span>
+        <h3 className="font-semibold text-[#e8edf5]">Session History</h3>
+        <span className="text-xs text-[#3a4a62]">{entries.length} sessions</span>
       </div>
 
       {entries.map(entry => {
@@ -1762,11 +1762,11 @@ function HistoryTab({ clientId }: { clientId: string }) {
 
         return (
           <div key={entry.id}
-            className="rounded-2xl border border-gray-100 overflow-hidden shadow-sm bg-white">
+            className="rounded-2xl border border-[#242d40] overflow-hidden shadow-sm bg-[#161b27]">
             {/* Summary row */}
             <button
               onClick={() => toggleSession(entry.id)}
-              className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-[#0d1117] transition-colors"
             >
               {/* Date badge */}
               <div className="w-10 h-10 rounded-xl bg-amber-50 flex flex-col items-center justify-center flex-shrink-0">
@@ -1774,22 +1774,22 @@ function HistoryTab({ clientId }: { clientId: string }) {
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900 text-[15px] leading-tight truncate">
+                <p className="font-semibold text-[#e8edf5] text-[15px] leading-tight truncate">
                   {entry.workout_name}
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
+                <p className="text-xs text-[#3a4a62] mt-0.5 flex items-center gap-1.5">
                   <Calendar size={11} />{dateStr}
                 </p>
                 {entry.exercises?.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1.5">
                     {entry.exercises.slice(0, 4).map(name => (
                       <span key={name}
-                        className="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                        className="text-[11px] text-[#4a5a75] bg-[#161b27] px-2 py-0.5 rounded-full">
                         {name}
                       </span>
                     ))}
                     {entry.exercises.length > 4 && (
-                      <span className="text-[11px] text-gray-400 px-1 py-0.5">
+                      <span className="text-[11px] text-[#3a4a62] px-1 py-0.5">
                         +{entry.exercises.length - 4}
                       </span>
                     )}
@@ -1801,28 +1801,28 @@ function HistoryTab({ clientId }: { clientId: string }) {
                 {entry.set_count > 0 && (
                   <div className="text-right">
                     <p className="text-amber-500 font-bold text-lg leading-none">{entry.set_count}</p>
-                    <p className="text-gray-400 text-[10px] uppercase tracking-wide">sets</p>
+                    <p className="text-[#3a4a62] text-[10px] uppercase tracking-wide">sets</p>
                   </div>
                 )}
                 {isOpen
-                  ? <ChevronUp size={16} className="text-gray-400" />
-                  : <ChevronDown size={16} className="text-gray-400" />
+                  ? <ChevronUp size={16} className="text-[#3a4a62]" />
+                  : <ChevronDown size={16} className="text-[#3a4a62]" />
                 }
               </div>
             </button>
 
             {/* Expanded detail */}
             {isOpen && (
-              <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-4 space-y-4">
+              <div className="border-t border-[#242d40] bg-[#0d1117]/50 px-4 py-4 space-y-4">
                 {isLoading ? (
-                  <div className="flex items-center justify-center py-8 gap-2 text-gray-400">
+                  <div className="flex items-center justify-center py-8 gap-2 text-[#3a4a62]">
                     <Loader2 size={18} className="animate-spin" />
                     <span className="text-sm">Loading sets…</span>
                   </div>
                 ) : !d || d.exercises.length === 0 ? (
                   <div className="text-center py-8">
-                    <ClipboardList size={24} className="text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">No set data recorded for this session.</p>
+                    <ClipboardList size={24} className="text-[#2e3a52] mx-auto mb-2" />
+                    <p className="text-sm text-[#3a4a62]">No set data recorded for this session.</p>
                   </div>
                 ) : (
                   <>
@@ -1838,16 +1838,16 @@ function HistoryTab({ clientId }: { clientId: string }) {
 
                       return (
                         <div key={ex.exercise_id}
-                          className="rounded-xl bg-white border border-gray-100 overflow-hidden">
+                          className="rounded-xl bg-[#161b27] border border-[#242d40] overflow-hidden">
                           {/* Exercise header */}
-                          <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+                          <div className="flex items-center gap-3 px-4 py-3 border-b border-[#242d40]">
                             <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center text-[11px] font-bold text-amber-600 flex-shrink-0">
                               {idx + 1}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-gray-900 text-sm leading-tight">{ex.name}</p>
+                              <p className="font-semibold text-[#e8edf5] text-sm leading-tight">{ex.name}</p>
                               {ex.muscle_group && (
-                                <p className="text-xs text-gray-400 mt-0.5">{ex.muscle_group}</p>
+                                <p className="text-xs text-[#3a4a62] mt-0.5">{ex.muscle_group}</p>
                               )}
                             </div>
                             <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
@@ -1857,7 +1857,7 @@ function HistoryTab({ clientId }: { clientId: string }) {
 
                           {/* Column headers */}
                           <div className={clsx(
-                            'grid px-4 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-bold uppercase tracking-wide text-gray-400',
+                            'grid px-4 py-2 bg-[#0d1117] border-b border-[#242d40] text-[10px] font-bold uppercase tracking-wide text-[#3a4a62]',
                             isWeighted ? 'grid-cols-[28px_1fr_1fr_52px]' : 'grid-cols-[28px_1fr_52px]',
                           )}>
                             <span>#</span>
@@ -1877,42 +1877,42 @@ function HistoryTab({ clientId }: { clientId: string }) {
                                   isWeighted ? 'grid-cols-[28px_1fr_1fr_52px]' : 'grid-cols-[28px_1fr_52px]',
                                 )}>
                                 {/* Set number */}
-                                <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[11px] font-bold text-gray-500">
+                                <div className="w-5 h-5 rounded-full bg-[#161b27] flex items-center justify-center text-[11px] font-bold text-[#4a5a75]">
                                   {s.set_number}
                                 </div>
 
                                 {isWeighted && (
                                   <>
                                     <div>
-                                      <span className="font-bold text-gray-900">{s.reps_achieved ?? '—'}</span>
-                                      <span className="text-gray-400 text-xs ml-1">reps</span>
+                                      <span className="font-bold text-[#e8edf5]">{s.reps_achieved ?? '—'}</span>
+                                      <span className="text-[#3a4a62] text-xs ml-1">reps</span>
                                     </div>
                                     <div>
-                                      <span className="font-bold text-gray-900">
+                                      <span className="font-bold text-[#e8edf5]">
                                         {s.weight_used != null ? s.weight_used : '—'}
                                       </span>
-                                      <span className="text-gray-400 text-xs ml-1">kg</span>
+                                      <span className="text-[#3a4a62] text-xs ml-1">kg</span>
                                     </div>
                                   </>
                                 )}
                                 {isTimed && (
                                   <div>
-                                    <span className="font-bold text-gray-900">
+                                    <span className="font-bold text-[#e8edf5]">
                                       {s.duration_seconds != null ? `${s.duration_seconds}s` : '—'}
                                     </span>
                                   </div>
                                 )}
                                 {isDistance && (
                                   <div>
-                                    <span className="font-bold text-gray-900">
+                                    <span className="font-bold text-[#e8edf5]">
                                       {s.distance_meters != null ? `${s.distance_meters}m` : '—'}
                                     </span>
                                   </div>
                                 )}
                                 {ex.metric_type === 'reps' && (
                                   <div>
-                                    <span className="font-bold text-gray-900">{s.reps_achieved ?? '—'}</span>
-                                    <span className="text-gray-400 text-xs ml-1">reps</span>
+                                    <span className="font-bold text-[#e8edf5]">{s.reps_achieved ?? '—'}</span>
+                                    <span className="text-[#3a4a62] text-xs ml-1">reps</span>
                                   </div>
                                 )}
 
@@ -1928,7 +1928,7 @@ function HistoryTab({ clientId }: { clientId: string }) {
                                       {s.rpe}
                                     </span>
                                   ) : (
-                                    <span className="text-gray-300 text-xs">—</span>
+                                    <span className="text-[#2e3a52] text-xs">—</span>
                                   )}
                                 </div>
                               </div>
@@ -1939,9 +1939,9 @@ function HistoryTab({ clientId }: { clientId: string }) {
                     })}
 
                     {d.notes && (
-                      <div className="rounded-xl bg-white border border-gray-100 px-4 py-3">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Session notes</p>
-                        <p className="text-sm text-gray-600 leading-relaxed italic">{d.notes}</p>
+                      <div className="rounded-xl bg-[#161b27] border border-[#242d40] px-4 py-3">
+                        <p className="text-xs font-semibold text-[#3a4a62] uppercase tracking-wide mb-1">Session notes</p>
+                        <p className="text-sm text-[#8a9ab5] leading-relaxed italic">{d.notes}</p>
                       </div>
                     )}
                   </>
@@ -1999,41 +1999,41 @@ function LogCheckInModal({ clientId, onClose, onSaved }: { clientId: string; onC
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 overflow-y-auto max-h-[90vh]">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 overflow-y-auto max-h-[90vh]">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-bold text-gray-900 text-lg">Log Check-in</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><X size={18} /></button>
+          <h3 className="font-bold text-[#e8edf5] text-lg">Log Check-in</h3>
+          <button onClick={onClose} className="text-[#3a4a62] hover:text-[#8a9ab5] p-1"><X size={18} /></button>
         </div>
         {err && <p className="mb-3 text-xs text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{err}</p>}
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Date</label>
+            <label className="text-xs font-semibold text-[#4a5a75] uppercase tracking-wide block mb-1">Date</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+              className="w-full px-3 py-2 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1"><Scale size={11} />Weight (kg)</label>
+              <label className="text-xs font-semibold text-[#4a5a75] flex items-center gap-1 mb-1"><Scale size={11} />Weight (kg)</label>
               <input type="number" step="0.1" min="0" value={weight} onChange={e => setWeight(e.target.value)}
-                placeholder="–" className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                placeholder="–" className="w-full px-3 py-2 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1"><TrendingUp size={11} />Body Fat (%)</label>
+              <label className="text-xs font-semibold text-[#4a5a75] flex items-center gap-1 mb-1"><TrendingUp size={11} />Body Fat (%)</label>
               <input type="number" step="0.1" min="0" max="100" value={fat} onChange={e => setFat(e.target.value)}
-                placeholder="–" className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                placeholder="–" className="w-full px-3 py-2 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1"><Moon size={11} />Sleep (hrs)</label>
+              <label className="text-xs font-semibold text-[#4a5a75] flex items-center gap-1 mb-1"><Moon size={11} />Sleep (hrs)</label>
               <input type="number" step="0.5" min="0" max="24" value={sleep} onChange={e => setSleep(e.target.value)}
-                placeholder="–" className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                placeholder="–" className="w-full px-3 py-2 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1"><Zap size={11} />Energy (1–10)</label>
+              <label className="text-xs font-semibold text-[#4a5a75] flex items-center gap-1 mb-1"><Zap size={11} />Energy (1–10)</label>
               <div className="flex gap-1 flex-wrap">
                 {[1,2,3,4,5,6,7,8,9,10].map(n => (
                   <button key={n} type="button" onClick={() => setEnergy(energy === n ? null : n)}
                     className={clsx('w-7 h-7 text-xs font-bold rounded-lg border transition-all',
-                      energy === n ? 'bg-amber-500 border-amber-500 text-white' : 'border-gray-200 text-gray-500 hover:border-amber-300')}>
+                      energy === n ? 'bg-amber-500 border-amber-500 text-white' : 'border-[#242d40] text-[#4a5a75] hover:border-amber-300')}>
                     {n}
                   </button>
                 ))}
@@ -2041,14 +2041,14 @@ function LogCheckInModal({ clientId, onClose, onSaved }: { clientId: string; onC
             </div>
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Notes</label>
+            <label className="text-xs font-semibold text-[#4a5a75] uppercase tracking-wide block mb-1">Notes</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
               placeholder="Any notes for this check-in…"
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 resize-none" />
+              className="w-full px-3 py-2 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 resize-none" />
           </div>
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
+              className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">Cancel</button>
             <button type="submit" disabled={saving}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 transition-all">
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}Save
@@ -2087,28 +2087,28 @@ function LogCustomMetricModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-gray-900">Log Custom Metric</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1"><X size={18} /></button>
+          <h3 className="font-bold text-[#e8edf5]">Log Custom Metric</h3>
+          <button onClick={onClose} className="text-[#3a4a62] hover:text-[#8a9ab5] p-1"><X size={18} /></button>
         </div>
         <form onSubmit={submit} className="space-y-3">
           <select value={defId} onChange={e => setDefId(e.target.value)} required
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 bg-white">
+            className="w-full px-3 py-2 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 bg-[#161b27]">
             {definitions.map(d => <option key={d.id} value={d.id}>{d.emoji} {d.name}{d.unit ? ` (${d.unit})` : ''}</option>)}
           </select>
           <div className="flex gap-2">
             <input type="number" step="any" value={value} onChange={e => setValue(e.target.value)} required
               placeholder={`Value${selectedDef?.unit ? ` in ${selectedDef.unit}` : ''}…`}
-              className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+              className="flex-1 px-3 py-2 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+              className="px-3 py-2 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
           </div>
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose}
-              className="flex-1 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
+              className="flex-1 py-2 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">Cancel</button>
             <button type="submit" disabled={!defId || !value || saving}
-              className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl disabled:opacity-50 transition-all">
+              className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl disabled:opacity-50 transition-all">
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}Log
             </button>
           </div>
@@ -2157,7 +2157,7 @@ function MetricsTab({ clientId }: { clientId: string }) {
   }, [customValues])
 
   if (ciLoading || cvLoading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-brand-500" /></div>
+    return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-amber-400" /></div>
   }
 
   return (
@@ -2175,19 +2175,19 @@ function MetricsTab({ clientId }: { clientId: string }) {
       )}
 
       {/* ── Unified Metrics ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <div className="bg-[#161b27] rounded-2xl border border-[#242d40] shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <LineChart size={16} className="text-emerald-500" />
-            <h3 className="font-semibold text-gray-900">Metrics</h3>
+            <h3 className="font-semibold text-[#e8edf5]">Metrics</h3>
             {checkIns.length > 0 && (
-              <span className="text-xs text-gray-400">{checkIns.length} check-ins</span>
+              <span className="text-xs text-[#3a4a62]">{checkIns.length} check-ins</span>
             )}
           </div>
           <div className="flex items-center gap-2">
             {definitions.length > 0 && (
               <button onClick={() => setShowLogCustom(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-lg hover:from-brand-700 hover:to-violet-700 transition-all">
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-lg hover:from-amber-400 hover:to-amber-300 transition-all">
                 <Plus size={12} />Log Metric
               </button>
             )}
@@ -2199,7 +2199,7 @@ function MetricsTab({ clientId }: { clientId: string }) {
         </div>
 
         {checkIns.length === 0 && customValues.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">No metrics logged yet. Log a check-in to start tracking progress.</p>
+          <p className="text-sm text-[#3a4a62] text-center py-6">No metrics logged yet. Log a check-in to start tracking progress.</p>
         ) : (
           <>
             {/* All metric cards in a unified grid */}
@@ -2212,27 +2212,27 @@ function MetricsTab({ clientId }: { clientId: string }) {
                 const sparkVals = series.map(c => c[m.key] as number)
                 const trend = series.length > 1 ? sparkVals[sparkVals.length - 1] - sparkVals[0] : null
                 return (
-                  <div key={m.key} className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                  <div key={m.key} className="rounded-xl bg-[#0d1117] border border-[#242d40] p-3">
                     <div className="flex items-center gap-3">
                       <span className={clsx('flex-shrink-0', m.color)}>{m.icon}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-gray-800">{m.label}</p>
+                          <p className="text-sm font-semibold text-[#e8edf5]">{m.label}</p>
                           {trend != null && (
-                            <span className={clsx('text-[10px] font-semibold', trend > 0 ? 'text-emerald-500' : trend < 0 ? 'text-rose-500' : 'text-gray-400')}>
+                            <span className={clsx('text-[10px] font-semibold', trend > 0 ? 'text-emerald-500' : trend < 0 ? 'text-rose-500' : 'text-[#3a4a62]')}>
                               {trend > 0 ? '+' : ''}{trend.toFixed(1)}{m.unit}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-400">{series.length} entries · latest: <strong>{latestVal}{m.unit}</strong></p>
+                        <p className="text-xs text-[#3a4a62]">{series.length} entries · latest: <strong>{latestVal}{m.unit}</strong></p>
                       </div>
                       <MiniSparkline values={sparkVals} color="#10b981" />
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {series.slice(-6).reverse().map(c => (
-                        <div key={c.id} className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2 py-1 text-[10px]">
-                          <span className="text-gray-500">{new Date(c.checked_in_at).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
-                          <span className="font-bold text-gray-700">{c[m.key]}{m.unit}</span>
+                        <div key={c.id} className="flex items-center gap-1 bg-[#161b27] border border-[#242d40] rounded-lg px-2 py-1 text-[10px]">
+                          <span className="text-[#4a5a75]">{new Date(c.checked_in_at).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
+                          <span className="font-bold text-[#8a9ab5]">{c[m.key]}{m.unit}</span>
                         </div>
                       ))}
                     </div>
@@ -2247,29 +2247,29 @@ function MetricsTab({ clientId }: { clientId: string }) {
                 const sparkVals = vals.map(v => v.value)
                 const trend = vals.length > 1 ? sparkVals[sparkVals.length - 1] - sparkVals[0] : null
                 return (
-                  <div key={def.id} className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                  <div key={def.id} className="rounded-xl bg-[#0d1117] border border-[#242d40] p-3">
                     <div className="flex items-center gap-3">
                       <span className="text-xl">{def.emoji}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-gray-800">{def.name}</p>
+                          <p className="text-sm font-semibold text-[#e8edf5]">{def.name}</p>
                           {trend != null && (
-                            <span className={clsx('text-[10px] font-semibold', trend > 0 ? 'text-emerald-500' : trend < 0 ? 'text-rose-500' : 'text-gray-400')}>
+                            <span className={clsx('text-[10px] font-semibold', trend > 0 ? 'text-emerald-500' : trend < 0 ? 'text-rose-500' : 'text-[#3a4a62]')}>
                               {trend > 0 ? '+' : ''}{trend.toFixed(1)}{def.unit}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-400">{vals.length} entries · latest: <strong>{latestCustom.value}{def.unit}</strong></p>
+                        <p className="text-xs text-[#3a4a62]">{vals.length} entries · latest: <strong>{latestCustom.value}{def.unit}</strong></p>
                       </div>
                       <MiniSparkline values={sparkVals} color="#6366f1" />
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {[...customByDef.get(def.id)!].slice(0, 6).map(v => (
-                        <div key={v.id} className="group flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2 py-1 text-[10px]">
-                          <span className="text-gray-500">{new Date(v.logged_at).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
-                          <span className="font-bold text-gray-700">{v.value}{def.unit}</span>
+                        <div key={v.id} className="group flex items-center gap-1 bg-[#161b27] border border-[#242d40] rounded-lg px-2 py-1 text-[10px]">
+                          <span className="text-[#4a5a75]">{new Date(v.logged_at).toLocaleDateString([], { day: 'numeric', month: 'short' })}</span>
+                          <span className="font-bold text-[#8a9ab5]">{v.value}{def.unit}</span>
                           <button onClick={() => deleteCustom.mutate({ id: v.id, clientId })}
-                            className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-rose-500 transition-all ml-0.5">
+                            className="opacity-0 group-hover:opacity-100 text-[#2e3a52] hover:text-rose-500 transition-all ml-0.5">
                             <X size={10} />
                           </button>
                         </div>
@@ -2284,28 +2284,28 @@ function MetricsTab({ clientId }: { clientId: string }) {
             {checkIns.length > 0 && (
               <div>
                 <button onClick={() => setExpandedCI(v => !v)}
-                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors mb-2">
+                  className="flex items-center gap-1.5 text-xs text-[#3a4a62] hover:text-[#8a9ab5] transition-colors mb-2">
                   <ChevronDown size={13} className={clsx('transition-transform', expandedCI && 'rotate-180')} />
                   {expandedCI ? 'Hide' : 'Show'} check-in history
                 </button>
                 {expandedCI && (
                   <div className="space-y-1">
                     {checkIns.map(ci => (
-                      <div key={ci.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors group">
+                      <div key={ci.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#0d1117] transition-colors group">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-700">
+                          <p className="text-xs font-semibold text-[#8a9ab5]">
                             {new Date(ci.checked_in_at).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}
                           </p>
                           <div className="flex gap-3 mt-0.5 flex-wrap">
-                            {ci.weight_kg != null && <span className="text-[10px] text-gray-400">{ci.weight_kg}kg</span>}
-                            {ci.body_fat_pct != null && <span className="text-[10px] text-gray-400">{ci.body_fat_pct}% bf</span>}
-                            {ci.energy_level != null && <span className="text-[10px] text-gray-400">⚡{ci.energy_level}/10</span>}
-                            {ci.sleep_hours != null && <span className="text-[10px] text-gray-400">😴{ci.sleep_hours}h</span>}
-                            {ci.notes && <span className="text-[10px] text-gray-400 italic truncate max-w-[140px]">"{ci.notes}"</span>}
+                            {ci.weight_kg != null && <span className="text-[10px] text-[#3a4a62]">{ci.weight_kg}kg</span>}
+                            {ci.body_fat_pct != null && <span className="text-[10px] text-[#3a4a62]">{ci.body_fat_pct}% bf</span>}
+                            {ci.energy_level != null && <span className="text-[10px] text-[#3a4a62]">⚡{ci.energy_level}/10</span>}
+                            {ci.sleep_hours != null && <span className="text-[10px] text-[#3a4a62]">😴{ci.sleep_hours}h</span>}
+                            {ci.notes && <span className="text-[10px] text-[#3a4a62] italic truncate max-w-[140px]">"{ci.notes}"</span>}
                           </div>
                         </div>
                         <button onClick={() => deleteCheckIn.mutate({ id: ci.id, clientId })}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-300 hover:text-rose-500 hover:bg-rose-50 transition-all">
+                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-[#2e3a52] hover:text-rose-500 hover:bg-rose-400/10 transition-all">
                           <Trash2 size={13} />
                         </button>
                       </div>
@@ -2366,7 +2366,7 @@ function NutritionTab({ clientId, orgId }: { clientId: string; orgId: string }) 
     : null
 
   if (isLoading) {
-    return <div className="py-16 text-center"><Loader2 size={24} className="animate-spin text-gray-400 mx-auto" /></div>
+    return <div className="py-16 text-center"><Loader2 size={24} className="animate-spin text-[#3a4a62] mx-auto" /></div>
   }
 
   return (
@@ -2386,27 +2386,27 @@ function NutritionTab({ clientId, orgId }: { clientId: string; orgId: string }) 
       )}
 
       {/* Form */}
-      <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100">
+      <div className="bg-[#161b27] rounded-2xl border border-[#242d40] divide-y divide-[#1e2535]">
         {/* MFP Username */}
         <div className="p-5 space-y-2">
-          <label className="text-sm font-semibold text-gray-700">MyFitnessPal Username</label>
+          <label className="text-sm font-semibold text-[#8a9ab5]">MyFitnessPal Username</label>
           <input
             type="text"
             value={mfpUsername}
             onChange={e => setMfpUsername(e.target.value)}
             placeholder="e.g. john_doe"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+            className="w-full border border-[#242d40] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
           />
           {mfpUsername.trim() && (
-            <p className="text-xs text-gray-400">
-              Diary URL: <span className="text-gray-600">https://www.myfitnesspal.com/food/diary/{mfpUsername.trim()}</span>
+            <p className="text-xs text-[#3a4a62]">
+              Diary URL: <span className="text-[#8a9ab5]">https://www.myfitnesspal.com/food/diary/{mfpUsername.trim()}</span>
             </p>
           )}
         </div>
 
         {/* Daily Targets */}
         <div className="p-5 space-y-3">
-          <p className="text-sm font-semibold text-gray-700">Daily Targets</p>
+          <p className="text-sm font-semibold text-[#8a9ab5]">Daily Targets</p>
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: 'Calories (kcal)', value: caloriesTarget, onChange: setCaloriesTarget },
@@ -2415,14 +2415,14 @@ function NutritionTab({ clientId, orgId }: { clientId: string; orgId: string }) 
               { label: 'Fat (g)',         value: fatG,           onChange: setFatG           },
             ].map(field => (
               <div key={field.label} className="space-y-1">
-                <label className="text-xs text-gray-500">{field.label}</label>
+                <label className="text-xs text-[#4a5a75]">{field.label}</label>
                 <input
                   type="number"
                   min={0}
                   value={field.value}
                   onChange={e => field.onChange(e.target.value)}
                   placeholder="—"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
+                  className="w-full border border-[#242d40] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
                 />
               </div>
             ))}
@@ -2431,13 +2431,13 @@ function NutritionTab({ clientId, orgId }: { clientId: string; orgId: string }) 
 
         {/* Notes */}
         <div className="p-5 space-y-2">
-          <label className="text-sm font-semibold text-gray-700">Nutrition Notes</label>
+          <label className="text-sm font-semibold text-[#8a9ab5]">Nutrition Notes</label>
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
             rows={5}
             placeholder="Meal plan, food guidance, dietary restrictions..."
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 resize-none"
+            className="w-full border border-[#242d40] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 resize-none"
           />
         </div>
       </div>
@@ -2446,7 +2446,7 @@ function NutritionTab({ clientId, orgId }: { clientId: string; orgId: string }) 
       <button
         onClick={handleSave}
         disabled={upsert.isPending}
-        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors"
+        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0d1117] text-white text-sm font-medium hover:bg-[#1e2535] disabled:opacity-50 transition-colors"
       >
         {upsert.isPending ? <Loader2 size={16} className="animate-spin" /> : saved ? <Check size={16} /> : null}
         {saved ? 'Saved!' : 'Save Nutrition Plan'}
@@ -2459,11 +2459,11 @@ function NutritionTab({ clientId, orgId }: { clientId: string; orgId: string }) 
 function ComingSoon({ label }: { label: string }) {
   return (
     <div className="text-center py-16">
-      <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-        <Dumbbell size={28} className="text-gray-300" />
+      <div className="w-14 h-14 rounded-2xl bg-[#161b27] flex items-center justify-center mx-auto mb-4">
+        <Dumbbell size={28} className="text-[#2e3a52]" />
       </div>
-      <p className="text-gray-500 font-medium">{label}</p>
-      <p className="text-xs text-gray-400 mt-1">Coming soon</p>
+      <p className="text-[#4a5a75] font-medium">{label}</p>
+      <p className="text-xs text-[#3a4a62] mt-1">Coming soon</p>
     </div>
   )
 }
@@ -2498,21 +2498,21 @@ function HabitsSection({ clientId }: { clientId: string }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-gray-800">Habits</h3>
+        <h3 className="font-semibold text-[#e8edf5]">Habits</h3>
         <button onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-1 text-xs text-brand-600 font-semibold hover:text-brand-700 transition-colors">
+          className="flex items-center gap-1 text-xs text-amber-400 font-semibold hover:text-amber-400 transition-colors">
           <Plus size={13} /> Add habit
         </button>
       </div>
 
       {/* Create form */}
       {showForm && (
-        <div className="mb-3 p-3 bg-brand-50 border border-brand-200 rounded-xl space-y-2.5">
+        <div className="mb-3 p-3 bg-amber-400/10 border border-amber-400/20 rounded-xl space-y-2.5">
           <div className="flex flex-wrap gap-1">
             {HABIT_EMOJIS.map(e => (
               <button key={e} onClick={() => setEmoji(e)}
                 className={clsx('w-8 h-8 rounded-lg text-base flex items-center justify-center transition-all',
-                  emoji === e ? 'bg-brand-200 ring-2 ring-brand-400 scale-110' : 'hover:bg-brand-100')}>
+                  emoji === e ? 'bg-amber-400/20 ring-2 ring-amber-400 scale-110' : 'hover:bg-amber-400/10')}>
                 {e}
               </button>
             ))}
@@ -2520,49 +2520,49 @@ function HabitsSection({ clientId }: { clientId: string }) {
           <input autoFocus value={name} onChange={e => setName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleCreate()}
             placeholder="Habit name (e.g. Drink 2L water)…"
-            className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+            className="w-full text-sm px-3 py-2 border border-[#242d40] rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
           <div className="flex gap-1 flex-wrap">
             {HABIT_FREQS.map(f => (
               <button key={f.value} onClick={() => setFrequency(f.value)}
                 className={clsx('px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors',
-                  frequency === f.value ? 'bg-brand-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50')}>
+                  frequency === f.value ? 'bg-amber-400 text-white' : 'bg-[#161b27] border border-[#242d40] text-[#8a9ab5] hover:bg-[#0d1117]')}>
                 {f.label}
               </button>
             ))}
           </div>
           <div className="flex gap-2">
             <button onClick={handleCreate} disabled={!name.trim() || createHabit.isPending}
-              className="px-3 py-1.5 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700 disabled:opacity-40 flex items-center gap-1.5">
+              className="px-3 py-1.5 bg-amber-400 text-white text-xs font-semibold rounded-lg hover:bg-amber-400 disabled:opacity-40 flex items-center gap-1.5">
               {createHabit.isPending && <Loader2 size={12} className="animate-spin" />} Save
             </button>
-            <button onClick={() => setShowForm(false)} className="px-3 py-1.5 text-gray-400 text-xs hover:text-gray-600">Cancel</button>
+            <button onClick={() => setShowForm(false)} className="px-3 py-1.5 text-[#3a4a62] text-xs hover:text-[#8a9ab5]">Cancel</button>
           </div>
         </div>
       )}
 
       {isLoading ? (
-        <div className="flex justify-center py-6"><Loader2 size={16} className="animate-spin text-gray-300" /></div>
+        <div className="flex justify-center py-6"><Loader2 size={16} className="animate-spin text-[#2e3a52]" /></div>
       ) : habits.length === 0 && !showForm ? (
-        <p className="text-sm text-gray-400 text-center py-4">No habits yet</p>
+        <p className="text-sm text-[#3a4a62] text-center py-4">No habits yet</p>
       ) : (
         <div className="space-y-1.5 max-h-64 overflow-y-auto">
           {habits.map(h => (
-            <div key={h.id} className="flex items-center gap-2.5 p-2.5 bg-gray-50 rounded-xl group hover:bg-gray-100 transition-colors">
+            <div key={h.id} className="flex items-center gap-2.5 p-2.5 bg-[#0d1117] rounded-xl group hover:bg-[#161b27] transition-colors">
               <span className="text-lg flex-shrink-0">{h.emoji}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-700 truncate">{h.name}</p>
-                <p className="text-xs text-gray-400 capitalize">{HABIT_FREQS.find(f => f.value === h.frequency)?.label}</p>
+                <p className="text-sm font-medium text-[#8a9ab5] truncate">{h.name}</p>
+                <p className="text-xs text-[#3a4a62] capitalize">{HABIT_FREQS.find(f => f.value === h.frequency)?.label}</p>
               </div>
               {pendingDelete === h.id ? (
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <button onClick={() => deleteHabit.mutate({ id: h.id, clientId })}
                     className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded font-bold">Del</button>
                   <button onClick={() => setPendingDelete(null)}
-                    className="text-[10px] text-gray-400 px-1.5 py-0.5 rounded font-bold">No</button>
+                    className="text-[10px] text-[#3a4a62] px-1.5 py-0.5 rounded font-bold">No</button>
                 </div>
               ) : (
                 <button onClick={() => setPendingDelete(h.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-300 hover:text-red-400 transition-all flex-shrink-0">
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-[#2e3a52] hover:text-red-400 transition-all flex-shrink-0">
                   <Trash2 size={13} />
                 </button>
               )}
@@ -2641,7 +2641,7 @@ export default function ClientDetail() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 size={24} className="animate-spin text-gray-300" />
+        <Loader2 size={24} className="animate-spin text-[#2e3a52]" />
       </div>
     )
   }
@@ -2649,8 +2649,8 @@ export default function ClientDetail() {
   if (error || !client) {
     return (
       <div className="p-6 text-center">
-        <p className="text-gray-500">Client not found.</p>
-        <Link to="/clients" className="text-brand-600 mt-2 inline-block hover:underline">Back to clients</Link>
+        <p className="text-[#4a5a75]">Client not found.</p>
+        <Link to="/clients" className="text-amber-400 mt-2 inline-block hover:underline">Back to clients</Link>
       </div>
     )
   }
@@ -2674,46 +2674,46 @@ export default function ClientDetail() {
       {showReport && <ProgressReport  client={client} onClose={() => setShowReport(false)} />}
 
       {/* Back */}
-      <Link to="/clients" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">
+      <Link to="/clients" className="inline-flex items-center gap-2 text-sm text-[#4a5a75] hover:text-[#8a9ab5] transition-colors">
         <ArrowLeft size={16} />
         Back to Clients
       </Link>
 
       {/* Profile header */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
+      <div className="bg-[#161b27] rounded-2xl border border-[#242d40] shadow-card p-6">
         <div className="flex flex-col sm:flex-row items-start gap-5">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0 shadow-md">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-300 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0 shadow-md">
             {initials}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <h2 className="text-2xl font-bold text-gray-900">{client.name}</h2>
+              <h2 className="text-2xl font-bold text-[#e8edf5]">{client.name}</h2>
               <span className={clsx(
                 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold w-fit',
                 client.status === 'active'   && 'bg-emerald-50 text-emerald-700',
                 client.status === 'pending'  && 'bg-amber-50 text-amber-700',
-                client.status === 'inactive' && 'bg-gray-100 text-gray-600',
+                client.status === 'inactive' && 'bg-[#161b27] text-[#8a9ab5]',
               )}>
                 <span className={clsx('w-1.5 h-1.5 rounded-full',
                   client.status === 'active'   && 'bg-emerald-500',
                   client.status === 'pending'  && 'bg-amber-500',
-                  client.status === 'inactive' && 'bg-gray-400',
+                  client.status === 'inactive' && 'bg-[#3a4a62]',
                 )} />
                 {client.status.charAt(0).toUpperCase() + client.status.slice(1)}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-4 mt-2">
               {client.email && (
-                <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                <div className="flex items-center gap-1.5 text-sm text-[#4a5a75]">
                   <Mail size={14} />{client.email}
                 </div>
               )}
               {client.phone && (
-                <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                <div className="flex items-center gap-1.5 text-sm text-[#4a5a75]">
                   <Phone size={14} />{client.phone}
                 </div>
               )}
-              <div className="flex items-center gap-1.5 text-sm text-gray-500">
+              <div className="flex items-center gap-1.5 text-sm text-[#4a5a75]">
                 <Calendar size={14} />
                 Joined {new Date(client.joined_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
               </div>
@@ -2721,7 +2721,7 @@ export default function ClientDetail() {
             {client.tags?.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-3">
                 {client.tags.map(tag => (
-                  <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                  <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#161b27] text-[#8a9ab5] rounded-full text-xs">
                     <Tag size={10} />{tag}
                   </span>
                 ))}
@@ -2730,27 +2730,27 @@ export default function ClientDetail() {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Share portal link */}
-            <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
+            <div className="flex items-center gap-1 bg-[#0d1117] border border-[#242d40] rounded-xl overflow-hidden">
               <button
                 onClick={copyPortalLink}
                 title="Copy client portal link"
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#8a9ab5] hover:bg-[#161b27] transition-colors"
               >
                 {copied ? <CheckCircle2 size={13} className="text-emerald-500" /> : <Copy size={13} />}
                 {copied ? 'Copied!' : 'Copy Link'}
               </button>
-              <div className="w-px h-5 bg-gray-200" />
+              <div className="w-px h-5 bg-[#1e2535]" />
               <button
                 onClick={openPortal}
                 title="Open client portal"
-                className="px-2.5 py-2 text-gray-500 hover:bg-gray-100 transition-colors"
+                className="px-2.5 py-2 text-[#4a5a75] hover:bg-[#161b27] transition-colors"
               >
                 <ExternalLink size={13} />
               </button>
             </div>
             <button
               onClick={() => setShowReport(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-[#161b27] text-[#8a9ab5] text-sm font-semibold rounded-xl hover:bg-[#1e2535] transition-colors"
             >
               <FileText size={15} />
               Report
@@ -2758,7 +2758,7 @@ export default function ClientDetail() {
             <button
               onClick={openMessage}
               disabled={getOrCreate.isPending}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all shadow-sm disabled:opacity-60"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-300 text-white text-sm font-semibold rounded-xl hover:from-amber-400 hover:to-amber-300 transition-all shadow-sm disabled:opacity-60"
             >
               {getOrCreate.isPending
                 ? <Loader2 size={15} className="animate-spin" />
@@ -2769,31 +2769,31 @@ export default function ClientDetail() {
             <div ref={menuRef} className="relative">
               <button
                 onClick={() => setMenuOpen(o => !o)}
-                className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+                className="p-2 rounded-xl border border-[#242d40] text-[#4a5a75] hover:bg-[#0d1117] transition-colors"
               >
                 <MoreHorizontal size={18} />
               </button>
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-44 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
+                <div className="absolute right-0 top-full mt-1.5 w-44 bg-[#161b27] rounded-xl shadow-lg border border-[#242d40] py-1 z-20">
                   <button
                     onClick={() => { setMenuOpen(false); setShowEdit(true) }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-[#8a9ab5] hover:bg-[#0d1117] transition-colors"
                   >
-                    <MoreHorizontal size={15} className="text-gray-400" />
+                    <MoreHorizontal size={15} className="text-[#3a4a62]" />
                     Edit Details
                   </button>
                   <button
                     onClick={handleArchive}
                     disabled={updateClient.isPending}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-[#8a9ab5] hover:bg-[#0d1117] transition-colors disabled:opacity-50"
                   >
                     <Archive size={15} className="text-amber-500" />
                     {client?.status === 'inactive' ? 'Unarchive' : 'Archive'}
                   </button>
-                  <div className="my-1 border-t border-gray-100" />
+                  <div className="my-1 border-t border-[#242d40]" />
                   <button
                     onClick={() => { setMenuOpen(false); setShowDeleteConfirm(true) }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-rose-600 hover:bg-rose-400/10 transition-colors"
                   >
                     <Trash2 size={15} />
                     Delete Client
@@ -2806,20 +2806,20 @@ export default function ClientDetail() {
             {showDeleteConfirm && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
-                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10">
+                <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10">
                   <div className="flex flex-col items-center text-center gap-3 mb-5">
                     <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center">
                       <AlertTriangle size={22} className="text-rose-600" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-gray-900">Delete {client?.name}?</h3>
-                      <p className="text-sm text-gray-500 mt-1">This will permanently remove the client and all their data. This cannot be undone.</p>
+                      <h3 className="text-base font-bold text-[#e8edf5]">Delete {client?.name}?</h3>
+                      <p className="text-sm text-[#4a5a75] mt-1">This will permanently remove the client and all their data. This cannot be undone.</p>
                     </div>
                   </div>
                   <div className="flex gap-3">
                     <button
                       onClick={() => setShowDeleteConfirm(false)}
-                      className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                      className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors"
                     >
                       Cancel
                     </button>
@@ -2842,21 +2842,21 @@ export default function ClientDetail() {
       {/* Quick stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Status',        value: client.status.charAt(0).toUpperCase() + client.status.slice(1), icon: <span className={clsx('w-3 h-3 rounded-full', client.status === 'active' ? 'bg-emerald-500' : client.status === 'pending' ? 'bg-amber-500' : 'bg-gray-400')} /> },
-          { label: 'Category',      value: client.category ?? '—',     icon: <Tag size={16} className="text-brand-500" /> },
+          { label: 'Status',        value: client.status.charAt(0).toUpperCase() + client.status.slice(1), icon: <span className={clsx('w-3 h-3 rounded-full', client.status === 'active' ? 'bg-emerald-500' : client.status === 'pending' ? 'bg-amber-500' : 'bg-[#3a4a62]')} /> },
+          { label: 'Category',      value: client.category ?? '—',     icon: <Tag size={16} className="text-amber-400" /> },
           { label: 'Group',         value: client.group_name ?? '—',   icon: <ChevronDown size={16} className="text-violet-500" /> },
           { label: 'Pending Tasks', value: loadingTasks ? '—' : pendingTasks, icon: <Clock size={16} className="text-amber-500" /> },
         ].map(stat => (
-          <div key={stat.label} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-card">
-            <div className="flex items-center gap-2 mb-1.5">{stat.icon}<span className="text-xs text-gray-500">{stat.label}</span></div>
-            <p className="text-lg font-bold text-gray-900">{stat.value}</p>
+          <div key={stat.label} className="bg-[#161b27] rounded-2xl border border-[#242d40] p-4 shadow-card">
+            <div className="flex items-center gap-2 mb-1.5">{stat.icon}<span className="text-xs text-[#4a5a75]">{stat.label}</span></div>
+            <p className="text-lg font-bold text-[#e8edf5]">{stat.value}</p>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
-        <div className="border-b border-gray-100">
+      <div className="bg-[#161b27] rounded-2xl border border-[#242d40] shadow-card overflow-hidden">
+        <div className="border-b border-[#242d40]">
           <div className="flex overflow-x-auto">
             {tabs.map(tab => (
               <button
@@ -2865,8 +2865,8 @@ export default function ClientDetail() {
                 className={clsx(
                   'flex-shrink-0 px-5 py-3.5 text-sm font-medium border-b-2 transition-colors',
                   activeTab === tab.key
-                    ? 'border-brand-600 text-brand-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700',
+                    ? 'border-amber-400 text-amber-400'
+                    : 'border-transparent text-[#4a5a75] hover:text-[#8a9ab5]',
                 )}
               >
                 {tab.label}
@@ -2880,7 +2880,7 @@ export default function ClientDetail() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Client info */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-gray-800">Client Info</h3>
+                <h3 className="font-semibold text-[#e8edf5]">Client Info</h3>
                 <div className="space-y-1">
                   {[
                     { label: 'Primary Goal', value: client.goal },
@@ -2889,9 +2889,9 @@ export default function ClientDetail() {
                     { label: 'Email',        value: client.email },
                     { label: 'Phone',        value: client.phone },
                   ].map(item => (
-                    <div key={item.label} className="flex items-center justify-between py-2.5 border-b border-gray-50">
-                      <span className="text-sm text-gray-500">{item.label}</span>
-                      <span className="text-sm font-medium text-gray-800">{item.value || '—'}</span>
+                    <div key={item.label} className="flex items-center justify-between py-2.5 border-b border-[#1e2535]">
+                      <span className="text-sm text-[#4a5a75]">{item.label}</span>
+                      <span className="text-sm font-medium text-[#e8edf5]">{item.value || '—'}</span>
                     </div>
                   ))}
                 </div>
@@ -2902,38 +2902,38 @@ export default function ClientDetail() {
               {/* Tasks */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-800">Tasks</h3>
-                  <span className="text-xs font-semibold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full">
+                  <h3 className="font-semibold text-[#e8edf5]">Tasks</h3>
+                  <span className="text-xs font-semibold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
                     {pendingTasks} pending
                   </span>
                 </div>
 
                 {loadingTasks ? (
                   <div className="flex items-center justify-center py-8">
-                    <Loader2 size={18} className="animate-spin text-gray-300" />
+                    <Loader2 size={18} className="animate-spin text-[#2e3a52]" />
                   </div>
                 ) : (
                   <>
                     <div className="space-y-2 max-h-72 overflow-y-auto">
                       {tasks.map(task => (
-                        <div key={task.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div key={task.id} className="flex items-center gap-3 p-3 bg-[#0d1117] rounded-xl hover:bg-[#161b27] transition-colors">
                           <button
                             onClick={() => toggleTask.mutate({ id: task.id, completed: !task.completed })}
                             className={clsx(
                               'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all',
                               task.completed
                                 ? 'bg-emerald-500 border-emerald-500 shadow-sm shadow-emerald-200'
-                                : 'border-gray-300 hover:border-brand-400',
+                                : 'border-[#2e3a52] hover:border-amber-400',
                             )}
                           >
                             {task.completed && <CheckCircle2 size={11} className="text-white" />}
                           </button>
                           <div className="flex-1 min-w-0">
-                            <p className={clsx('text-sm font-medium truncate', task.completed ? 'line-through text-gray-400' : 'text-gray-700')}>
+                            <p className={clsx('text-sm font-medium truncate', task.completed ? 'line-through text-[#3a4a62]' : 'text-[#8a9ab5]')}>
                               {task.title}
                             </p>
                             {task.due_date && (
-                              <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                              <p className="text-xs text-[#3a4a62] flex items-center gap-1 mt-0.5">
                                 <Clock size={10} />
                                 {new Date(task.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
                               </p>
@@ -2942,7 +2942,7 @@ export default function ClientDetail() {
                         </div>
                       ))}
                       {tasks.length === 0 && (
-                        <p className="text-sm text-gray-400 text-center py-4">No tasks yet</p>
+                        <p className="text-sm text-[#3a4a62] text-center py-4">No tasks yet</p>
                       )}
                     </div>
                     <AddTaskRow clientId={client.id} />
@@ -2956,14 +2956,14 @@ export default function ClientDetail() {
               </div>
 
               {/* Portal Access — spans full width */}
-              <div className="lg:col-span-2 border-t border-gray-100 pt-6">
+              <div className="lg:col-span-2 border-t border-[#242d40] pt-6">
                 <PortalAccessCard client={client} />
               </div>
 
               {/* Community Courses — spans full width */}
-              <div className="lg:col-span-2 border-t border-gray-100 pt-6">
+              <div className="lg:col-span-2 border-t border-[#242d40] pt-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <h3 className="font-semibold text-[#e8edf5] flex items-center gap-2">
                     <BookOpen size={16} className="text-violet-500" /> Community Courses
                   </h3>
                 </div>

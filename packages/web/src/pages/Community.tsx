@@ -99,7 +99,7 @@ function contentTypeBg(type: CommunityLesson['content_type']) {
     video:    'bg-violet-100 text-violet-700',
     audio:    'bg-pink-100 text-pink-700',
     document: 'bg-blue-100 text-blue-700',
-    text:     'bg-gray-100 text-gray-600',
+    text:     'bg-[#161b27] text-[#8a9ab5]',
   }[type]
 }
 
@@ -146,19 +146,19 @@ function CreateCommunityModal({ orgId, onClose, onCreated }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6">
+      <div className="w-full max-w-sm bg-[#161b27] rounded-2xl shadow-2xl p-6">
         <div className="flex items-center justify-between mb-5">
-          <p className="font-bold text-gray-800">New Community</p>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
+          <p className="font-bold text-[#e8edf5]">New Community</p>
+          <button onClick={onClose} className="text-[#3a4a62] hover:text-[#8a9ab5] transition-colors"><X size={20} /></button>
         </div>
         <div className="space-y-4">
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-2">Icon</p>
+            <p className="text-xs font-semibold text-[#4a5a75] mb-2">Icon</p>
             <div className="flex gap-1.5 flex-wrap">
               {COMMUNITY_EMOJIS.map(e => (
                 <button key={e} onClick={() => setEmoji(e)}
                   className={clsx('w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-all',
-                    emoji === e ? 'bg-brand-100 ring-2 ring-brand-400 scale-110' : 'hover:bg-gray-100')}>
+                    emoji === e ? 'bg-amber-400/10 ring-2 ring-amber-400 scale-110' : 'hover:bg-[#161b27]')}>
                   {e}
                 </button>
               ))}
@@ -170,23 +170,23 @@ function CreateCommunityModal({ orgId, onClose, onCreated }: {
             onChange={e => setName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleCreate()}
             placeholder="Community name (e.g. 8 Week Challenge)…"
-            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+            className="w-full rounded-xl border border-[#242d40] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400"
           />
           <textarea
             value={description}
             onChange={e => setDesc(e.target.value)}
             placeholder="Short description (optional)…"
             rows={2}
-            className="w-full resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+            className="w-full resize-none rounded-xl border border-[#242d40] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400"
           />
         </div>
         {errorMsg && (
           <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{errorMsg}</p>
         )}
         <div className="flex justify-end gap-2 mt-4">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 rounded-xl border border-[#242d40] text-sm text-[#8a9ab5] hover:bg-[#0d1117] transition-colors">Cancel</button>
           <button onClick={handleCreate} disabled={!name.trim() || saving}
-            className="px-5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-40 flex items-center gap-2 transition-colors">
+            className="px-5 py-2 rounded-xl bg-amber-400 text-white text-sm font-semibold hover:bg-amber-400 disabled:opacity-40 flex items-center gap-2 transition-colors">
             {saving && <Loader2 size={14} className="animate-spin" />} Create
           </button>
         </div>
@@ -364,58 +364,58 @@ function FeedTab({ orgId, communityId }: { orgId: string; communityId: string | 
     <div className="space-y-4">
       {/* Section tabs + manage button */}
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 flex-wrap">
+        <div className="flex gap-1 bg-[#161b27] rounded-xl p-1 flex-wrap">
           <button
             onClick={() => setActiveSection(null)}
             className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all',
-              activeSection === null ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
+              activeSection === null ? 'bg-[#161b27] text-[#e8edf5] shadow-sm' : 'text-[#4a5a75] hover:text-[#8a9ab5]')}>
             All
           </button>
           {sections.map(s => (
             <button key={s.id}
               onClick={() => setActiveSection(s.id)}
               className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all',
-                activeSection === s.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
+                activeSection === s.id ? 'bg-[#161b27] text-[#e8edf5] shadow-sm' : 'text-[#4a5a75] hover:text-[#8a9ab5]')}>
               <span>{s.emoji}</span> {s.name}
             </button>
           ))}
         </div>
         <button onClick={() => setShowSections(v => !v)}
           className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-sm font-semibold transition-colors',
-            showSections ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-gray-200 text-gray-500 hover:text-brand-600 hover:border-brand-300')}>
+            showSections ? 'border-amber-400/30 bg-amber-400/10 text-amber-400' : 'border-[#242d40] text-[#4a5a75] hover:text-amber-400 hover:border-amber-400/30')}>
           <Hash size={14} /> Manage Sections
         </button>
       </div>
 
       {/* Sections management panel */}
       {showSections && (
-        <div className="bg-white rounded-2xl border border-brand-200 p-5 shadow-sm space-y-4">
-          <p className="text-sm font-semibold text-gray-700 flex items-center gap-2"><Hash size={15} className="text-brand-500" /> Feed Sections</p>
-          <p className="text-xs text-gray-400 -mt-2">Create topic channels for your community. Clients can filter posts by section.</p>
+        <div className="bg-[#161b27] rounded-2xl border border-amber-400/20 p-5 shadow-sm space-y-4">
+          <p className="text-sm font-semibold text-[#8a9ab5] flex items-center gap-2"><Hash size={15} className="text-amber-400" /> Feed Sections</p>
+          <p className="text-xs text-[#3a4a62] -mt-2">Create topic channels for your community. Clients can filter posts by section.</p>
 
           {/* Existing sections */}
           {sections.length > 0 && (
             <div className="space-y-1">
               {sections.map(s => (
-                <div key={s.id} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50">
+                <div key={s.id} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-[#0d1117]">
                   <span className="text-lg">{s.emoji}</span>
-                  <span className="flex-1 text-sm font-semibold text-gray-700">{s.name}</span>
+                  <span className="flex-1 text-sm font-semibold text-[#8a9ab5]">{s.name}</span>
                   <button onClick={() => deleteSection(s.id)}
-                    className="text-gray-300 hover:text-red-500 transition-colors p-1"><Trash2 size={14} /></button>
+                    className="text-[#2e3a52] hover:text-red-500 transition-colors p-1"><Trash2 size={14} /></button>
                 </div>
               ))}
             </div>
           )}
 
           {/* New section form */}
-          <div className="border-t border-gray-100 pt-4">
-            <p className="text-xs font-semibold text-gray-500 mb-2">New Section</p>
+          <div className="border-t border-[#242d40] pt-4">
+            <p className="text-xs font-semibold text-[#4a5a75] mb-2">New Section</p>
             <div className="flex gap-2 flex-wrap">
               <div className="flex gap-1 flex-wrap">
                 {QUICK_EMOJIS.map(e => (
                   <button key={e} onClick={() => setNewSectionEmoji(e)}
                     className={clsx('w-8 h-8 rounded-lg text-base flex items-center justify-center transition-all',
-                      newSectionEmoji === e ? 'bg-brand-100 ring-2 ring-brand-400' : 'hover:bg-gray-100')}>
+                      newSectionEmoji === e ? 'bg-amber-400/10 ring-2 ring-amber-400' : 'hover:bg-[#161b27]')}>
                     {e}
                   </button>
                 ))}
@@ -426,10 +426,10 @@ function FeedTab({ orgId, communityId }: { orgId: string; communityId: string | 
                   onChange={e => setNewSectionName(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && addSection()}
                   placeholder="Section name…"
-                  className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+                  className="flex-1 rounded-xl border border-[#242d40] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400"
                 />
                 <button onClick={addSection} disabled={!newSectionName.trim() || savingSection}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold disabled:opacity-40 transition-colors">
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-400 text-white text-sm font-semibold disabled:opacity-40 transition-colors">
                   {savingSection ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Add
                 </button>
               </div>
@@ -439,20 +439,20 @@ function FeedTab({ orgId, communityId }: { orgId: string; communityId: string | 
       )}
 
       {/* Composer */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-        <p className="text-sm font-semibold text-gray-700 mb-3">New Post</p>
+      <div className="bg-[#161b27] rounded-2xl border border-[#242d40] p-5 shadow-sm">
+        <p className="text-sm font-semibold text-[#8a9ab5] mb-3">New Post</p>
         <textarea
           value={content}
           onChange={e => setContent(e.target.value)}
           placeholder="Share an update, tip, or announcement with your community…"
           rows={3}
-          className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+          className="w-full resize-none rounded-xl border border-[#242d40] px-4 py-3 text-sm text-[#e8edf5] placeholder-[#3a4a62] focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400"
         />
 
         <div className="mt-3 flex gap-2 flex-wrap">
           {sections.length > 0 && (
             <select value={postSection} onChange={e => setPostSection(e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+              className="rounded-lg border border-[#242d40] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400">
               <option value="">No section</option>
               {sections.map(s => <option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}
             </select>
@@ -466,25 +466,25 @@ function FeedTab({ orgId, communityId }: { orgId: string; communityId: string | 
 
             {mediaUrl ? (
               /* Uploaded / URL set — show chip */
-              <div className="flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-xl px-4 py-2.5">
-                {mediaType === 'image' ? <img src={mediaUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" /> : <Film size={14} className="text-brand-600 flex-shrink-0" />}
-                <span className="flex-1 text-xs text-brand-700 truncate">{mediaUrl.split('/').pop()}</span>
-                <button onClick={() => { setMediaUrl(''); setMediaType(null) }} className="text-brand-400 hover:text-red-500 transition-colors flex-shrink-0"><X size={14} /></button>
+              <div className="flex items-center gap-2 bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-2.5">
+                {mediaType === 'image' ? <img src={mediaUrl} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" /> : <Film size={14} className="text-amber-400 flex-shrink-0" />}
+                <span className="flex-1 text-xs text-amber-400 truncate">{mediaUrl.split('/').pop()}</span>
+                <button onClick={() => { setMediaUrl(''); setMediaType(null) }} className="text-amber-400 hover:text-red-500 transition-colors flex-shrink-0"><X size={14} /></button>
               </div>
             ) : (
               /* URL + upload row */
               <div className="flex gap-2">
                 <select value={mediaType ?? ''} onChange={e => setMediaType(e.target.value as CommunityPost['media_type'] || null)}
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400">
+                  className="rounded-lg border border-[#242d40] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400">
                   <option value="">Type…</option>
                   <option value="image">Image</option>
                   <option value="video">Video</option>
                   <option value="audio">Audio</option>
                 </select>
                 <input value={mediaUrl} onChange={e => setMediaUrl(e.target.value)} placeholder="Paste URL…"
-                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400" />
+                  className="flex-1 rounded-lg border border-[#242d40] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400" />
                 <button type="button" onClick={() => postMediaRef.current?.click()} disabled={postMediaUploading}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-xs font-semibold text-gray-500 hover:border-brand-300 hover:text-brand-600 transition-colors">
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#242d40] text-xs font-semibold text-[#4a5a75] hover:border-amber-400/30 hover:text-amber-400 transition-colors">
                   {postMediaUploading ? <Loader2 size={13} className="animate-spin" /> : <UploadCloud size={13} />}
                   {postMediaUploading ? 'Uploading…' : 'Upload'}
                 </button>
@@ -495,11 +495,11 @@ function FeedTab({ orgId, communityId }: { orgId: string; communityId: string | 
 
         <div className="flex items-center justify-between mt-3">
           <button onClick={() => setShowMedia(v => !v)}
-            className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-brand-600 transition-colors">
+            className="flex items-center gap-1.5 text-xs font-medium text-[#4a5a75] hover:text-amber-400 transition-colors">
             <Film size={14} /> {showMedia ? 'Remove media' : 'Add media'}
           </button>
           <button onClick={handlePost} disabled={!content.trim() || posting}
-            className="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
+            className="px-5 py-2 rounded-xl bg-amber-400 hover:bg-amber-400 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
             {posting && <Loader2 size={14} className="animate-spin" />} Post
           </button>
         </div>
@@ -507,14 +507,14 @@ function FeedTab({ orgId, communityId }: { orgId: string; communityId: string | 
 
       {/* Posts */}
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-brand-500" /></div>
+        <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-amber-400" /></div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-          <div className="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center mx-auto mb-3">
-            <MessageCircle size={22} className="text-brand-500" />
+        <div className="text-center py-16 bg-[#161b27] rounded-2xl border border-[#242d40]">
+          <div className="w-12 h-12 rounded-2xl bg-amber-400/10 flex items-center justify-center mx-auto mb-3">
+            <MessageCircle size={22} className="text-amber-400" />
           </div>
-          <p className="font-semibold text-gray-700">No posts yet</p>
-          <p className="text-sm text-gray-400 mt-1">{activeSection ? 'No posts in this section yet.' : 'Write your first community update above.'}</p>
+          <p className="font-semibold text-[#8a9ab5]">No posts yet</p>
+          <p className="text-sm text-[#3a4a62] mt-1">{activeSection ? 'No posts in this section yet.' : 'Write your first community update above.'}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -529,7 +529,7 @@ function FeedTab({ orgId, communityId }: { orgId: string; communityId: string | 
           {hasMore && (
             <div className="flex justify-center pt-2">
               <button onClick={loadMore} disabled={loadingMore}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#242d40] text-sm font-semibold text-[#8a9ab5] hover:bg-[#0d1117] disabled:opacity-40 transition-colors">
                 {loadingMore ? <Loader2 size={14} className="animate-spin" /> : <ChevronDown size={14} />}
                 {loadingMore ? 'Loading…' : 'Load more'}
               </button>
@@ -645,8 +645,8 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
 
   return (
     <div className={clsx(
-      'bg-white rounded-2xl border p-5 shadow-sm transition-all',
-      post.pinned ? 'border-brand-200 bg-brand-50/30' : 'border-gray-100',
+      'bg-[#161b27] rounded-2xl border p-5 shadow-sm transition-all',
+      post.pinned ? 'border-amber-400/20 bg-amber-400/10/30' : 'border-[#242d40]',
     )}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
@@ -654,40 +654,40 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
             'w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0',
             post.author_type === 'client'
               ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-              : 'bg-gradient-to-br from-brand-500 to-violet-600',
+              : 'bg-gradient-to-br from-amber-400 to-amber-300',
           )}>
             {(post.author_name ?? 'C').charAt(0).toUpperCase()}
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-sm font-semibold text-gray-800">{post.author_name ?? 'Coach'}</p>
+              <p className="text-sm font-semibold text-[#e8edf5]">{post.author_name ?? 'Coach'}</p>
               {post.section_id && (() => {
                 const sec = sections.find(s => s.id === post.section_id)
                 return sec ? (
-                  <span className="text-[10px] font-semibold bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-semibold bg-amber-400/10 text-amber-400 px-2 py-0.5 rounded-full">
                     {sec.emoji} {sec.name}
                   </span>
                 ) : null
               })()}
             </div>
-            <p className="text-xs text-gray-400">{timeAgo(post.created_at)}</p>
+            <p className="text-xs text-[#3a4a62]">{timeAgo(post.created_at)}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {post.pinned && (
-            <span className="flex items-center gap-1 text-xs text-brand-600 font-semibold bg-brand-100 rounded-full px-2.5 py-0.5">
+            <span className="flex items-center gap-1 text-xs text-amber-400 font-semibold bg-amber-400/10 rounded-full px-2.5 py-0.5">
               <Pin size={10} /> Pinned
             </span>
           )}
           <div ref={menuRef} className="relative">
             <button onClick={() => setMenu(v => !v)}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
+              className="text-[#3a4a62] hover:text-[#8a9ab5] transition-colors p-1 rounded-lg hover:bg-[#161b27]">
               <MoreVertical size={16} />
             </button>
             {menu && (
-              <div className="absolute right-0 top-8 z-20 w-44 bg-white border border-gray-100 rounded-xl shadow-xl py-1 overflow-hidden">
+              <div className="absolute right-0 top-8 z-20 w-44 bg-[#161b27] border border-[#242d40] rounded-xl shadow-xl py-1 overflow-hidden">
                 <button onClick={() => { onPin(post.id, post.pinned); setMenu(false) }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#8a9ab5] hover:bg-[#0d1117]">
                   {post.pinned ? <PinOff size={14} /> : <Pin size={14} />}
                   {post.pinned ? 'Unpin' : 'Pin post'}
                 </button>
@@ -698,7 +698,7 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
                       <button onClick={() => { onDelete(post.id); setMenu(false); setPendingDelete(false) }}
                         className="flex-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600">Yes</button>
                       <button onClick={() => setPendingDelete(false)}
-                        className="flex-1 px-2 py-1 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50">No</button>
+                        className="flex-1 px-2 py-1 rounded-lg border border-[#242d40] text-xs text-[#8a9ab5] hover:bg-[#0d1117]">No</button>
                     </div>
                   </div>
                 ) : (
@@ -713,7 +713,7 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
         </div>
       </div>
 
-      <p className="text-sm text-gray-700 mt-3 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+      <p className="text-sm text-[#8a9ab5] mt-3 leading-relaxed whitespace-pre-wrap">{post.content}</p>
 
       {/* Media preview */}
       {post.media_url && post.media_type === 'image' && (
@@ -729,7 +729,7 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
       )}
 
       {/* Actions row */}
-      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-gray-100 text-xs">
+      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[#242d40] text-xs">
         <button
           onClick={toggleReaction}
           disabled={reacting}
@@ -737,7 +737,7 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
             'flex items-center gap-1.5 transition-colors',
             post.coach_reacted
               ? 'text-rose-500 font-semibold'
-              : 'text-gray-400 hover:text-rose-400',
+              : 'text-[#3a4a62] hover:text-rose-400',
           )}
         >
           <Heart size={13} fill={post.coach_reacted ? 'currentColor' : 'none'} />
@@ -747,7 +747,7 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
           onClick={toggleComments}
           className={clsx(
             'flex items-center gap-1.5 transition-colors',
-            showComments ? 'text-brand-500 font-semibold' : 'text-gray-400 hover:text-brand-400',
+            showComments ? 'text-amber-400 font-semibold' : 'text-[#3a4a62] hover:text-amber-400',
           )}
         >
           <MessageCircle size={13} /> {post.comment_count} {showComments ? 'Hide' : 'Reply'}
@@ -756,11 +756,11 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
 
       {/* Comments section */}
       {showComments && (
-        <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+        <div className="mt-3 pt-3 border-t border-[#242d40] space-y-3">
           {loadingComments ? (
-            <div className="flex justify-center py-2"><Loader2 size={16} className="animate-spin text-gray-300" /></div>
+            <div className="flex justify-center py-2"><Loader2 size={16} className="animate-spin text-[#2e3a52]" /></div>
           ) : comments.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-1">No comments yet. Be the first to reply.</p>
+            <p className="text-xs text-[#3a4a62] text-center py-1">No comments yet. Be the first to reply.</p>
           ) : (
             comments.map(c => (
               <div key={c.id} className="flex gap-2.5">
@@ -768,22 +768,22 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
                   'w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0',
                   c.author_type === 'client'
                     ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                    : 'bg-gradient-to-br from-brand-500 to-violet-600',
+                    : 'bg-gradient-to-br from-amber-400 to-amber-300',
                 )}>
                   {c.author_name.charAt(0).toUpperCase()}
                 </div>
-                <div className="flex-1 bg-gray-50 rounded-xl px-3 py-2">
+                <div className="flex-1 bg-[#0d1117] rounded-xl px-3 py-2">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-xs font-semibold text-gray-700">{c.author_name}</span>
-                    <span className="text-[10px] text-gray-400">{timeAgo(c.created_at)}</span>
+                    <span className="text-xs font-semibold text-[#8a9ab5]">{c.author_name}</span>
+                    <span className="text-[10px] text-[#3a4a62]">{timeAgo(c.created_at)}</span>
                     {c.author_type === 'coach' && (
                       <button onClick={() => deleteComment(c.id)}
-                        className="ml-auto text-gray-300 hover:text-red-500 transition-colors p-0.5 rounded">
+                        className="ml-auto text-[#2e3a52] hover:text-red-500 transition-colors p-0.5 rounded">
                         <Trash2 size={11} />
                       </button>
                     )}
                   </div>
-                  <p className="text-xs text-gray-600 leading-relaxed">{c.content}</p>
+                  <p className="text-xs text-[#8a9ab5] leading-relaxed">{c.content}</p>
                 </div>
               </div>
             ))
@@ -794,12 +794,12 @@ function PostCard({ post, sections, orgId, onPin, onDelete, onReactionToggle, on
               value={commentText}
               onChange={e => setCommentText(e.target.value)}
               placeholder="Write a reply…"
-              className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-300 placeholder:text-gray-400"
+              className="flex-1 text-sm bg-[#0d1117] border border-[#242d40] rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-[#3a4a62]"
             />
             <button
               type="submit"
               disabled={!commentText.trim() || submitting}
-              className="flex items-center gap-1.5 px-3 py-2 bg-brand-600 text-white text-xs font-semibold rounded-xl hover:bg-brand-700 disabled:opacity-40 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 bg-amber-400 text-white text-xs font-semibold rounded-xl hover:bg-amber-400 disabled:opacity-40 transition-colors"
             >
               {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
             </button>
@@ -857,13 +857,13 @@ function ModuleAccessModal({ mod, orgId, onClose, onUpdated }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-lg bg-[#161b27] rounded-2xl shadow-2xl p-6 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="font-bold text-gray-800">Manage Access</p>
-            <p className="text-xs text-gray-400 mt-0.5">{mod.title}</p>
+            <p className="font-bold text-[#e8edf5]">Manage Access</p>
+            <p className="text-xs text-[#3a4a62] mt-0.5">{mod.title}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
+          <button onClick={onClose} className="text-[#3a4a62] hover:text-[#8a9ab5] transition-colors"><X size={20} /></button>
         </div>
 
         <div className="grid grid-cols-2 gap-2 mb-4">
@@ -873,58 +873,58 @@ function ModuleAccessModal({ mod, orgId, onClose, onUpdated }: {
           ]).map(({ value, label, desc, Icon }) => (
             <button key={value} onClick={() => setAccessType(value)}
               className={clsx('flex flex-col gap-1 p-3 rounded-xl border text-left transition-all',
-                accessType === value ? 'border-brand-400 bg-brand-50' : 'border-gray-200 hover:border-gray-300')}>
+                accessType === value ? 'border-amber-400 bg-amber-400/10' : 'border-[#242d40] hover:border-[#2e3a52]')}>
               <div className="flex items-center gap-2">
-                <Icon size={14} className={accessType === value ? 'text-brand-600' : 'text-gray-400'} />
-                <span className={clsx('text-sm font-semibold', accessType === value ? 'text-brand-700' : 'text-gray-700')}>{label}</span>
+                <Icon size={14} className={accessType === value ? 'text-amber-400' : 'text-[#3a4a62]'} />
+                <span className={clsx('text-sm font-semibold', accessType === value ? 'text-amber-400' : 'text-[#8a9ab5]')}>{label}</span>
               </div>
-              <p className="text-xs text-gray-400">{desc}</p>
+              <p className="text-xs text-[#3a4a62]">{desc}</p>
             </button>
           ))}
         </div>
 
-        <label className="flex items-center justify-between py-3 border-t border-gray-100 mb-4 cursor-pointer">
+        <label className="flex items-center justify-between py-3 border-t border-[#242d40] mb-4 cursor-pointer">
           <div>
-            <p className="text-sm font-semibold text-gray-700">Auto-enroll new clients</p>
-            <p className="text-xs text-gray-400 mt-0.5">Automatically enroll clients when they join</p>
+            <p className="text-sm font-semibold text-[#8a9ab5]">Auto-enroll new clients</p>
+            <p className="text-xs text-[#3a4a62] mt-0.5">Automatically enroll clients when they join</p>
           </div>
           <div onClick={() => setAutoEnroll(v => !v)}
-            className={clsx('w-10 h-6 rounded-full transition-colors relative flex-shrink-0 cursor-pointer', autoEnroll ? 'bg-brand-500' : 'bg-gray-200')}>
-            <span className={clsx('absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform', autoEnroll ? 'translate-x-5' : 'translate-x-1')} />
+            className={clsx('w-10 h-6 rounded-full transition-colors relative flex-shrink-0 cursor-pointer', autoEnroll ? 'bg-amber-400' : 'bg-[#1e2535]')}>
+            <span className={clsx('absolute top-1 w-4 h-4 bg-[#161b27] rounded-full shadow transition-transform', autoEnroll ? 'translate-x-5' : 'translate-x-1')} />
           </div>
         </label>
 
         {accessType === 'enrolled' && (
-          <div className="flex-1 overflow-hidden flex flex-col min-h-0 border-t border-gray-100 pt-4">
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0 border-t border-[#242d40] pt-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Enrolled Clients</p>
-              <span className="text-xs text-gray-400">{enrolled.size} enrolled</span>
+              <p className="text-xs font-semibold text-[#4a5a75] uppercase tracking-wide">Enrolled Clients</p>
+              <span className="text-xs text-[#3a4a62]">{enrolled.size} enrolled</span>
             </div>
             <div className="relative mb-2">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3a4a62]" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search clients…"
-                className="w-full pl-8 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400" />
+                className="w-full pl-8 pr-3 py-2 rounded-xl border border-[#242d40] text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400" />
             </div>
             {loading ? (
-              <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-brand-500" /></div>
+              <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-amber-400" /></div>
             ) : (
               <div className="overflow-y-auto flex-1 space-y-0.5">
                 {filtered.length === 0
-                  ? <p className="text-center text-sm text-gray-400 py-4">No clients found</p>
+                  ? <p className="text-center text-sm text-[#3a4a62] py-4">No clients found</p>
                   : filtered.map(client => (
                     <button key={client.id}
                       onClick={() => setEnrolled(prev => { const n = new Set(prev); n.has(client.id) ? n.delete(client.id) : n.add(client.id); return n })}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[#0d1117] transition-colors">
                       <div className={clsx('w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors',
-                        enrolled.has(client.id) ? 'bg-brand-500 border-brand-500' : 'border-gray-300')}>
+                        enrolled.has(client.id) ? 'bg-amber-400 border-amber-400' : 'border-[#2e3a52]')}>
                         {enrolled.has(client.id) && <Check size={11} className="text-white" />}
                       </div>
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-300 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                         {client.name.charAt(0).toUpperCase()}
                       </div>
-                      <span className="flex-1 text-sm text-gray-700 text-left">{client.name}</span>
+                      <span className="flex-1 text-sm text-[#8a9ab5] text-left">{client.name}</span>
                       <span className={clsx('text-[11px] font-semibold px-2 py-0.5 rounded-full',
-                        client.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}>{client.status}</span>
+                        client.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-[#161b27] text-[#4a5a75]')}>{client.status}</span>
                     </button>
                   ))}
               </div>
@@ -932,10 +932,10 @@ function ModuleAccessModal({ mod, orgId, onClose, onUpdated }: {
           </div>
         )}
 
-        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-[#242d40]">
+          <button onClick={onClose} className="px-4 py-2 rounded-xl border border-[#242d40] text-sm text-[#8a9ab5] hover:bg-[#0d1117] transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={saving}
-            className="px-5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-40 flex items-center gap-2 transition-colors">
+            className="px-5 py-2 rounded-xl bg-amber-400 text-white text-sm font-semibold hover:bg-amber-400 disabled:opacity-40 flex items-center gap-2 transition-colors">
             {saving && <Loader2 size={14} className="animate-spin" />} Save Changes
           </button>
         </div>
@@ -972,44 +972,44 @@ function ClientCoursesModal({ client, modules, enrollments, onClose, onSaved }: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-md bg-[#161b27] rounded-2xl shadow-2xl p-6 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="font-bold text-gray-800">Assign Courses</p>
-            <p className="text-xs text-gray-400 mt-0.5">{client.name}</p>
+            <p className="font-bold text-[#e8edf5]">Assign Courses</p>
+            <p className="text-xs text-[#3a4a62] mt-0.5">{client.name}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
+          <button onClick={onClose} className="text-[#3a4a62] hover:text-[#8a9ab5] transition-colors"><X size={20} /></button>
         </div>
         <div className="flex-1 overflow-y-auto space-y-2">
-          {modules.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No courses created yet.</p>}
+          {modules.length === 0 && <p className="text-sm text-[#3a4a62] text-center py-4">No courses created yet.</p>}
           {modules.map(m => {
             const isAll     = m.access_type === 'all'
             const isChecked = isAll || localEnrolled.has(m.id)
             return (
               <div key={m.id} className={clsx('flex items-center gap-3 px-4 py-3 rounded-xl border transition-all',
-                isChecked ? 'border-brand-200 bg-brand-50/50' : 'border-gray-200 hover:border-gray-300')}>
+                isChecked ? 'border-amber-400/20 bg-amber-400/10/50' : 'border-[#242d40] hover:border-[#2e3a52]')}>
                 <button disabled={isAll}
                   onClick={() => setLocalEnrolled(prev => { const n = new Set(prev); n.has(m.id) ? n.delete(m.id) : n.add(m.id); return n })}
                   className={clsx('w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors',
-                    isChecked ? 'bg-brand-500 border-brand-500' : 'border-gray-300', isAll && 'cursor-default opacity-70')}>
+                    isChecked ? 'bg-amber-400 border-amber-400' : 'border-[#2e3a52]', isAll && 'cursor-default opacity-70')}>
                   {isChecked && <Check size={11} className="text-white" />}
                 </button>
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-amber-300 flex items-center justify-center flex-shrink-0">
                   <BookOpen size={14} className="text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-700 truncate">{m.title}</p>
-                  <p className="text-xs text-gray-400">{isAll ? 'All members • Always accessible' : 'Enrolled only'}</p>
+                  <p className="text-sm font-semibold text-[#8a9ab5] truncate">{m.title}</p>
+                  <p className="text-xs text-[#3a4a62]">{isAll ? 'All members • Always accessible' : 'Enrolled only'}</p>
                 </div>
                 {isAll && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold flex-shrink-0">All Access</span>}
               </div>
             )
           })}
         </div>
-        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-[#242d40]">
+          <button onClick={onClose} className="px-4 py-2 rounded-xl border border-[#242d40] text-sm text-[#8a9ab5] hover:bg-[#0d1117] transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={saving}
-            className="px-5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-40 flex items-center gap-2 transition-colors">
+            className="px-5 py-2 rounded-xl bg-amber-400 text-white text-sm font-semibold hover:bg-amber-400 disabled:opacity-40 flex items-center gap-2 transition-colors">
             {saving && <Loader2 size={14} className="animate-spin" />} Save
           </button>
         </div>
@@ -1059,60 +1059,60 @@ function AssignCoursesModal({ orgId, communityId, communityName, onClose, onAssi
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-md bg-[#161b27] rounded-2xl shadow-2xl p-6 max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between mb-1">
-          <p className="font-bold text-gray-800">Assign Courses</p>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
+          <p className="font-bold text-[#e8edf5]">Assign Courses</p>
+          <button onClick={onClose} className="text-[#3a4a62] hover:text-[#8a9ab5] transition-colors"><X size={20} /></button>
         </div>
-        <p className="text-xs text-gray-400 mb-4">Move General courses into <span className="font-semibold text-brand-600">{communityName}</span>. They'll only be visible to that community.</p>
+        <p className="text-xs text-[#3a4a62] mb-4">Move General courses into <span className="font-semibold text-amber-400">{communityName}</span>. They'll only be visible to that community.</p>
 
         <div className="relative mb-3">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3a4a62]" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search courses…"
-            className="w-full pl-8 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400" />
+            className="w-full pl-8 pr-3 py-2 rounded-xl border border-[#242d40] text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400" />
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-1.5 min-h-0">
           {loading ? (
-            <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-brand-500" /></div>
+            <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-amber-400" /></div>
           ) : filtered.length === 0 ? (
-            <p className="text-center text-sm text-gray-400 py-8">
+            <p className="text-center text-sm text-[#3a4a62] py-8">
               {modules.length === 0 ? 'All courses are already assigned to communities.' : 'No courses match your search.'}
             </p>
           ) : filtered.map(m => (
             <button key={m.id}
               onClick={() => setSelected(prev => { const n = new Set(prev); n.has(m.id) ? n.delete(m.id) : n.add(m.id); return n })}
               className={clsx('w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left',
-                selected.has(m.id) ? 'border-brand-400 bg-brand-50' : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50')}>
+                selected.has(m.id) ? 'border-amber-400 bg-amber-400/10' : 'border-[#242d40] hover:border-[#242d40] hover:bg-[#0d1117]')}>
               <div className={clsx('w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors',
-                selected.has(m.id) ? 'bg-brand-500 border-brand-500' : 'border-gray-300')}>
+                selected.has(m.id) ? 'bg-amber-400 border-amber-400' : 'border-[#2e3a52]')}>
                 {selected.has(m.id) && <Check size={11} className="text-white" />}
               </div>
               {m.cover_url ? (
                 <img src={m.cover_url} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
               ) : (
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-amber-300 flex items-center justify-center flex-shrink-0">
                   <BookOpen size={14} className="text-white" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-800 truncate">{m.title}</p>
-                {m.description && <p className="text-xs text-gray-400 truncate">{m.description}</p>}
+                <p className="text-sm font-semibold text-[#e8edf5] truncate">{m.title}</p>
+                {m.description && <p className="text-xs text-[#3a4a62] truncate">{m.description}</p>}
               </div>
               <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0',
-                m.published ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500')}>
+                m.published ? 'bg-emerald-100 text-emerald-700' : 'bg-[#161b27] text-[#4a5a75]')}>
                 {m.published ? 'Live' : 'Draft'}
               </span>
             </button>
           ))}
         </div>
 
-        <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
-          <span className="text-xs text-gray-400">{selected.size} selected</span>
+        <div className="flex justify-between items-center mt-4 pt-4 border-t border-[#242d40]">
+          <span className="text-xs text-[#3a4a62]">{selected.size} selected</span>
           <div className="flex gap-2">
-            <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+            <button onClick={onClose} className="px-4 py-2 rounded-xl border border-[#242d40] text-sm text-[#8a9ab5] hover:bg-[#0d1117] transition-colors">Cancel</button>
             <button onClick={handleAssign} disabled={selected.size === 0 || saving}
-              className="px-5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-40 flex items-center gap-2 transition-colors">
+              className="px-5 py-2 rounded-xl bg-amber-400 text-white text-sm font-semibold hover:bg-amber-400 disabled:opacity-40 flex items-center gap-2 transition-colors">
               {saving && <Loader2 size={14} className="animate-spin" />} Assign {selected.size > 0 ? `(${selected.size})` : ''}
             </button>
           </div>
@@ -1351,18 +1351,18 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
     <div className="space-y-4">
       {/* Header bar */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-[#4a5a75]">
           {communityId ? `Courses assigned to this community.` : 'All courses — build here and assign to communities.'}
         </p>
         <div className="flex items-center gap-2">
           {communityId && (
             <button onClick={() => setShowAssignModal(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-brand-300 bg-brand-50 hover:bg-brand-100 text-brand-700 text-sm font-semibold transition-colors">
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-400/30 bg-amber-400/10 hover:bg-amber-400/10 text-amber-400 text-sm font-semibold transition-colors">
               <Plus size={15} /> Assign Courses
             </button>
           )}
           <button onClick={() => setShowModuleForm(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors">
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-400 text-white text-sm font-semibold transition-colors">
             <Plus size={16} /> New Course
           </button>
         </div>
@@ -1370,21 +1370,21 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
 
       {/* New module form */}
       {showModuleForm && (
-        <div className="bg-white rounded-2xl border border-brand-200 p-5 shadow-sm space-y-2">
-          <p className="text-sm font-semibold text-gray-700 mb-1">New Module</p>
+        <div className="bg-[#161b27] rounded-2xl border border-amber-400/20 p-5 shadow-sm space-y-2">
+          <p className="text-sm font-semibold text-[#8a9ab5] mb-1">New Module</p>
           <input
             autoFocus
             value={moduleDraft.title}
             onChange={e => setModuleDraft(d => ({ ...d, title: e.target.value }))}
             placeholder="Module title…"
-            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+            className="w-full rounded-xl border border-[#242d40] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400"
           />
           <textarea
             value={moduleDraft.description}
             onChange={e => setModuleDraft(d => ({ ...d, description: e.target.value }))}
             placeholder="Short description (optional)…"
             rows={2}
-            className="w-full resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+            className="w-full resize-none rounded-xl border border-[#242d40] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400"
           />
 
           {/* Cover image upload */}
@@ -1398,7 +1398,7 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
             </div>
           ) : (
             <button type="button" onClick={() => moduleCoverRef.current?.click()} disabled={coverUploading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-gray-200 text-gray-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition-all text-sm font-semibold">
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-[#242d40] text-[#4a5a75] hover:border-amber-400 hover:text-amber-400 hover:bg-amber-400/10 transition-all text-sm font-semibold">
               {coverUploading ? <Loader2 size={15} className="animate-spin" /> : <UploadCloud size={15} />}
               {coverUploading ? 'Uploading cover…' : 'Upload cover image (optional)'}
             </button>
@@ -1406,11 +1406,11 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
 
           <div className="flex justify-end gap-2 pt-1">
             <button onClick={() => setShowModuleForm(false)}
-              className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+              className="px-4 py-2 rounded-xl border border-[#242d40] text-sm text-[#8a9ab5] hover:bg-[#0d1117] transition-colors">
               Cancel
             </button>
             <button onClick={saveModule} disabled={!moduleDraft.title.trim() || savingModule}
-              className="px-5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-40 flex items-center gap-2 transition-colors">
+              className="px-5 py-2 rounded-xl bg-amber-400 text-white text-sm font-semibold hover:bg-amber-400 disabled:opacity-40 flex items-center gap-2 transition-colors">
               {savingModule && <Loader2 size={14} className="animate-spin" />} Save
             </button>
           </div>
@@ -1424,14 +1424,14 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
         </div>
       )}
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-brand-500" /></div>
+        <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-amber-400" /></div>
       ) : modules.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
+        <div className="text-center py-16 bg-[#161b27] rounded-2xl border border-[#242d40]">
           <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center mx-auto mb-3">
             <BookOpen size={22} className="text-violet-500" />
           </div>
-          <p className="font-semibold text-gray-700">No modules yet</p>
-          <p className="text-sm text-gray-400 mt-1">Create your first module to get started.</p>
+          <p className="font-semibold text-[#8a9ab5]">No modules yet</p>
+          <p className="text-sm text-[#3a4a62] mt-1">Create your first module to get started.</p>
         </div>
       ) : (
         modules.map((mod, modIdx) => (
@@ -1492,10 +1492,10 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
       {/* Add Lesson Dialog */}
       {lessonFor && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6">
+          <div className="w-full max-w-lg bg-[#161b27] rounded-2xl shadow-2xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <p className="font-bold text-gray-800">Add Lesson</p>
-              <button onClick={() => setLessonFor(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
+              <p className="font-bold text-[#e8edf5]">Add Lesson</p>
+              <button onClick={() => setLessonFor(null)} className="text-[#3a4a62] hover:text-[#8a9ab5] transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -1506,7 +1506,7 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
                 value={lessonDraft.title}
                 onChange={e => setLessonDraft(d => ({ ...d, title: e.target.value }))}
                 placeholder="Lesson title…"
-                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+                className="w-full rounded-xl border border-[#242d40] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400"
               />
 
               {/* Type selector */}
@@ -1518,8 +1518,8 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
                     className={clsx(
                       'flex flex-col items-center gap-1.5 py-3 rounded-xl border text-xs font-semibold transition-all',
                       lessonDraft.content_type === value
-                        ? 'border-brand-400 bg-brand-50 text-brand-700'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300',
+                        ? 'border-amber-400 bg-amber-400/10 text-amber-400'
+                        : 'border-[#242d40] text-[#4a5a75] hover:border-[#2e3a52]',
                     )}>
                     <Icon size={18} />
                     {label}
@@ -1551,16 +1551,16 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
                     </div>
                   ) : uploading ? (
                     /* Upload progress */
-                    <div className="flex items-center gap-3 bg-brand-50 border border-brand-200 rounded-xl px-4 py-2.5">
-                      <Loader2 size={14} className="animate-spin text-brand-500 flex-shrink-0" />
-                      <span className="text-sm text-brand-600 font-medium">Uploading…</span>
+                    <div className="flex items-center gap-3 bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-2.5">
+                      <Loader2 size={14} className="animate-spin text-amber-400 flex-shrink-0" />
+                      <span className="text-sm text-amber-400 font-medium">Uploading…</span>
                     </div>
                   ) : (
                     /* Upload button */
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 text-gray-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition-all text-sm font-semibold"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-[#242d40] text-[#4a5a75] hover:border-amber-400 hover:text-amber-400 hover:bg-amber-400/10 transition-all text-sm font-semibold"
                     >
                       <UploadCloud size={18} />
                       {lessonDraft.content_type === 'document' ? 'Upload File (PDF, Word, Excel, PPT…)' : 'Upload Video (.mp4, .mov)'}
@@ -1582,10 +1582,10 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
                         ? 'Or paste Google Drive / Dropbox URL…'
                         : 'Audio URL (.mp3, .wav, SoundCloud, etc.)…'
                     }
-                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+                    className="w-full rounded-xl border border-[#242d40] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400"
                   />
                   {lessonDraft.content_type === 'video' && (
-                    <p className="text-[11px] text-gray-400 mt-1.5 ml-1">
+                    <p className="text-[11px] text-[#3a4a62] mt-1.5 ml-1">
                       YouTube/Vimeo/Loom embed inline. Direct .mp4 plays natively.
                     </p>
                   )}
@@ -1599,7 +1599,7 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
                   onChange={e => setLessonDraft(d => ({ ...d, body: e.target.value }))}
                   placeholder={lessonDraft.content_type === 'document' ? 'Additional notes or instructions (optional)…' : 'Lesson content…'}
                   rows={5}
-                  className="w-full resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+                  className="w-full resize-none rounded-xl border border-[#242d40] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400"
                 />
               )}
 
@@ -1608,27 +1608,27 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
                 onChange={e => setLessonDraft(d => ({ ...d, description: e.target.value }))}
                 placeholder="Short description (optional)…"
                 rows={2}
-                className="w-full resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+                className="w-full resize-none rounded-xl border border-[#242d40] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400"
               />
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 mb-1 block">Drip delay (days)</label>
+                  <label className="text-xs font-semibold text-[#4a5a75] mb-1 block">Drip delay (days)</label>
                   <input
                     type="number" min="0"
                     value={lessonDraft.drip_days}
                     onChange={e => setLessonDraft(d => ({ ...d, drip_days: e.target.value }))}
-                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+                    className="w-full rounded-xl border border-[#242d40] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 mb-1 block">Duration (min)</label>
+                  <label className="text-xs font-semibold text-[#4a5a75] mb-1 block">Duration (min)</label>
                   <input
                     type="number" min="1"
                     value={lessonDraft.duration_minutes}
                     onChange={e => setLessonDraft(d => ({ ...d, duration_minutes: e.target.value }))}
                     placeholder="Optional"
-                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400"
+                    className="w-full rounded-xl border border-[#242d40] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400"
                   />
                 </div>
               </div>
@@ -1636,11 +1636,11 @@ export function CoursesTab({ orgId, communityId, communityName }: { orgId: strin
 
             <div className="flex justify-end gap-2 mt-5">
               <button onClick={() => setLessonFor(null)}
-                className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                className="px-4 py-2 rounded-xl border border-[#242d40] text-sm text-[#8a9ab5] hover:bg-[#0d1117] transition-colors">
                 Cancel
               </button>
               <button onClick={saveLesson} disabled={!lessonDraft.title.trim() || savingLesson || uploading}
-                className="px-5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-40 flex items-center gap-2 transition-colors">
+                className="px-5 py-2 rounded-xl bg-amber-400 text-white text-sm font-semibold hover:bg-amber-400 disabled:opacity-40 flex items-center gap-2 transition-colors">
                 {savingLesson && <Loader2 size={14} className="animate-spin" />} Add Lesson
               </button>
             </div>
@@ -1691,13 +1691,13 @@ function ModuleCard({
       onDragStart={onModDragStart}
       onDragOver={onModDragOver}
       onDragEnd={onModDragEnd}
-      className={clsx('bg-white rounded-2xl border shadow-sm overflow-hidden transition-opacity',
-        isDraggingMod ? 'opacity-50 border-brand-300' : 'border-gray-100')}
+      className={clsx('bg-[#161b27] rounded-2xl border shadow-sm overflow-hidden transition-opacity',
+        isDraggingMod ? 'opacity-50 border-amber-400/30' : 'border-[#242d40]')}
     >
       {/* Module header */}
       <div className="flex items-center gap-2 px-3 py-4">
         {/* Drag handle */}
-        <div className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 transition-colors flex-shrink-0 px-1">
+        <div className="cursor-grab active:cursor-grabbing text-[#2e3a52] hover:text-[#3a4a62] transition-colors flex-shrink-0 px-1">
           <GripVertical size={16} />
         </div>
 
@@ -1706,22 +1706,22 @@ function ModuleCard({
           {mod.cover_url ? (
             <img src={mod.cover_url} alt="" className="w-9 h-9 rounded-xl object-cover flex-shrink-0" />
           ) : (
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-amber-300 flex items-center justify-center flex-shrink-0">
               <BookOpen size={16} className="text-white" />
             </div>
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-semibold text-gray-800 truncate">{mod.title}</p>
+              <p className="font-semibold text-[#e8edf5] truncate">{mod.title}</p>
               {communityBadge && (
                 <span className="text-[10px] font-semibold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full flex-shrink-0">
                   {communityBadge}
                 </span>
               )}
             </div>
-            {mod.description && <p className="text-xs text-gray-400 truncate mt-0.5">{mod.description}</p>}
+            {mod.description && <p className="text-xs text-[#3a4a62] truncate mt-0.5">{mod.description}</p>}
           </div>
-          {expanded ? <ChevronDown size={16} className="text-gray-400 flex-shrink-0" /> : <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />}
+          {expanded ? <ChevronDown size={16} className="text-[#3a4a62] flex-shrink-0" /> : <ChevronRight size={16} className="text-[#3a4a62] flex-shrink-0" />}
         </button>
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -1731,12 +1731,12 @@ function ModuleCard({
             {mod.access_type === 'all' ? <><Globe size={9} /> All</> : <><UserCheck size={9} /> Enrolled</>}
           </span>
           <button onClick={onManageAccess} title="Manage access"
-            className="p-1.5 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors">
+            className="p-1.5 rounded-lg text-[#3a4a62] hover:text-amber-400 hover:bg-amber-400/10 transition-colors">
             <Settings2 size={14} />
           </button>
           <button onClick={onPublish} title={mod.published ? 'Unpublish' : 'Publish'}
             className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
-              mod.published ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-gray-100 text-gray-500 hover:bg-gray-200')}>
+              mod.published ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-[#161b27] text-[#4a5a75] hover:bg-[#1e2535]')}>
             {mod.published ? <><Globe size={12} /> Live</> : <><Lock size={12} /> Draft</>}
           </button>
 
@@ -1748,11 +1748,11 @@ function ModuleCard({
                 <button onClick={() => { onRemoveFromCommunity(); setPendingRemove(false) }}
                   className="px-2 py-1 rounded-lg bg-amber-500 text-white text-[10px] font-semibold hover:bg-amber-600">Yes</button>
                 <button onClick={() => setPendingRemove(false)}
-                  className="px-2 py-1 rounded-lg border border-gray-200 text-[10px] text-gray-600 hover:bg-gray-50">No</button>
+                  className="px-2 py-1 rounded-lg border border-[#242d40] text-[10px] text-[#8a9ab5] hover:bg-[#0d1117]">No</button>
               </div>
             ) : (
               <button onClick={() => setPendingRemove(true)} title="Remove from community"
-                className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors">
+                className="p-1.5 rounded-lg text-[#3a4a62] hover:text-amber-600 hover:bg-amber-50 transition-colors">
                 <X size={14} />
               </button>
             )
@@ -1765,11 +1765,11 @@ function ModuleCard({
               <button onClick={() => { onDelete(); setPendingDeleteMod(false) }}
                 className="px-2 py-1 rounded-lg bg-red-500 text-white text-[10px] font-semibold hover:bg-red-600">Yes</button>
               <button onClick={() => setPendingDeleteMod(false)}
-                className="px-2 py-1 rounded-lg border border-gray-200 text-[10px] text-gray-600 hover:bg-gray-50">No</button>
+                className="px-2 py-1 rounded-lg border border-[#242d40] text-[10px] text-[#8a9ab5] hover:bg-[#0d1117]">No</button>
             </div>
           ) : (
             <button onClick={() => setPendingDeleteMod(true)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+              className="p-1.5 rounded-lg text-[#3a4a62] hover:text-red-500 hover:bg-red-50 transition-colors">
               <Trash2 size={14} />
             </button>
           )}
@@ -1778,13 +1778,13 @@ function ModuleCard({
 
       {/* Expanded lessons */}
       {expanded && (
-        <div className="border-t border-gray-100">
+        <div className="border-t border-[#242d40]">
           {lessons === undefined ? (
-            <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-brand-500" /></div>
+            <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-amber-400" /></div>
           ) : (
             <>
               {lessons.length === 0 ? (
-                <p className="text-center text-sm text-gray-400 py-6">No lessons yet.</p>
+                <p className="text-center text-sm text-[#3a4a62] py-6">No lessons yet.</p>
               ) : (
                 <div className="divide-y divide-gray-50">
                   {lessons.map((lesson, i) => (
@@ -1798,18 +1798,18 @@ function ModuleCard({
                         dragLsnIdx === i ? 'opacity-40' : '')}
                     >
                       {/* Lesson drag handle */}
-                      <div className="cursor-grab active:cursor-grabbing text-gray-200 hover:text-gray-400 transition-colors flex-shrink-0">
+                      <div className="cursor-grab active:cursor-grabbing text-[#8a9ab5] hover:text-[#3a4a62] transition-colors flex-shrink-0">
                         <GripVertical size={14} />
                       </div>
-                      <span className="text-xs text-gray-300 w-5 text-center font-bold">{i + 1}</span>
+                      <span className="text-xs text-[#2e3a52] w-5 text-center font-bold">{i + 1}</span>
                       <span className={clsx('flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0', contentTypeBg(lesson.content_type))}>
                         {contentTypeIcon(lesson.content_type)} {lesson.content_type}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-700 truncate">{lesson.title}</p>
+                        <p className="text-sm font-medium text-[#8a9ab5] truncate">{lesson.title}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           {lesson.duration_minutes && (
-                            <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                            <span className="flex items-center gap-1 text-[10px] text-[#3a4a62]">
                               <Clock size={9} /> {lesson.duration_minutes}min
                             </span>
                           )}
@@ -1819,7 +1819,7 @@ function ModuleCard({
                         </div>
                       </div>
                       <button onClick={() => onLessonPublish(lesson)}
-                        className={clsx('p-1.5 rounded-lg transition-colors', lesson.published ? 'text-emerald-500 hover:bg-emerald-50' : 'text-gray-300 hover:bg-gray-100')}>
+                        className={clsx('p-1.5 rounded-lg transition-colors', lesson.published ? 'text-emerald-500 hover:bg-emerald-50' : 'text-[#2e3a52] hover:bg-[#161b27]')}>
                         {lesson.published ? <Eye size={14} /> : <EyeOff size={14} />}
                       </button>
 
@@ -1830,11 +1830,11 @@ function ModuleCard({
                           <button onClick={() => { onLessonDelete(lesson); setPendingDeleteLsn(null) }}
                             className="px-2 py-1 rounded-lg bg-red-500 text-white text-[10px] font-semibold hover:bg-red-600">Yes</button>
                           <button onClick={() => setPendingDeleteLsn(null)}
-                            className="px-2 py-1 rounded-lg border border-gray-200 text-[10px] text-gray-600 hover:bg-gray-50">No</button>
+                            className="px-2 py-1 rounded-lg border border-[#242d40] text-[10px] text-[#8a9ab5] hover:bg-[#0d1117]">No</button>
                         </div>
                       ) : (
                         <button onClick={() => setPendingDeleteLsn(lesson.id)}
-                          className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                          className="p-1.5 rounded-lg text-[#2e3a52] hover:text-red-500 hover:bg-red-50 transition-colors">
                           <Trash2 size={14} />
                         </button>
                       )}
@@ -1842,9 +1842,9 @@ function ModuleCard({
                   ))}
                 </div>
               )}
-              <div className="px-5 py-3 border-t border-gray-50">
+              <div className="px-5 py-3 border-t border-[#1e2535]">
                 <button onClick={onAddLesson}
-                  className="flex items-center gap-2 text-sm font-semibold text-brand-600 hover:text-brand-700 transition-colors">
+                  className="flex items-center gap-2 text-sm font-semibold text-amber-400 hover:text-amber-400 transition-colors">
                   <Plus size={15} /> Add lesson
                 </button>
               </div>
@@ -1955,18 +1955,18 @@ function MembersTab({ orgId, communityId }: { orgId: string; communityId: string
     <div className="space-y-4">
       {/* Community membership panel */}
       {communityId && (
-        <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-            <p className="text-sm font-bold text-gray-800 flex items-center gap-2">
-              <Users size={15} className="text-brand-500" /> Community Members
+        <div className="bg-[#161b27] rounded-2xl border border-amber-400/20 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-[#242d40] flex items-center justify-between">
+            <p className="text-sm font-bold text-[#e8edf5] flex items-center gap-2">
+              <Users size={15} className="text-amber-400" /> Community Members
             </p>
-            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{communityMembers.size} members</span>
+            <span className="text-xs text-[#3a4a62] bg-[#161b27] px-2 py-0.5 rounded-full">{communityMembers.size} members</span>
           </div>
           <div className="p-4">
             <div className="relative mb-3">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3a4a62]" />
               <input value={memberSearch} onChange={e => setMemberSearch(e.target.value)} placeholder="Search clients to add/remove…"
-                className="w-full pl-8 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400" />
+                className="w-full pl-8 pr-3 py-2 rounded-xl border border-[#242d40] text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400" />
             </div>
             <div className="space-y-0.5 max-h-64 overflow-y-auto">
               {clients
@@ -1976,13 +1976,13 @@ function MembersTab({ orgId, communityId }: { orgId: string; communityId: string
                   const isPending = addingMember === client.id
                   return (
                     <div key={client.id} className={clsx('flex items-center gap-3 px-3 py-2 rounded-xl transition-colors',
-                      isMember ? 'bg-brand-50' : 'hover:bg-gray-50')}>
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                      isMember ? 'bg-amber-400/10' : 'hover:bg-[#0d1117]')}>
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-300 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                         {client.name.charAt(0).toUpperCase()}
                       </div>
-                      <span className="flex-1 text-sm font-medium text-gray-700 truncate">{client.name}</span>
+                      <span className="flex-1 text-sm font-medium text-[#8a9ab5] truncate">{client.name}</span>
                       <span className={clsx('text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0',
-                        client.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}>
+                        client.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-[#161b27] text-[#4a5a75]')}>
                         {client.status}
                       </span>
                       {isMember ? (
@@ -1992,7 +1992,7 @@ function MembersTab({ orgId, communityId }: { orgId: string; communityId: string
                         </button>
                       ) : (
                         <button onClick={() => addToCommunity(client.id)} disabled={isPending}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-brand-600 bg-brand-50 hover:bg-brand-100 transition-colors disabled:opacity-40 flex-shrink-0">
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-amber-400 bg-amber-400/10 hover:bg-amber-400/10 transition-colors disabled:opacity-40 flex-shrink-0">
                           {isPending ? <Loader2 size={11} className="animate-spin" /> : <UserPlus size={11} />} Add
                         </button>
                       )}
@@ -2007,48 +2007,48 @@ function MembersTab({ orgId, communityId }: { orgId: string; communityId: string
       {/* Course enrollment section */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3a4a62]" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search members…"
-            className="w-full pl-8 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400" />
+            className="w-full pl-8 pr-3 py-2 rounded-xl border border-[#242d40] text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400" />
         </div>
         {selected.size > 0 && (
           <button onClick={() => setBulkPicker(v => !v)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors">
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-400 text-white text-sm font-semibold transition-colors">
             <UserPlus size={15} /> Enroll {selected.size}
           </button>
         )}
       </div>
 
       {bulkPicker && (
-        <div className="bg-white rounded-2xl border border-brand-200 p-4 shadow-sm">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Choose a course to enroll selected clients:</p>
+        <div className="bg-[#161b27] rounded-2xl border border-amber-400/20 p-4 shadow-sm">
+          <p className="text-sm font-semibold text-[#8a9ab5] mb-3">Choose a course to enroll selected clients:</p>
           {modules.filter(m => m.access_type === 'enrolled').length === 0
-            ? <p className="text-sm text-gray-400 text-center py-2">No enrolled-only courses. Set a course to "Enrolled Only" first.</p>
+            ? <p className="text-sm text-[#3a4a62] text-center py-2">No enrolled-only courses. Set a course to "Enrolled Only" first.</p>
             : modules.filter(m => m.access_type === 'enrolled').map(m => (
               <button key={m.id} onClick={() => bulkEnroll(m.id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-brand-50 border border-transparent hover:border-brand-200 transition-colors text-left">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-amber-400/10 border border-transparent hover:border-amber-400/20 transition-colors text-left">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-amber-300 flex items-center justify-center flex-shrink-0">
                   <BookOpen size={14} className="text-white" />
                 </div>
-                <span className="text-sm font-medium text-gray-700">{m.title}</span>
+                <span className="text-sm font-medium text-[#8a9ab5]">{m.title}</span>
               </button>
             ))
           }
-          <button onClick={() => setBulkPicker(false)} className="mt-2 text-xs text-gray-400 hover:text-gray-600 transition-colors">Cancel</button>
+          <button onClick={() => setBulkPicker(false)} className="mt-2 text-xs text-[#3a4a62] hover:text-[#8a9ab5] transition-colors">Cancel</button>
         </div>
       )}
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-brand-500" /></div>
+        <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-amber-400" /></div>
       ) : clients.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-          <div className="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center mx-auto mb-3"><Users size={22} className="text-brand-500" /></div>
-          <p className="font-semibold text-gray-700">No clients yet</p>
-          <p className="text-sm text-gray-400 mt-1">Add clients to see their community progress here.</p>
+        <div className="text-center py-16 bg-[#161b27] rounded-2xl border border-[#242d40]">
+          <div className="w-12 h-12 rounded-2xl bg-amber-400/10 flex items-center justify-center mx-auto mb-3"><Users size={22} className="text-amber-400" /></div>
+          <p className="font-semibold text-[#8a9ab5]">No clients yet</p>
+          <p className="text-sm text-[#3a4a62] mt-1">Add clients to see their community progress here.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="grid grid-cols-[auto_1fr_auto_auto] gap-4 px-5 py-3 border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+        <div className="bg-[#161b27] rounded-2xl border border-[#242d40] shadow-sm overflow-hidden">
+          <div className="grid grid-cols-[auto_1fr_auto_auto] gap-4 px-5 py-3 border-b border-[#242d40] text-xs font-semibold text-[#3a4a62] uppercase tracking-wide">
             <input type="checkbox"
               checked={selected.size === filtered.length && filtered.length > 0}
               onChange={e => setSelected(e.target.checked ? new Set(filtered.map(c => c.id)) : new Set())}
@@ -2064,39 +2064,39 @@ function MembersTab({ orgId, communityId }: { orgId: string; communityId: string
                     onChange={e => setSelected(prev => { const n = new Set(prev); e.target.checked ? n.add(client.id) : n.delete(client.id); return n })}
                     className="w-4 h-4 rounded" />
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-300 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                       {client.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{client.name}</p>
+                      <p className="text-sm font-semibold text-[#e8edf5] truncate">{client.name}</p>
                       <span className={clsx('text-[10px] font-semibold px-1.5 py-0.5 rounded-full',
-                        client.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}>{client.status}</span>
+                        client.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-[#161b27] text-[#4a5a75]')}>{client.status}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 justify-end flex-wrap">
                     {clientMods.length === 0
-                      ? <span className="text-xs text-gray-300">No courses</span>
+                      ? <span className="text-xs text-[#2e3a52]">No courses</span>
                       : clientMods.slice(0, 3).map(m => {
                           const done  = progress[client.id]?.[m.id] ?? 0
                           const total = lessonCounts[m.id] ?? 0
                           const pct   = total > 0 ? Math.round((done / total) * 100) : 0
                           return (
                             <div key={m.id} className="flex flex-col items-end gap-0.5">
-                              <span className="text-[10px] font-medium text-gray-500 truncate max-w-[80px]">{m.title}</span>
+                              <span className="text-[10px] font-medium text-[#4a5a75] truncate max-w-[80px]">{m.title}</span>
                               <div className="flex items-center gap-1">
-                                <div className="w-14 h-1 bg-gray-100 rounded-full overflow-hidden">
-                                  <div className="h-full bg-brand-500 rounded-full" style={{ width: `${pct}%` }} />
+                                <div className="w-14 h-1 bg-[#161b27] rounded-full overflow-hidden">
+                                  <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
                                 </div>
-                                <span className="text-[10px] text-gray-400">{pct}%</span>
+                                <span className="text-[10px] text-[#3a4a62]">{pct}%</span>
                               </div>
                             </div>
                           )
                         })
                     }
-                    {clientMods.length > 3 && <span className="text-xs text-gray-400">+{clientMods.length - 3}</span>}
+                    {clientMods.length > 3 && <span className="text-xs text-[#3a4a62]">+{clientMods.length - 3}</span>}
                   </div>
                   <button onClick={() => setClientModal(client)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-brand-50 hover:border-brand-200 hover:text-brand-700 transition-colors flex-shrink-0">
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#242d40] text-xs font-semibold text-[#8a9ab5] hover:bg-amber-400/10 hover:border-amber-400/20 hover:text-amber-400 transition-colors flex-shrink-0">
                     <UserPlus size={13} /> Assign
                   </button>
                 </div>
@@ -2144,38 +2144,38 @@ function PreviewTab({ orgId, communityId }: { orgId: string; communityId: string
 
   return (
     <div className="space-y-4">
-      <div className="bg-gradient-to-r from-violet-50 to-brand-50 border border-brand-200/60 rounded-2xl p-4 flex items-center gap-3">
-        <Monitor size={18} className="text-brand-600 flex-shrink-0" />
+      <div className="bg-gradient-to-r from-violet-50 to-amber-300 border border-amber-400/20/60 rounded-2xl p-4 flex items-center gap-3">
+        <Monitor size={18} className="text-amber-400 flex-shrink-0" />
         <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-800">Community Preview</p>
-          <p className="text-xs text-gray-500">See the community exactly as a client would.</p>
+          <p className="text-sm font-semibold text-[#e8edf5]">Community Preview</p>
+          <p className="text-xs text-[#4a5a75]">See the community exactly as a client would.</p>
         </div>
         <select value={selectedId} onChange={e => setSelectedId(e.target.value)}
-          className="rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 bg-white min-w-[160px]">
+          className="rounded-xl border border-[#242d40] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 bg-[#161b27] min-w-[160px]">
           <option value="">Select client…</option>
           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
 
       {!selectedId ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-          <Monitor size={32} className="text-gray-300 mx-auto mb-3" />
-          <p className="font-semibold text-gray-600">Select a client to preview</p>
-          <p className="text-sm text-gray-400 mt-1">See their personalised view including course access and progress.</p>
+        <div className="text-center py-16 bg-[#161b27] rounded-2xl border border-[#242d40]">
+          <Monitor size={32} className="text-[#2e3a52] mx-auto mb-3" />
+          <p className="font-semibold text-[#8a9ab5]">Select a client to preview</p>
+          <p className="text-sm text-[#3a4a62] mt-1">See their personalised view including course access and progress.</p>
         </div>
       ) : loading ? (
-        <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-brand-500" /></div>
+        <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-amber-400" /></div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-          <div className="bg-gradient-to-r from-brand-600 to-violet-600 px-5 py-3 flex items-center justify-between">
+        <div className="bg-[#161b27] rounded-2xl border border-[#242d40] overflow-hidden shadow-sm">
+          <div className="bg-gradient-to-r from-amber-400 to-amber-300 px-5 py-3 flex items-center justify-between">
             <p className="text-white text-sm font-semibold">Viewing as: {selectedClient?.name}</p>
-            <span className="text-xs text-white/70 bg-white/10 px-2 py-1 rounded-full">Preview Mode</span>
+            <span className="text-xs text-white/70 bg-[#161b27]/10 px-2 py-1 rounded-full">Preview Mode</span>
           </div>
-          <div className="flex gap-1 p-3 border-b border-gray-100">
+          <div className="flex gap-1 p-3 border-b border-[#242d40]">
             {([{ id: 'feed', label: 'Feed', Icon: MessageCircle }, { id: 'courses', label: 'Courses', Icon: BookOpen }] as const).map(({ id, label, Icon }) => (
               <button key={id} onClick={() => setSubTab(id)}
                 className={clsx('flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all',
-                  subTab === id ? 'bg-brand-50 text-brand-700' : 'text-gray-500 hover:text-gray-700')}>
+                  subTab === id ? 'bg-amber-400/10 text-amber-400' : 'text-[#4a5a75] hover:text-[#8a9ab5]')}>
                 <Icon size={14} /> {label}
               </button>
             ))}
@@ -2184,21 +2184,21 @@ function PreviewTab({ orgId, communityId }: { orgId: string; communityId: string
             {subTab === 'feed' ? (
               <div className="space-y-3">
                 {posts.length === 0
-                  ? <p className="text-center text-sm text-gray-400 py-8">No posts visible to this client.</p>
+                  ? <p className="text-center text-sm text-[#3a4a62] py-8">No posts visible to this client.</p>
                   : posts.slice(0, 6).map((post: any) => (
-                    <div key={post.id} className={clsx('rounded-xl border p-4', post.pinned ? 'border-brand-200 bg-brand-50/30' : 'border-gray-100')}>
+                    <div key={post.id} className={clsx('rounded-xl border p-4', post.pinned ? 'border-amber-400/20 bg-amber-400/10/30' : 'border-[#242d40]')}>
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-300 flex items-center justify-center text-white text-xs font-bold">
                           {(post.author_name ?? 'C').charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-xs font-semibold text-gray-700">{post.author_name ?? 'Coach'}</p>
-                          <p className="text-[10px] text-gray-400">{timeAgo(post.created_at)}</p>
+                          <p className="text-xs font-semibold text-[#8a9ab5]">{post.author_name ?? 'Coach'}</p>
+                          <p className="text-[10px] text-[#3a4a62]">{timeAgo(post.created_at)}</p>
                         </div>
-                        {post.pinned && <span className="ml-auto text-[10px] bg-brand-100 text-brand-600 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><Pin size={8} /> Pinned</span>}
+                        {post.pinned && <span className="ml-auto text-[10px] bg-amber-400/10 text-amber-400 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><Pin size={8} /> Pinned</span>}
                       </div>
-                      <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">{post.content}</p>
-                      <div className="flex items-center gap-3 mt-3 pt-2 border-t border-gray-100 text-xs text-gray-400">
+                      <p className="text-sm text-[#8a9ab5] leading-relaxed line-clamp-3">{post.content}</p>
+                      <div className="flex items-center gap-3 mt-3 pt-2 border-t border-[#242d40] text-xs text-[#3a4a62]">
                         <span className={clsx('flex items-center gap-1', post.client_reacted && 'text-red-500')}>
                           <Heart size={12} fill={post.client_reacted ? 'currentColor' : 'none'} /> {post.reaction_count}
                         </span>
@@ -2211,39 +2211,39 @@ function PreviewTab({ orgId, communityId }: { orgId: string; communityId: string
             ) : (
               <div className="space-y-3">
                 {mods.length === 0
-                  ? <p className="text-center text-sm text-gray-400 py-8">No courses accessible to this client.</p>
+                  ? <p className="text-center text-sm text-[#3a4a62] py-8">No courses accessible to this client.</p>
                   : mods.map((m: any) => {
                     const done  = (m.lessons ?? []).filter((l: any) => l.completed).length
                     const total = (m.lessons ?? []).length
                     const pct   = total > 0 ? Math.round((done / total) * 100) : 0
                     return (
-                      <div key={m.id} className="rounded-xl border border-gray-100 overflow-hidden">
+                      <div key={m.id} className="rounded-xl border border-[#242d40] overflow-hidden">
                         <div className="px-4 py-3 flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-amber-300 flex items-center justify-center flex-shrink-0">
                             <BookOpen size={15} className="text-white" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-800 truncate">{m.title}</p>
+                            <p className="text-sm font-semibold text-[#e8edf5] truncate">{m.title}</p>
                             <div className="flex items-center gap-2 mt-1">
-                              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-brand-500 rounded-full" style={{ width: `${pct}%` }} />
+                              <div className="flex-1 h-1.5 bg-[#161b27] rounded-full overflow-hidden">
+                                <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
                               </div>
-                              <span className="text-[10px] text-gray-500 font-semibold">{done}/{total}</span>
+                              <span className="text-[10px] text-[#4a5a75] font-semibold">{done}/{total}</span>
                             </div>
                           </div>
                         </div>
                         {(m.lessons ?? []).slice(0, 4).map((l: any, i: number) => (
-                          <div key={l.id} className="flex items-center gap-3 px-4 py-2 border-t border-gray-50">
-                            <span className="text-xs text-gray-300 w-4 font-bold text-center">{i + 1}</span>
-                            {l.completed ? <CheckCircle2 size={14} className="text-brand-500 flex-shrink-0" />
-                              : l.locked ? <Lock size={14} className="text-gray-300 flex-shrink-0" />
-                              : <Circle size={14} className="text-gray-300 flex-shrink-0" />}
-                            <span className={clsx('text-xs flex-1 truncate', l.locked ? 'text-gray-300' : 'text-gray-600')}>{l.title}</span>
+                          <div key={l.id} className="flex items-center gap-3 px-4 py-2 border-t border-[#1e2535]">
+                            <span className="text-xs text-[#2e3a52] w-4 font-bold text-center">{i + 1}</span>
+                            {l.completed ? <CheckCircle2 size={14} className="text-amber-400 flex-shrink-0" />
+                              : l.locked ? <Lock size={14} className="text-[#2e3a52] flex-shrink-0" />
+                              : <Circle size={14} className="text-[#2e3a52] flex-shrink-0" />}
+                            <span className={clsx('text-xs flex-1 truncate', l.locked ? 'text-[#2e3a52]' : 'text-[#8a9ab5]')}>{l.title}</span>
                             {l.locked && <span className="text-[10px] text-amber-500 font-semibold">+{l.drip_days}d</span>}
                           </div>
                         ))}
                         {(m.lessons ?? []).length > 4 && (
-                          <div className="px-4 py-2 border-t border-gray-50 text-xs text-gray-400 text-center">
+                          <div className="px-4 py-2 border-t border-[#1e2535] text-xs text-[#3a4a62] text-center">
                             +{m.lessons.length - 4} more lessons
                           </div>
                         )}
@@ -2290,43 +2290,43 @@ function CommunityCoursesView({ orgId, communityId, communityName }: { orgId: st
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-gray-500">Courses active in <span className="font-semibold text-gray-700">{communityName}</span>. Build courses in the Library tab.</p>
+        <p className="text-sm text-[#4a5a75]">Courses active in <span className="font-semibold text-[#8a9ab5]">{communityName}</span>. Build courses in the Library tab.</p>
         <button onClick={() => setShowAssignModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-brand-300 bg-brand-50 hover:bg-brand-100 text-brand-700 text-sm font-semibold transition-colors">
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-400/30 bg-amber-400/10 hover:bg-amber-400/10 text-amber-400 text-sm font-semibold transition-colors">
           <Plus size={15} /> Assign Courses
         </button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-brand-500" /></div>
+        <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-amber-400" /></div>
       ) : modules.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
+        <div className="text-center py-16 bg-[#161b27] rounded-2xl border border-[#242d40]">
           <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center mx-auto mb-3">
             <BookOpen size={22} className="text-violet-500" />
           </div>
-          <p className="font-semibold text-gray-700">No courses assigned</p>
-          <p className="text-sm text-gray-400 mt-1">Assign courses from the Library to this community.</p>
+          <p className="font-semibold text-[#8a9ab5]">No courses assigned</p>
+          <p className="text-sm text-[#3a4a62] mt-1">Assign courses from the Library to this community.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {modules.map(mod => (
-            <div key={mod.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-4 shadow-sm">
+            <div key={mod.id} className="bg-[#161b27] rounded-2xl border border-[#242d40] p-4 flex items-center gap-4 shadow-sm">
               {mod.cover_url ? (
                 <img src={mod.cover_url} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
               ) : (
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-amber-300 flex items-center justify-center flex-shrink-0">
                   <BookOpen size={20} className="text-white" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800 truncate">{mod.title}</p>
-                {mod.description && <p className="text-xs text-gray-400 truncate mt-0.5">{mod.description}</p>}
+                <p className="font-semibold text-[#e8edf5] truncate">{mod.title}</p>
+                {mod.description && <p className="text-xs text-[#3a4a62] truncate mt-0.5">{mod.description}</p>}
                 <div className="flex items-center gap-2 mt-1.5">
                   <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full',
-                    mod.published ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500')}>
+                    mod.published ? 'bg-emerald-100 text-emerald-700' : 'bg-[#161b27] text-[#4a5a75]')}>
                     {mod.published ? 'Live' : 'Draft'}
                   </span>
-                  <span className="text-[10px] text-gray-400">{mod.access_type === 'all' ? 'Open access' : 'Enrolled only'}</span>
+                  <span className="text-[10px] text-[#3a4a62]">{mod.access_type === 'all' ? 'Open access' : 'Enrolled only'}</span>
                 </div>
               </div>
               <button onClick={() => removeFromCommunity(mod.id)}
@@ -2393,7 +2393,7 @@ export default function Community() {
 
   if (!profile?.org_id) return (
     <div className="flex items-center justify-center h-64">
-      <Loader2 size={24} className="animate-spin text-brand-500" />
+      <Loader2 size={24} className="animate-spin text-amber-400" />
     </div>
   )
 
@@ -2404,21 +2404,21 @@ export default function Community() {
       {/* Header */}
       <div className="mb-5">
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-300 flex items-center justify-center">
             <Users2 size={18} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Community</h1>
+          <h1 className="text-2xl font-bold text-[#e8edf5]">Community</h1>
         </div>
-        <p className="text-sm text-gray-500 ml-12">Engage your clients and deliver education.</p>
+        <p className="text-sm text-[#4a5a75] ml-12">Engage your clients and deliver education.</p>
       </div>
 
       {/* Community selector */}
       <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 flex-shrink-0">
+        <div className="flex gap-1 bg-[#161b27] rounded-xl p-1 flex-shrink-0">
           <button
             onClick={() => handleSetCommunityId(null)}
             className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all',
-              communityId === null ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
+              communityId === null ? 'bg-[#161b27] text-[#e8edf5] shadow-sm' : 'text-[#4a5a75] hover:text-[#8a9ab5]')}>
             🌐 General
           </button>
           {communities.map(c => (
@@ -2426,22 +2426,22 @@ export default function Community() {
               <button
                 onClick={() => handleSetCommunityId(c.id)}
                 className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all pr-6',
-                  communityId === c.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
+                  communityId === c.id ? 'bg-[#161b27] text-[#e8edf5] shadow-sm' : 'text-[#4a5a75] hover:text-[#8a9ab5]')}>
                 <span>{c.emoji}</span> {c.name}
               </button>
               {/* Delete button shown on hover when this community is active */}
               {communityId === c.id && (
                 pendingDeleteComm === c.id ? (
-                  <div className="absolute right-0.5 top-0.5 flex items-center gap-0.5 bg-white rounded-lg shadow-md px-1 py-0.5 z-10">
+                  <div className="absolute right-0.5 top-0.5 flex items-center gap-0.5 bg-[#161b27] rounded-lg shadow-md px-1 py-0.5 z-10">
                     <span className="text-[9px] text-red-600 font-bold">Del?</span>
                     <button onClick={() => deleteCommunity(c.id)}
                       className="text-[9px] bg-red-500 text-white px-1 py-0.5 rounded font-bold">Y</button>
                     <button onClick={() => setPendingDeleteComm(null)}
-                      className="text-[9px] text-gray-500 px-1 py-0.5 rounded font-bold">N</button>
+                      className="text-[9px] text-[#4a5a75] px-1 py-0.5 rounded font-bold">N</button>
                   </div>
                 ) : (
                   <button onClick={() => setPendingDeleteComm(c.id)}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-300 hover:text-red-500 transition-colors">
+                    className="absolute right-1 top-1/2 -translate-y-1/2 text-[#2e3a52] hover:text-red-500 transition-colors">
                     <X size={11} />
                   </button>
                 )
@@ -2450,25 +2450,25 @@ export default function Community() {
           ))}
         </div>
         <button onClick={() => setShowCreateComm(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dashed border-gray-300 text-sm font-semibold text-gray-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition-all">
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dashed border-[#2e3a52] text-sm font-semibold text-[#4a5a75] hover:border-amber-400 hover:text-amber-400 hover:bg-amber-400/10 transition-all">
           <Plus size={14} /> New Community
         </button>
       </div>
 
       {/* Active community banner */}
       {activeCommunity && (
-        <div className="bg-gradient-to-r from-brand-50 to-violet-50 border border-brand-200/60 rounded-xl px-4 py-3 mb-5 flex items-center gap-3">
+        <div className="bg-gradient-to-r from-amber-400 to-amber-300 border border-amber-400/20/60 rounded-xl px-4 py-3 mb-5 flex items-center gap-3">
           <span className="text-2xl">{activeCommunity.emoji}</span>
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-gray-800 text-sm">{activeCommunity.name}</p>
-            {activeCommunity.description && <p className="text-xs text-gray-500 truncate">{activeCommunity.description}</p>}
+            <p className="font-bold text-[#e8edf5] text-sm">{activeCommunity.name}</p>
+            {activeCommunity.description && <p className="text-xs text-[#4a5a75] truncate">{activeCommunity.description}</p>}
           </div>
-          <span className="text-xs bg-brand-100 text-brand-700 font-semibold px-2 py-0.5 rounded-full">Active</span>
+          <span className="text-xs bg-amber-400/10 text-amber-400 font-semibold px-2 py-0.5 rounded-full">Active</span>
         </div>
       )}
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 overflow-x-auto w-full sm:w-fit">
+      <div className="flex gap-1 bg-[#161b27] rounded-xl p-1 mb-6 overflow-x-auto w-full sm:w-fit">
         {([
           { id: 'feed'    as const, label: 'Feed',    Icon: MessageCircle, show: true },
           { id: 'courses' as const, label: 'Courses', Icon: BookOpen,      show: !!communityId },
@@ -2477,7 +2477,7 @@ export default function Community() {
         ] as const).filter(t => t.show).map(({ id, label, Icon }) => (
           <button key={id} onClick={() => setTab(id)}
             className={clsx('flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all',
-              tab === id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
+              tab === id ? 'bg-[#161b27] text-[#e8edf5] shadow-sm' : 'text-[#4a5a75] hover:text-[#8a9ab5]')}>
             <Icon size={15} /> {label}
           </button>
         ))}

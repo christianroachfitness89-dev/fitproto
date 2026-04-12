@@ -41,15 +41,15 @@ function DifficultyBadge({ level }: { level: Difficulty | null }) {
 function SearchBar({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <div className="relative flex-1 min-w-0">
-      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3a4a62] pointer-events-none" />
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder ?? 'Search…'}
-        className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 shadow-sm transition-all"
+        className="w-full pl-9 pr-4 py-2.5 text-sm bg-[#161b27] border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 shadow-sm transition-all"
       />
       {value && (
-        <button onClick={() => onChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+        <button onClick={() => onChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#2e3a52] hover:text-[#4a5a75]">
           <X size={13} />
         </button>
       )}
@@ -76,20 +76,20 @@ function FilterPopover({ activeCount, children }: { activeCount: number; childre
         className={clsx(
           'flex items-center gap-2 px-3 py-2.5 text-sm font-medium rounded-xl border transition-all',
           open || activeCount > 0
-            ? 'bg-brand-50 border-brand-200 text-brand-700'
-            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50',
+            ? 'bg-amber-400/10 border-amber-400/20 text-amber-400'
+            : 'bg-[#161b27] border-[#242d40] text-[#8a9ab5] hover:bg-[#0d1117]',
         )}
       >
         <SlidersHorizontal size={15} />
         <span className="hidden sm:inline">Filter</span>
         {activeCount > 0 && (
-          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] font-bold leading-none">
+          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-amber-400 text-white text-[10px] font-bold leading-none">
             {activeCount}
           </span>
         )}
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 z-20 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 min-w-[240px]">
+        <div className="absolute right-0 top-full mt-1.5 z-20 bg-[#161b27] rounded-2xl shadow-xl border border-[#242d40] p-4 min-w-[240px]">
           {children}
         </div>
       )}
@@ -210,17 +210,17 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 z-10">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-lg p-6 z-10">
 
         {result !== null ? (
           <div className="text-center py-6">
             <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 size={32} className="text-emerald-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">{result} exercises synced!</h3>
-            <p className="text-sm text-gray-500 mb-6">New exercises were added and existing ones updated — no duplicates created.</p>
+            <h3 className="text-xl font-bold text-[#e8edf5] mb-2">{result} exercises synced!</h3>
+            <p className="text-sm text-[#4a5a75] mb-6">New exercises were added and existing ones updated — no duplicates created.</p>
             <button onClick={onClose}
-              className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl">
+              className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl">
               Done
             </button>
           </div>
@@ -228,25 +228,25 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
           <>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Sync Exercises from CSV</h2>
-                <p className="text-xs text-gray-500 mt-0.5">Adds new exercises and updates existing ones by name — safe to re-upload anytime</p>
+                <h2 className="text-lg font-bold text-[#e8edf5]">Sync Exercises from CSV</h2>
+                <p className="text-xs text-[#4a5a75] mt-0.5">Adds new exercises and updates existing ones by name — safe to re-upload anytime</p>
               </div>
-              <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18} /></button>
+              <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:text-[#8a9ab5] hover:bg-[#161b27]"><X size={18} /></button>
             </div>
 
             {/* File drop zone */}
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="w-full border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center hover:border-brand-300 hover:bg-brand-50/30 transition-all group"
+              className="w-full border-2 border-dashed border-[#242d40] rounded-2xl p-8 text-center hover:border-amber-400/30 hover:bg-amber-400/10/30 transition-all group"
             >
-              <Upload size={28} className="text-gray-300 group-hover:text-brand-400 mx-auto mb-2 transition-colors" />
+              <Upload size={28} className="text-[#2e3a52] group-hover:text-amber-400 mx-auto mb-2 transition-colors" />
               {fileName ? (
-                <p className="text-sm font-semibold text-brand-600">{fileName}</p>
+                <p className="text-sm font-semibold text-amber-400">{fileName}</p>
               ) : (
                 <>
-                  <p className="text-sm font-semibold text-gray-600">Click to select your CSV file</p>
-                  <p className="text-xs text-gray-400 mt-1">Supports comma or tab-separated files</p>
+                  <p className="text-sm font-semibold text-[#8a9ab5]">Click to select your CSV file</p>
+                  <p className="text-xs text-[#3a4a62] mt-1">Supports comma or tab-separated files</p>
                 </>
               )}
             </button>
@@ -262,34 +262,34 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
             {preview && (
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-semibold text-gray-800">
+                  <p className="text-sm font-semibold text-[#e8edf5]">
                     {preview.length} exercises ready to import
                   </p>
-                  <span className="text-xs text-gray-400">Preview (first 5)</span>
+                  <span className="text-xs text-[#3a4a62]">Preview (first 5)</span>
                 </div>
-                <div className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
+                <div className="bg-[#0d1117] rounded-xl overflow-hidden border border-[#242d40]">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="px-3 py-2 text-left font-semibold text-gray-500">Name</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-500">Muscle</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-500">Equipment</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-500">Difficulty</th>
+                      <tr className="border-b border-[#242d40]">
+                        <th className="px-3 py-2 text-left font-semibold text-[#4a5a75]">Name</th>
+                        <th className="px-3 py-2 text-left font-semibold text-[#4a5a75]">Muscle</th>
+                        <th className="px-3 py-2 text-left font-semibold text-[#4a5a75]">Equipment</th>
+                        <th className="px-3 py-2 text-left font-semibold text-[#4a5a75]">Difficulty</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-[#1e2535]">
                       {preview.slice(0, 5).map((row, i) => (
                         <tr key={i}>
-                          <td className="px-3 py-2 font-medium text-gray-800 max-w-[160px] truncate">{row.name}</td>
-                          <td className="px-3 py-2 text-gray-600 max-w-[100px] truncate">{row.muscle_group || '—'}</td>
-                          <td className="px-3 py-2 text-gray-600">{row.equipment || '—'}</td>
-                          <td className="px-3 py-2 text-gray-600">{row.difficulty || '—'}</td>
+                          <td className="px-3 py-2 font-medium text-[#e8edf5] max-w-[160px] truncate">{row.name}</td>
+                          <td className="px-3 py-2 text-[#8a9ab5] max-w-[100px] truncate">{row.muscle_group || '—'}</td>
+                          <td className="px-3 py-2 text-[#8a9ab5]">{row.equipment || '—'}</td>
+                          <td className="px-3 py-2 text-[#8a9ab5]">{row.difficulty || '—'}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                   {preview.length > 5 && (
-                    <p className="px-3 py-2 text-xs text-gray-400 border-t border-gray-100">
+                    <p className="px-3 py-2 text-xs text-[#3a4a62] border-t border-[#242d40]">
                       + {preview.length - 5} more…
                     </p>
                   )}
@@ -299,13 +299,13 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
 
             <div className="flex gap-3 mt-5">
               <button type="button" onClick={onClose}
-                className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">
                 Cancel
               </button>
               <button
                 onClick={handleImport}
                 disabled={!preview || bulkImport.isPending}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-50 transition-all"
               >
                 {bulkImport.isPending
                   ? <><Loader2 size={15} className="animate-spin" /> Syncing…</>
@@ -385,16 +385,16 @@ function ExerciseModal({ onClose, exercise }: { onClose: () => void; exercise?: 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 z-10">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-lg p-6 z-10">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-900">{isEdit ? 'Edit Exercise' : 'New Exercise'}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18} /></button>
+          <h2 className="text-lg font-bold text-[#e8edf5]">{isEdit ? 'Edit Exercise' : 'New Exercise'}</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:text-[#8a9ab5] hover:bg-[#161b27]"><X size={18} /></button>
         </div>
         {error && <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">{error}</div>}
         <form onSubmit={submit} className="space-y-4">
           {/* Metric type picker */}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">How is this exercise measured? *</label>
+            <label className="block text-xs font-semibold text-[#8a9ab5] mb-2 uppercase tracking-wide">How is this exercise measured? *</label>
             <div className="grid grid-cols-2 gap-2">
               {METRIC_OPTIONS.map(opt => (
                 <button
@@ -404,14 +404,14 @@ function ExerciseModal({ onClose, exercise }: { onClose: () => void; exercise?: 
                   className={clsx(
                     'flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all',
                     form.metric_type === opt.value
-                      ? 'border-brand-500 bg-brand-50'
-                      : 'border-gray-100 hover:border-gray-200 bg-white',
+                      ? 'border-amber-400 bg-amber-400/10'
+                      : 'border-[#242d40] hover:border-[#242d40] bg-[#161b27]',
                   )}
                 >
                   <span className="text-xl">{opt.icon}</span>
                   <div>
-                    <p className={clsx('text-xs font-semibold', form.metric_type === opt.value ? 'text-brand-700' : 'text-gray-700')}>{opt.label}</p>
-                    <p className="text-xs text-gray-400">{opt.desc}</p>
+                    <p className={clsx('text-xs font-semibold', form.metric_type === opt.value ? 'text-amber-400' : 'text-[#8a9ab5]')}>{opt.label}</p>
+                    <p className="text-xs text-[#3a4a62]">{opt.desc}</p>
                   </div>
                 </button>
               ))}
@@ -419,38 +419,38 @@ function ExerciseModal({ onClose, exercise }: { onClose: () => void; exercise?: 
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Exercise Name *</label>
+            <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Exercise Name *</label>
             <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required
               placeholder="e.g. Barbell Back Squat"
-              className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+              className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Category</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Category</label>
               <input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
                 placeholder="Strength, Cardio..."
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Muscle Group</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Muscle Group</label>
               <input value={form.muscle_group} onChange={e => setForm(f => ({ ...f, muscle_group: e.target.value }))}
                 placeholder="Legs, Chest..."
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Equipment</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Equipment</label>
               <input value={form.equipment} onChange={e => setForm(f => ({ ...f, equipment: e.target.value }))}
                 placeholder="Barbell, Dumbbells..."
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Difficulty</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Difficulty</label>
               <select value={form.difficulty} onChange={e => setForm(f => ({ ...f, difficulty: e.target.value as Difficulty | '' }))}
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 bg-white">
+                className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 bg-[#161b27]">
                 <option value="">—</option>
                 <option value="beginner">Beginner</option>
                 <option value="intermediate">Intermediate</option>
@@ -460,24 +460,24 @@ function ExerciseModal({ onClose, exercise }: { onClose: () => void; exercise?: 
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Video URL</label>
+            <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Video URL</label>
             <input value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))}
               placeholder="https://youtube.com/watch?v=..."
-              className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+              className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Instructions</label>
+            <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Instructions</label>
             <textarea value={form.instructions} onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))}
               rows={2} placeholder="Step-by-step instructions..."
-              className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 resize-none" />
+              className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 resize-none" />
           </div>
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
+              className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">Cancel</button>
             <button type="submit" disabled={isPending}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-60 transition-all">
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-60 transition-all">
               {isPending ? <Loader2 size={15} className="animate-spin" /> : isEdit ? 'Save Changes' : 'Create Exercise'}
             </button>
           </div>
@@ -503,15 +503,15 @@ function CheckboxGroup({
   }
   return (
     <div>
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{label}</p>
+      <p className="text-xs font-semibold text-[#4a5a75] uppercase tracking-wide mb-2">{label}</p>
       <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
         {options.map(opt => (
           <label key={opt} className="flex items-center gap-2.5 cursor-pointer group">
             <div className={clsx(
               'w-4 h-4 rounded flex items-center justify-center border transition-all flex-shrink-0',
               selected.includes(opt)
-                ? 'bg-brand-600 border-brand-600'
-                : 'border-gray-300 group-hover:border-brand-400',
+                ? 'bg-amber-400 border-amber-400'
+                : 'border-[#2e3a52] group-hover:border-amber-400',
             )}>
               {selected.includes(opt) && (
                 <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
@@ -520,7 +520,7 @@ function CheckboxGroup({
               )}
             </div>
             <input type="checkbox" checked={selected.includes(opt)} onChange={() => toggle(opt)} className="sr-only" />
-            <span className="text-sm text-gray-700 group-hover:text-gray-900 truncate">{opt}</span>
+            <span className="text-sm text-[#8a9ab5] group-hover:text-[#e8edf5] truncate">{opt}</span>
           </label>
         ))}
       </div>
@@ -580,41 +580,41 @@ function ExercisesList() {
           </div>
         </FilterPopover>
         <button onClick={() => setShowImport(true)}
-          className="flex items-center gap-2 px-3 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 shadow-sm transition-all flex-shrink-0">
+          className="flex items-center gap-2 px-3 py-2.5 bg-[#161b27] border border-[#242d40] text-[#8a9ab5] text-sm font-semibold rounded-xl hover:bg-[#0d1117] shadow-sm transition-all flex-shrink-0">
           <Upload size={15} /><span className="hidden sm:inline">Sync CSV</span>
         </button>
         <button onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all flex-shrink-0">
+          className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-amber-400 to-amber-300 text-white text-sm font-semibold rounded-xl hover:from-amber-400 hover:to-amber-300 shadow-sm transition-all flex-shrink-0">
           <Plus size={15} /><span className="hidden sm:inline">New Exercise</span>
         </button>
       </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-gray-300" />
+          <Loader2 size={24} className="animate-spin text-[#2e3a52]" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-16 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-brand-50 flex items-center justify-center mx-auto mb-4">
-            <Dumbbell size={28} className="text-brand-300" />
+        <div className="bg-[#161b27] rounded-2xl border border-[#242d40] shadow-card p-16 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-amber-400/10 flex items-center justify-center mx-auto mb-4">
+            <Dumbbell size={28} className="text-amber-400" />
           </div>
-          <p className="font-semibold text-gray-700 mb-1">No exercises yet</p>
-          <p className="text-sm text-gray-400 mb-4">Add your first exercise to build your library</p>
+          <p className="font-semibold text-[#8a9ab5] mb-1">No exercises yet</p>
+          <p className="text-sm text-[#3a4a62] mb-4">Add your first exercise to build your library</p>
           <button onClick={() => setShowModal(true)}
-            className="px-4 py-2 bg-brand-50 text-brand-600 text-sm font-semibold rounded-xl hover:bg-brand-100 transition-colors">
+            className="px-4 py-2 bg-amber-400/10 text-amber-400 text-sm font-semibold rounded-xl hover:bg-amber-400/10 transition-colors">
             + New Exercise
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+        <div className="bg-[#161b27] rounded-2xl border border-[#242d40] shadow-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/50">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Exercise</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Muscle Group</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Equipment</th>
+                <tr className="border-b border-[#242d40] bg-[#0d1117]/50">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-[#4a5a75] uppercase tracking-wider">Exercise</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#4a5a75] uppercase tracking-wider">Category</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#4a5a75] uppercase tracking-wider">Muscle Group</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#4a5a75] uppercase tracking-wider">Equipment</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -622,26 +622,26 @@ function ExercisesList() {
                 {filtered.map(ex => {
                   const metricOpt = METRIC_OPTIONS.find(m => m.value === ex.metric_type)
                   return (
-                  <tr key={ex.id} className="hover:bg-gray-50/70 transition-colors group">
+                  <tr key={ex.id} className="hover:bg-[#0d1117]/70 transition-colors group">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-brand-50 flex items-center justify-center flex-shrink-0 text-base">
+                        <div className="w-9 h-9 rounded-lg bg-amber-400/10 flex items-center justify-center flex-shrink-0 text-base">
                           {metricOpt?.icon ?? '🏋️'}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-gray-800">{ex.name}</p>
-                          <p className="text-xs text-gray-400">{metricOpt?.label ?? 'Reps + Weight'}</p>
+                          <p className="text-sm font-semibold text-[#e8edf5]">{ex.name}</p>
+                          <p className="text-xs text-[#3a4a62]">{metricOpt?.label ?? 'Reps + Weight'}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600">{ex.category ?? '—'}</td>
-                    <td className="px-4 py-4 text-sm text-gray-600">{ex.muscle_group ?? '—'}</td>
-                    <td className="px-4 py-4 text-sm text-gray-600">{ex.equipment ?? '—'}</td>
+                    <td className="px-4 py-4 text-sm text-[#8a9ab5]">{ex.category ?? '—'}</td>
+                    <td className="px-4 py-4 text-sm text-[#8a9ab5]">{ex.muscle_group ?? '—'}</td>
+                    <td className="px-4 py-4 text-sm text-[#8a9ab5]">{ex.equipment ?? '—'}</td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => setEditExercise(ex)}
-                          className="p-1.5 rounded-lg hover:bg-brand-50 text-gray-300 hover:text-brand-600 transition-all"
+                          className="p-1.5 rounded-lg hover:bg-amber-400/10 text-[#2e3a52] hover:text-amber-400 transition-all"
                           title="Edit exercise"
                         >
                           <Pencil size={14} />
@@ -649,7 +649,7 @@ function ExercisesList() {
                         <button
                           onClick={() => deleteExercise.mutate(ex.id)}
                           disabled={deleteExercise.isPending}
-                          className="p-1.5 rounded-lg hover:bg-rose-50 text-gray-300 hover:text-rose-500 transition-all disabled:opacity-50"
+                          className="p-1.5 rounded-lg hover:bg-rose-400/10 text-[#2e3a52] hover:text-rose-500 transition-all disabled:opacity-50"
                           title="Delete exercise"
                         >
                           <Trash2 size={14} />
@@ -661,7 +661,7 @@ function ExercisesList() {
               </tbody>
             </table>
           </div>
-          <div className="px-5 py-3 border-t border-gray-50 text-xs text-gray-400">
+          <div className="px-5 py-3 border-t border-[#1e2535] text-xs text-[#3a4a62]">
             {filtered.length} exercise{filtered.length !== 1 ? 's' : ''}
           </div>
         </div>
@@ -702,19 +702,19 @@ function AssignToClientModal({ workout, onClose }: { workout: DbWorkout; onClose
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10">
         {done ? (
           <div className="text-center py-4">
             <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
               <CheckCircle2 size={28} className="text-emerald-600" />
             </div>
-            <h3 className="font-bold text-gray-900 mb-1">Workout assigned!</h3>
-            <p className="text-sm text-gray-500 mb-4">
+            <h3 className="font-bold text-[#e8edf5] mb-1">Workout assigned!</h3>
+            <p className="text-sm text-[#4a5a75] mb-4">
               <span className="font-medium">{workout.name}</span> has been sent to{' '}
               <span className="font-medium">{clients.find(c => c.id === selected)?.name}</span>
             </p>
             <button onClick={onClose}
-              className="w-full py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl">
+              className="w-full py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl">
               Done
             </button>
           </div>
@@ -722,35 +722,35 @@ function AssignToClientModal({ workout, onClose }: { workout: DbWorkout; onClose
           <>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Assign to Client</h2>
-                <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[220px]">{workout.name}</p>
+                <h2 className="text-lg font-bold text-[#e8edf5]">Assign to Client</h2>
+                <p className="text-xs text-[#4a5a75] mt-0.5 truncate max-w-[220px]">{workout.name}</p>
               </div>
-              <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X size={18} /></button>
+              <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:text-[#8a9ab5] hover:bg-[#161b27]"><X size={18} /></button>
             </div>
 
             {error && <div className="mb-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">{error}</div>}
 
             <form onSubmit={submit} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Client *</label>
+                <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Client *</label>
                 {isLoading ? (
-                  <div className="flex items-center justify-center py-6"><Loader2 size={18} className="animate-spin text-gray-300" /></div>
+                  <div className="flex items-center justify-center py-6"><Loader2 size={18} className="animate-spin text-[#2e3a52]" /></div>
                 ) : (
                   <div className="space-y-1.5 max-h-48 overflow-y-auto">
                     {activeClients.length === 0 && (
-                      <p className="text-sm text-gray-400 text-center py-4">No active clients yet</p>
+                      <p className="text-sm text-[#3a4a62] text-center py-4">No active clients yet</p>
                     )}
                     {activeClients.map(c => {
                       const initials = c.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
                       return (
                         <button key={c.id} type="button" onClick={() => setSelected(c.id)}
                           className={clsx('w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all text-left',
-                            selected === c.id ? 'border-brand-500 bg-brand-50' : 'border-transparent bg-gray-50 hover:bg-gray-100')}>
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            selected === c.id ? 'border-amber-400 bg-amber-400/10' : 'border-transparent bg-[#0d1117] hover:bg-[#161b27]')}>
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-300 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                             {initials}
                           </div>
-                          <span className="text-sm font-medium text-gray-800 flex-1 truncate">{c.name}</span>
-                          {selected === c.id && <CheckCircle2 size={15} className="text-brand-600 flex-shrink-0" />}
+                          <span className="text-sm font-medium text-[#e8edf5] flex-1 truncate">{c.name}</span>
+                          {selected === c.id && <CheckCircle2 size={15} className="text-amber-400 flex-shrink-0" />}
                         </button>
                       )
                     })}
@@ -758,22 +758,22 @@ function AssignToClientModal({ workout, onClose }: { workout: DbWorkout; onClose
                 )}
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Due Date</label>
+                <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Due Date</label>
                 <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                  className="w-full px-3 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Notes</label>
+                <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Notes</label>
                 <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. Focus on form..."
-                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400" />
+                  className="w-full px-3 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400" />
               </div>
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={onClose}
-                  className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+                  className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">
                   Cancel
                 </button>
                 <button type="submit" disabled={!selected || assign.isPending}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all">
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-50 transition-all">
                   {assign.isPending ? <Loader2 size={14} className="animate-spin" /> : <><Send size={13} /> Assign</>}
                 </button>
               </div>
@@ -801,24 +801,24 @@ function WorkoutsList() {
       <div className="flex items-center gap-2">
         <SearchBar value={search} onChange={setSearch} placeholder="Search workouts…" />
         <button onClick={() => navigate('/library/workouts/new')}
-          className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all flex-shrink-0">
+          className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-amber-400 to-amber-300 text-white text-sm font-semibold rounded-xl hover:from-amber-400 hover:to-amber-300 shadow-sm transition-all flex-shrink-0">
           <Plus size={15} /><span className="hidden sm:inline">New Workout</span>
         </button>
       </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-gray-300" />
+          <Loader2 size={24} className="animate-spin text-[#2e3a52]" />
         </div>
       ) : workouts.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-16 text-center">
+        <div className="bg-[#161b27] rounded-2xl border border-[#242d40] shadow-card p-16 text-center">
           <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-4">
             <Dumbbell size={28} className="text-emerald-300" />
           </div>
-          <p className="font-semibold text-gray-700 mb-1">No workouts yet</p>
-          <p className="text-sm text-gray-400 mb-4">Create your first workout template</p>
+          <p className="font-semibold text-[#8a9ab5] mb-1">No workouts yet</p>
+          <p className="text-sm text-[#3a4a62] mb-4">Create your first workout template</p>
           <button onClick={() => navigate('/library/workouts/new')}
-            className="px-4 py-2 bg-brand-50 text-brand-600 text-sm font-semibold rounded-xl hover:bg-brand-100 transition-colors">
+            className="px-4 py-2 bg-amber-400/10 text-amber-400 text-sm font-semibold rounded-xl hover:bg-amber-400/10 transition-colors">
             + New Workout
           </button>
         </div>
@@ -828,32 +828,32 @@ function WorkoutsList() {
             <div
               key={workout.id}
               onClick={() => navigate(`/library/workouts/${workout.id}`)}
-              className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-card-hover hover:border-brand-200 transition-all group relative cursor-pointer"
+              className="bg-[#161b27] rounded-2xl border border-[#242d40] p-5 hover:shadow-card-hover hover:border-amber-400/20 transition-all group relative cursor-pointer"
             >
               <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                 <button
                   onClick={e => { e.stopPropagation(); setAssigning(workout) }}
                   title="Assign to client"
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 text-xs font-semibold transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-400/10 text-amber-400 hover:bg-amber-400/10 text-xs font-semibold transition-colors"
                 >
                   <Send size={11} /> Assign
                 </button>
                 <button
                   onClick={e => { e.stopPropagation(); deleteWorkout.mutate(workout.id) }}
                   disabled={deleteWorkout.isPending}
-                  className="p-1.5 rounded-lg hover:bg-rose-50 text-gray-300 hover:text-rose-500 transition-all disabled:opacity-50"
+                  className="p-1.5 rounded-lg hover:bg-rose-400/10 text-[#2e3a52] hover:text-rose-500 transition-all disabled:opacity-50"
                 >
                   <Trash2 size={14} />
                 </button>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center mb-3">
-                <Dumbbell size={20} className="text-brand-600" />
+              <div className="w-10 h-10 rounded-xl bg-amber-400/10 flex items-center justify-center mb-3">
+                <Dumbbell size={20} className="text-amber-400" />
               </div>
-              <h3 className="font-semibold text-gray-800 mb-1 pr-16">{workout.name}</h3>
+              <h3 className="font-semibold text-[#e8edf5] mb-1 pr-16">{workout.name}</h3>
               {workout.description && (
-                <p className="text-xs text-gray-500 mb-3 line-clamp-2">{workout.description}</p>
+                <p className="text-xs text-[#4a5a75] mb-3 line-clamp-2">{workout.description}</p>
               )}
-              <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+              <div className="flex items-center gap-3 text-xs text-[#4a5a75] mb-3">
                 <div className="flex items-center gap-1">
                   <Dumbbell size={12} />
                   {workout.workout_exercises.length} exercise{workout.workout_exercises.length !== 1 ? 's' : ''}
@@ -867,18 +867,18 @@ function WorkoutsList() {
               </div>
               <div className="flex items-center justify-between">
                 <DifficultyBadge level={workout.difficulty} />
-                <ChevronRight size={14} className="text-gray-300 group-hover:text-brand-400 transition-colors" />
+                <ChevronRight size={14} className="text-[#2e3a52] group-hover:text-amber-400 transition-colors" />
               </div>
             </div>
           ))}
 
           {/* Create new card */}
           <button onClick={() => navigate('/library/workouts/new')}
-            className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-5 hover:border-brand-300 hover:bg-brand-50/30 transition-all group flex flex-col items-center justify-center min-h-[180px] gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-brand-100 flex items-center justify-center transition-colors">
-              <Plus size={20} className="text-gray-400 group-hover:text-brand-600" />
+            className="bg-[#161b27] rounded-2xl border-2 border-dashed border-[#242d40] p-5 hover:border-amber-400/30 hover:bg-amber-400/10/30 transition-all group flex flex-col items-center justify-center min-h-[180px] gap-2">
+            <div className="w-10 h-10 rounded-xl bg-[#161b27] group-hover:bg-amber-400/10 flex items-center justify-center transition-colors">
+              <Plus size={20} className="text-[#3a4a62] group-hover:text-amber-400" />
             </div>
-            <span className="text-sm font-medium text-gray-400 group-hover:text-brand-600">Create Workout</span>
+            <span className="text-sm font-medium text-[#3a4a62] group-hover:text-amber-400">Create Workout</span>
           </button>
         </div>
       )}
@@ -936,7 +936,7 @@ function ProgramsList() {
       <div className="flex items-center gap-2">
         <SearchBar value={search} onChange={setSearch} placeholder="Search programs…" />
         <button onClick={handleCreate} disabled={createProgram.isPending}
-          className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 shadow-sm transition-all disabled:opacity-60 flex-shrink-0">
+          className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-amber-400 to-amber-300 text-white text-sm font-semibold rounded-xl hover:from-amber-400 hover:to-amber-300 shadow-sm transition-all disabled:opacity-60 flex-shrink-0">
           {createProgram.isPending ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
           <span className="hidden sm:inline">New Program</span>
         </button>
@@ -944,17 +944,17 @@ function ProgramsList() {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-gray-300" />
+          <Loader2 size={24} className="animate-spin text-[#2e3a52]" />
         </div>
       ) : programs.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-16 text-center">
+        <div className="bg-[#161b27] rounded-2xl border border-[#242d40] shadow-card p-16 text-center">
           <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-4">
             <BarChart3 size={28} className="text-emerald-300" />
           </div>
-          <p className="font-semibold text-gray-700 mb-1">No programs yet</p>
-          <p className="text-sm text-gray-400 mb-4">Build multi-week training programs for your clients</p>
+          <p className="font-semibold text-[#8a9ab5] mb-1">No programs yet</p>
+          <p className="text-sm text-[#3a4a62] mb-4">Build multi-week training programs for your clients</p>
           <button onClick={handleCreate} disabled={createProgram.isPending}
-            className="px-4 py-2 bg-brand-50 text-brand-600 text-sm font-semibold rounded-xl hover:bg-brand-100 transition-colors disabled:opacity-60">
+            className="px-4 py-2 bg-amber-400/10 text-amber-400 text-sm font-semibold rounded-xl hover:bg-amber-400/10 transition-colors disabled:opacity-60">
             + New Program
           </button>
         </div>
@@ -963,12 +963,12 @@ function ProgramsList() {
           {programs.map(program => (
             <div key={program.id}
               onClick={() => navigate(`/library/programs/${program.id}`)}
-              className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-card-hover hover:border-brand-200 transition-all cursor-pointer group relative">
+              className="bg-[#161b27] rounded-2xl border border-[#242d40] p-5 hover:shadow-card-hover hover:border-amber-400/20 transition-all cursor-pointer group relative">
               {/* Delete btn */}
               <button
                 onClick={e => handleDelete(e, program.id, program.name)}
                 disabled={deleteProgram.isPending}
-                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-300 hover:text-rose-400 hover:bg-rose-50 transition-all">
+                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-[#2e3a52] hover:text-rose-400 hover:bg-rose-400/10 transition-all">
                 <Trash2 size={13} />
               </button>
               <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center mb-3">
@@ -985,12 +985,12 @@ function ProgramsList() {
                     if (e.key === 'Enter') { e.preventDefault(); commitRename(program.id) }
                     if (e.key === 'Escape') setRenamingId(null)
                   }}
-                  className="w-full font-semibold text-gray-800 mb-1 pr-6 bg-transparent border-b border-brand-400 outline-none text-base"
+                  className="w-full font-semibold text-[#e8edf5] mb-1 pr-6 bg-transparent border-b border-amber-400 outline-none text-base"
                   autoFocus
                 />
               ) : (
                 <h3
-                  className="font-semibold text-gray-800 mb-1 pr-6 cursor-text"
+                  className="font-semibold text-[#e8edf5] mb-1 pr-6 cursor-text"
                   onDoubleClick={e => startRename(e, program.id, program.name)}
                   title="Double-click to rename"
                 >
@@ -998,9 +998,9 @@ function ProgramsList() {
                 </h3>
               )}
               {program.description && (
-                <p className="text-xs text-gray-500 mb-3 line-clamp-2">{program.description}</p>
+                <p className="text-xs text-[#4a5a75] mb-3 line-clamp-2">{program.description}</p>
               )}
-              <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+              <div className="flex items-center gap-3 text-xs text-[#4a5a75] mb-3">
                 {program.duration_weeks && (
                   <div className="flex items-center gap-1"><Clock size={12} />{program.duration_weeks} weeks</div>
                 )}
@@ -1010,7 +1010,7 @@ function ProgramsList() {
               </div>
               <div className="flex items-center justify-between">
                 <DifficultyBadge level={program.difficulty} />
-                {program.category && <span className="text-xs text-gray-400">{program.category}</span>}
+                {program.category && <span className="text-xs text-[#3a4a62]">{program.category}</span>}
               </div>
             </div>
           ))}
@@ -1023,13 +1023,13 @@ function ProgramsList() {
 // ─── Placeholder tab ──────────────────────────────────────────
 function PlaceholderSection({ title }: { title: string }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
-      <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-        <Dumbbell size={28} className="text-gray-300" />
+    <div className="bg-[#161b27] rounded-2xl border border-[#242d40] p-16 text-center">
+      <div className="w-14 h-14 rounded-2xl bg-[#161b27] flex items-center justify-center mx-auto mb-4">
+        <Dumbbell size={28} className="text-[#2e3a52]" />
       </div>
-      <h3 className="text-lg font-semibold text-gray-700 mb-2">{title}</h3>
-      <p className="text-sm text-gray-400 mb-4">Coming soon</p>
-      <button className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-lg hover:bg-brand-700 mx-auto">
+      <h3 className="text-lg font-semibold text-[#8a9ab5] mb-2">{title}</h3>
+      <p className="text-sm text-[#3a4a62] mb-4">Coming soon</p>
+      <button className="flex items-center gap-2 px-4 py-2 bg-amber-400 text-white text-sm font-semibold rounded-lg hover:bg-amber-400 mx-auto">
         <Plus size={15} />Create First
       </button>
     </div>

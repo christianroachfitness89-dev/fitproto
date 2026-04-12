@@ -19,15 +19,15 @@ type ViewMode = 'table' | 'grid'
 function SearchBar({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <div className="relative flex-1 min-w-0">
-      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3a4a62] pointer-events-none" />
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder ?? 'Search…'}
-        className="w-full pl-9 pr-8 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 shadow-sm transition-all"
+        className="w-full pl-9 pr-8 py-2.5 text-sm bg-[#161b27] border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 shadow-sm transition-all"
       />
       {value && (
-        <button onClick={() => onChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+        <button onClick={() => onChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#2e3a52] hover:text-[#4a5a75]">
           <X size={13} />
         </button>
       )}
@@ -54,20 +54,20 @@ function FilterPopover({ activeCount, children }: { activeCount: number; childre
         className={clsx(
           'flex items-center gap-2 px-3 py-2.5 text-sm font-medium rounded-xl border transition-all',
           open || activeCount > 0
-            ? 'bg-brand-50 border-brand-200 text-brand-700'
-            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50',
+            ? 'bg-amber-400/10 border-amber-400/20 text-amber-400'
+            : 'bg-[#161b27] border-[#242d40] text-[#8a9ab5] hover:bg-[#0d1117]',
         )}
       >
         <SlidersHorizontal size={15} />
         <span className="hidden sm:inline">Filter</span>
         {activeCount > 0 && (
-          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] font-bold">
+          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-amber-400 text-white text-[10px] font-bold">
             {activeCount}
           </span>
         )}
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 z-20 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 min-w-[220px]">
+        <div className="absolute right-0 top-full mt-1.5 z-20 bg-[#161b27] rounded-2xl shadow-xl border border-[#242d40] p-4 min-w-[220px]">
           {children}
         </div>
       )}
@@ -80,12 +80,12 @@ function StatusBadge({ status }: { status: DbClient['status'] }) {
     <span className={clsx(
       'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
       status === 'active'   && 'bg-emerald-50 text-emerald-700',
-      status === 'inactive' && 'bg-gray-100 text-gray-600',
+      status === 'inactive' && 'bg-[#161b27] text-[#8a9ab5]',
       status === 'pending'  && 'bg-amber-50 text-amber-700',
     )}>
       <span className={clsx('w-1.5 h-1.5 rounded-full',
         status === 'active'   && 'bg-emerald-500',
-        status === 'inactive' && 'bg-gray-400',
+        status === 'inactive' && 'bg-[#3a4a62]',
         status === 'pending'  && 'bg-amber-500',
       )} />
       {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -96,13 +96,13 @@ function StatusBadge({ status }: { status: DbClient['status'] }) {
 function ComplianceBar({ value }: { value: number }) {
   return (
     <div className="flex items-center gap-2">
-      <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+      <div className="w-16 h-1.5 bg-[#161b27] rounded-full overflow-hidden">
         <div
           className={clsx('h-full rounded-full', value >= 80 ? 'bg-emerald-500' : value >= 50 ? 'bg-amber-400' : 'bg-rose-400')}
           style={{ width: `${value}%` }}
         />
       </div>
-      <span className="text-sm text-gray-600 w-8">{value}%</span>
+      <span className="text-sm text-[#8a9ab5] w-8">{value}%</span>
     </div>
   )
 }
@@ -112,41 +112,41 @@ function ClientCard({ client }: { client: DbClient }) {
   return (
     <Link
       to={`/clients/${client.id}`}
-      className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-card-hover hover:border-brand-200 transition-all group"
+      className="bg-[#161b27] rounded-2xl border border-[#242d40] p-5 hover:shadow-card-hover hover:border-amber-400/20 transition-all group"
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-400 to-amber-300 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
             {initials}
           </div>
           <div>
-            <p className="font-semibold text-gray-800 group-hover:text-brand-700 transition-colors">{client.name}</p>
-            <p className="text-xs text-gray-500">{client.email ?? '—'}</p>
+            <p className="font-semibold text-[#e8edf5] group-hover:text-amber-400 transition-colors">{client.name}</p>
+            <p className="text-xs text-[#4a5a75]">{client.email ?? '—'}</p>
           </div>
         </div>
         <StatusBadge status={client.status} />
       </div>
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-500">Goal</span>
-          <span className="font-medium text-gray-700">{client.goal ?? '—'}</span>
+          <span className="text-[#4a5a75]">Goal</span>
+          <span className="font-medium text-[#8a9ab5]">{client.goal ?? '—'}</span>
         </div>
         <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-500">Joined</span>
-          <span className="text-gray-600">{new Date(client.joined_at).toLocaleDateString()}</span>
+          <span className="text-[#4a5a75]">Joined</span>
+          <span className="text-[#8a9ab5]">{new Date(client.joined_at).toLocaleDateString()}</span>
         </div>
       </div>
-      <div className="mt-4 pt-3 border-t border-gray-50 flex items-center gap-2">
+      <div className="mt-4 pt-3 border-t border-[#1e2535] flex items-center gap-2">
         <button
           onClick={e => e.preventDefault()}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium text-brand-600 bg-brand-50 rounded-lg hover:bg-brand-100 transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium text-amber-400 bg-amber-400/10 rounded-lg hover:bg-amber-400/10 transition-colors"
         >
           <MessageSquare size={12} />
           Message
         </button>
         <button
           onClick={e => e.preventDefault()}
-          className="flex-1 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+          className="flex-1 py-1.5 text-xs font-medium text-[#8a9ab5] bg-[#0d1117] rounded-lg hover:bg-[#161b27] transition-colors"
         >
           View Profile
         </button>
@@ -190,10 +190,10 @@ function AddClientModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-900">Add New Client</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+          <h2 className="text-lg font-bold text-[#e8edf5]">Add New Client</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:text-[#8a9ab5] hover:bg-[#161b27] transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -205,65 +205,65 @@ function AddClientModal({ onClose }: { onClose: () => void }) {
         <form onSubmit={submit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Full Name *</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Full Name *</label>
               <input
                 type="text"
                 value={form.name}
                 onChange={e => set('name', e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 transition-all"
                 placeholder="Jane Smith"
                 required
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Email</label>
+                <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Email</label>
                 <input
                   type="email"
                   value={form.email}
                   onChange={e => set('email', e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                  className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 transition-all"
                   placeholder="jane@example.com"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Phone</label>
+                <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Phone</label>
                 <input
                   type="tel"
                   value={form.phone}
                   onChange={e => set('phone', e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                  className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 transition-all"
                   placeholder="+61 4xx xxx xxx"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Primary Goal</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Primary Goal</label>
               <input
                 type="text"
                 value={form.goal}
                 onChange={e => set('goal', e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 transition-all"
                 placeholder="Weight Loss, Muscle Gain, Performance..."
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Category</label>
+                <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Category</label>
                 <input
                   type="text"
                   value={form.category}
                   onChange={e => set('category', e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                  className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 transition-all"
                   placeholder="Premium, Standard..."
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Status</label>
+                <label className="block text-xs font-semibold text-[#8a9ab5] mb-1.5 uppercase tracking-wide">Status</label>
                 <select
                   value={form.status}
                   onChange={e => set('status', e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all bg-white"
+                  className="w-full px-3.5 py-2.5 text-sm border border-[#242d40] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 transition-all bg-[#161b27]"
                 >
                   <option value="active">Active</option>
                   <option value="pending">Pending</option>
@@ -277,14 +277,14 @@ function AddClientModal({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+              className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={create.isPending}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-60 transition-all"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-60 transition-all"
             >
               {create.isPending ? <Loader2 size={15} className="animate-spin" /> : 'Add Client'}
             </button>
@@ -356,7 +356,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-      className="ml-1.5 p-1 rounded text-gray-400 hover:text-brand-600 transition-colors"
+      className="ml-1.5 p-1 rounded text-[#3a4a62] hover:text-amber-400 transition-colors"
       title="Copy link"
     >
       {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
@@ -430,17 +430,17 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={importing ? undefined : onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col z-10">
+      <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col z-10">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#242d40] flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center">
-              <Upload size={16} className="text-brand-600" />
+            <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center">
+              <Upload size={16} className="text-amber-400" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-gray-900">Bulk Import Clients</h2>
-              <p className="text-xs text-gray-400">
+              <h2 className="text-base font-bold text-[#e8edf5]">Bulk Import Clients</h2>
+              <p className="text-xs text-[#3a4a62]">
                 {step === 'upload'  && 'Upload a spreadsheet to import multiple clients at once'}
                 {step === 'preview' && `${rows.length} client${rows.length !== 1 ? 's' : ''} ready to import`}
                 {step === 'results' && `Import complete — ${successCount} added`}
@@ -448,7 +448,7 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
           {!importing && (
-            <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+            <button onClick={onClose} className="p-1.5 rounded-lg text-[#3a4a62] hover:text-[#8a9ab5] hover:bg-[#161b27] transition-colors">
               <X size={18} />
             </button>
           )}
@@ -461,16 +461,16 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
           {step === 'upload' && (
             <div className="space-y-5">
               {/* Download template */}
-              <div className="flex items-center justify-between p-4 bg-brand-50 rounded-xl border border-brand-100">
+              <div className="flex items-center justify-between p-4 bg-amber-400/10 rounded-xl border border-amber-400/10">
                 <div>
-                  <p className="text-sm font-semibold text-brand-800">Download Template</p>
-                  <p className="text-xs text-brand-600 mt-0.5">
+                  <p className="text-sm font-semibold text-amber-400">Download Template</p>
+                  <p className="text-xs text-amber-400 mt-0.5">
                     Fill in the spreadsheet then upload it below
                   </p>
                 </div>
                 <button
                   onClick={downloadTemplate}
-                  className="flex items-center gap-2 px-3 py-2 bg-white border border-brand-200 text-brand-700 text-xs font-semibold rounded-lg hover:bg-brand-50 transition-colors shadow-sm"
+                  className="flex items-center gap-2 px-3 py-2 bg-[#161b27] border border-amber-400/20 text-amber-400 text-xs font-semibold rounded-lg hover:bg-amber-400/10 transition-colors shadow-sm"
                 >
                   <Download size={14} />
                   Download (.xlsx)
@@ -478,8 +478,8 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
               </div>
 
               {/* Template column guide */}
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Template Columns</p>
+              <div className="bg-[#0d1117] rounded-xl p-4 border border-[#242d40]">
+                <p className="text-xs font-semibold text-[#8a9ab5] uppercase tracking-wide mb-3">Template Columns</p>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   {[
                     { col: 'name',          req: true,  desc: 'Full name' },
@@ -491,14 +491,14 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
                     { col: 'invite_method', req: true,  desc: '"email" or "manual"' },
                   ].map(({ col, req, desc }) => (
                     <div key={col} className="flex items-start gap-2">
-                      <code className="bg-white border border-gray-200 rounded px-1.5 py-0.5 font-mono text-gray-700 flex-shrink-0">{col}</code>
-                      <span className="text-gray-500 leading-relaxed">{desc}{req && <span className="text-rose-500 ml-1">*</span>}</span>
+                      <code className="bg-[#161b27] border border-[#242d40] rounded px-1.5 py-0.5 font-mono text-[#8a9ab5] flex-shrink-0">{col}</code>
+                      <span className="text-[#4a5a75] leading-relaxed">{desc}{req && <span className="text-rose-500 ml-1">*</span>}</span>
                     </div>
                   ))}
                 </div>
-                <p className="mt-3 text-xs text-gray-400">
-                  <span className="font-semibold text-brand-600">email</span> — creates client + marks as Pending, so you can share their portal link<br />
-                  <span className="font-semibold text-gray-600">manual</span> — creates client as Active with no invite
+                <p className="mt-3 text-xs text-[#3a4a62]">
+                  <span className="font-semibold text-amber-400">email</span> — creates client + marks as Pending, so you can share their portal link<br />
+                  <span className="font-semibold text-[#8a9ab5]">manual</span> — creates client as Active with no invite
                 </p>
               </div>
 
@@ -507,14 +507,14 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
                 onDrop={onFileDrop}
                 onDragOver={e => e.preventDefault()}
                 onClick={() => fileRef.current?.click()}
-                className="flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-brand-300 hover:bg-brand-50/30 transition-all"
+                className="flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed border-[#242d40] rounded-xl cursor-pointer hover:border-amber-400/30 hover:bg-amber-400/10/30 transition-all"
               >
-                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                  <Upload size={20} className="text-gray-400" />
+                <div className="w-12 h-12 rounded-full bg-[#161b27] flex items-center justify-center">
+                  <Upload size={20} className="text-[#3a4a62]" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-gray-700">Drop your file here or click to browse</p>
-                  <p className="text-xs text-gray-400 mt-1">Supports .xlsx, .xls, .csv</p>
+                  <p className="text-sm font-semibold text-[#8a9ab5]">Drop your file here or click to browse</p>
+                  <p className="text-xs text-[#3a4a62] mt-1">Supports .xlsx, .xls, .csv</p>
                 </div>
                 <input
                   ref={fileRef}
@@ -546,40 +546,40 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
                     <p className="text-xs font-semibold text-emerald-600">Manual (Active)</p>
                   </div>
                 </div>
-                <div className="p-3 bg-brand-50 rounded-xl border border-brand-100 text-center">
-                  <p className="text-2xl font-bold text-brand-700">{rows.filter(r => r.invite_method === 'email').length}</p>
+                <div className="p-3 bg-amber-400/10 rounded-xl border border-amber-400/10 text-center">
+                  <p className="text-2xl font-bold text-amber-400">{rows.filter(r => r.invite_method === 'email').length}</p>
                   <div className="flex items-center justify-center gap-1.5 mt-1">
-                    <Mail size={13} className="text-brand-600" />
-                    <p className="text-xs font-semibold text-brand-600">Email Invite (Pending)</p>
+                    <Mail size={13} className="text-amber-400" />
+                    <p className="text-xs font-semibold text-amber-400">Email Invite (Pending)</p>
                   </div>
                 </div>
               </div>
 
               {/* Table preview */}
-              <div className="border border-gray-100 rounded-xl overflow-hidden">
+              <div className="border border-[#242d40] rounded-xl overflow-hidden">
                 <div className="overflow-x-auto max-h-72">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="bg-gray-50 border-b border-gray-100 sticky top-0">
-                        <th className="px-3 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide">Name</th>
-                        <th className="px-3 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide">Email</th>
-                        <th className="px-3 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide">Goal</th>
-                        <th className="px-3 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide">Invite</th>
-                        <th className="px-3 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide">Validation</th>
+                      <tr className="bg-[#0d1117] border-b border-[#242d40] sticky top-0">
+                        <th className="px-3 py-2.5 text-left font-semibold text-[#4a5a75] uppercase tracking-wide">Name</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-[#4a5a75] uppercase tracking-wide">Email</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-[#4a5a75] uppercase tracking-wide">Goal</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-[#4a5a75] uppercase tracking-wide">Invite</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-[#4a5a75] uppercase tracking-wide">Validation</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {rows.map((r, i) => {
                         const warn = r.invite_method === 'email' && !r.email ? 'Email required' : null
                         return (
-                          <tr key={i} className={clsx('hover:bg-gray-50/60', warn && 'bg-rose-50/40')}>
-                            <td className="px-3 py-2.5 font-medium text-gray-800">{r.name}</td>
-                            <td className="px-3 py-2.5 text-gray-500">{r.email || '—'}</td>
-                            <td className="px-3 py-2.5 text-gray-500">{r.goal || '—'}</td>
+                          <tr key={i} className={clsx('hover:bg-[#0d1117]/60', warn && 'bg-rose-50/40')}>
+                            <td className="px-3 py-2.5 font-medium text-[#e8edf5]">{r.name}</td>
+                            <td className="px-3 py-2.5 text-[#4a5a75]">{r.email || '—'}</td>
+                            <td className="px-3 py-2.5 text-[#4a5a75]">{r.goal || '—'}</td>
                             <td className="px-3 py-2.5">
                               {r.invite_method === 'email'
-                                ? <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-50 text-brand-700 rounded-full font-semibold"><Mail size={10} /> Email</span>
-                                : <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-semibold"><UserCheck size={10} /> Manual</span>
+                                ? <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-400/10 text-amber-400 rounded-full font-semibold"><Mail size={10} /> Email</span>
+                                : <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#161b27] text-[#8a9ab5] rounded-full font-semibold"><UserCheck size={10} /> Manual</span>
                               }
                             </td>
                             <td className="px-3 py-2.5">
@@ -605,12 +605,12 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
 
               {importing && (
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center justify-between text-xs text-[#4a5a75]">
                     <span>Importing clients…</span>
                     <span>{progress}%</span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-brand-500 to-violet-500 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+                  <div className="h-2 bg-[#161b27] rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-amber-400 to-amber-300 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
                   </div>
                 </div>
               )}
@@ -627,32 +627,32 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
                   <p className="text-2xl font-bold text-emerald-700">{successCount}</p>
                   <p className="text-xs font-semibold text-emerald-600">Imported</p>
                 </div>
-                <div className={clsx('p-4 rounded-xl border text-center', errorCount > 0 ? 'bg-rose-50 border-rose-100' : 'bg-gray-50 border-gray-100')}>
-                  <AlertCircle size={20} className={clsx('mx-auto mb-1', errorCount > 0 ? 'text-rose-500' : 'text-gray-300')} />
-                  <p className={clsx('text-2xl font-bold', errorCount > 0 ? 'text-rose-700' : 'text-gray-400')}>{errorCount}</p>
-                  <p className={clsx('text-xs font-semibold', errorCount > 0 ? 'text-rose-600' : 'text-gray-400')}>Failed</p>
+                <div className={clsx('p-4 rounded-xl border text-center', errorCount > 0 ? 'bg-rose-50 border-rose-100' : 'bg-[#0d1117] border-[#242d40]')}>
+                  <AlertCircle size={20} className={clsx('mx-auto mb-1', errorCount > 0 ? 'text-rose-500' : 'text-[#2e3a52]')} />
+                  <p className={clsx('text-2xl font-bold', errorCount > 0 ? 'text-rose-700' : 'text-[#3a4a62]')}>{errorCount}</p>
+                  <p className={clsx('text-xs font-semibold', errorCount > 0 ? 'text-rose-600' : 'text-[#3a4a62]')}>Failed</p>
                 </div>
               </div>
 
               {/* Portal links for email-invite clients */}
               {emailClients.length > 0 && (
-                <div className="border border-brand-100 rounded-xl overflow-hidden">
-                  <div className="bg-brand-50 px-4 py-3 border-b border-brand-100">
+                <div className="border border-amber-400/10 rounded-xl overflow-hidden">
+                  <div className="bg-amber-400/10 px-4 py-3 border-b border-amber-400/10">
                     <div className="flex items-center gap-2">
-                      <Mail size={14} className="text-brand-600" />
-                      <p className="text-sm font-semibold text-brand-800">Portal Links — Share with Clients</p>
+                      <Mail size={14} className="text-amber-400" />
+                      <p className="text-sm font-semibold text-amber-400">Portal Links — Share with Clients</p>
                     </div>
-                    <p className="text-xs text-brand-600 mt-0.5">Copy each link and send via email or message</p>
+                    <p className="text-xs text-amber-400 mt-0.5">Copy each link and send via email or message</p>
                   </div>
                   <div className="divide-y divide-gray-50 max-h-48 overflow-y-auto">
                     {emailClients.map((r, i) => (
-                      <div key={i} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50/60">
+                      <div key={i} className="flex items-center justify-between px-4 py-2.5 hover:bg-[#0d1117]/60">
                         <div>
-                          <p className="text-sm font-semibold text-gray-800">{r.name}</p>
-                          <p className="text-xs text-gray-400">{r.email}</p>
+                          <p className="text-sm font-semibold text-[#e8edf5]">{r.name}</p>
+                          <p className="text-xs text-[#3a4a62]">{r.email}</p>
                         </div>
                         <div className="flex items-center gap-1 min-w-0">
-                          <span className="text-xs text-gray-400 truncate max-w-[160px]">{portalBase}{r.clientId}</span>
+                          <span className="text-xs text-[#3a4a62] truncate max-w-[160px]">{portalBase}{r.clientId}</span>
                           <CopyButton text={portalBase + r.clientId} />
                         </div>
                       </div>
@@ -670,7 +670,7 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
                   <div className="divide-y divide-gray-50 max-h-36 overflow-y-auto">
                     {results.filter(r => r.status === 'error').map((r, i) => (
                       <div key={i} className="flex items-center justify-between px-4 py-2.5">
-                        <p className="text-sm font-medium text-gray-700">{r.name}</p>
+                        <p className="text-sm font-medium text-[#8a9ab5]">{r.name}</p>
                         <p className="text-xs text-rose-600">{r.error}</p>
                       </div>
                     ))}
@@ -682,13 +682,13 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3 flex-shrink-0">
+        <div className="px-6 py-4 border-t border-[#242d40] flex items-center justify-between gap-3 flex-shrink-0">
           {step === 'upload' && (
             <>
-              <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+              <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors">
                 Cancel
               </button>
-              <button onClick={downloadTemplate} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-brand-600 bg-brand-50 rounded-xl hover:bg-brand-100 transition-colors">
+              <button onClick={downloadTemplate} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-amber-400 bg-amber-400/10 rounded-xl hover:bg-amber-400/10 transition-colors">
                 <Download size={15} />
                 Get Template
               </button>
@@ -696,13 +696,13 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
           )}
           {step === 'preview' && (
             <>
-              <button onClick={() => { setStep('upload'); setRows([]) }} disabled={importing} className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 disabled:opacity-50 transition-colors">
+              <button onClick={() => { setStep('upload'); setRows([]) }} disabled={importing} className="px-4 py-2 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] disabled:opacity-50 transition-colors">
                 Back
               </button>
               <button
                 onClick={runImport}
                 disabled={importing || rows.length === 0}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-60 transition-all shadow-sm shadow-brand-500/20"
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 disabled:opacity-60 transition-all shadow-sm shadow-amber-400/20"
               >
                 {importing
                   ? <><Loader2 size={15} className="animate-spin" />Importing…</>
@@ -712,7 +712,7 @@ function BulkImportModal({ onClose }: { onClose: () => void }) {
             </>
           )}
           {step === 'results' && (
-            <button onClick={onClose} className="ml-auto px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all">
+            <button onClick={onClose} className="ml-auto px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-400 to-amber-300 rounded-xl hover:from-amber-400 hover:to-amber-300 transition-all">
               Done
             </button>
           )}
@@ -754,52 +754,52 @@ function ClientRow({ client }: { client: DbClient }) {
 
   return (
     <>
-      <tr className="hover:bg-gray-50/70 transition-colors group">
-        <td className="px-5 py-4"><input type="checkbox" className="rounded border-gray-300" /></td>
+      <tr className="hover:bg-[#0d1117]/70 transition-colors group">
+        <td className="px-5 py-4"><input type="checkbox" className="rounded border-[#2e3a52]" /></td>
         <td className="px-4 py-4">
           <Link to={`/clients/${client.id}`} className="flex items-center gap-3 group/link">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-amber-300 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
               {initials}
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-800 group-hover/link:text-brand-600 transition-colors">{client.name}</p>
-              <p className="text-xs text-gray-500">{client.email ?? '—'}</p>
+              <p className="text-sm font-semibold text-[#e8edf5] group-hover/link:text-amber-400 transition-colors">{client.name}</p>
+              <p className="text-xs text-[#4a5a75]">{client.email ?? '—'}</p>
             </div>
           </Link>
         </td>
         <td className="px-4 py-4"><StatusBadge status={client.status} /></td>
-        <td className="px-4 py-4 text-sm text-gray-600">{client.goal ?? '—'}</td>
-        <td className="px-4 py-4 text-sm text-gray-600">{new Date(client.joined_at).toLocaleDateString()}</td>
-        <td className="px-4 py-4 text-sm text-gray-600">{client.category ?? '—'}</td>
+        <td className="px-4 py-4 text-sm text-[#8a9ab5]">{client.goal ?? '—'}</td>
+        <td className="px-4 py-4 text-sm text-[#8a9ab5]">{new Date(client.joined_at).toLocaleDateString()}</td>
+        <td className="px-4 py-4 text-sm text-[#8a9ab5]">{client.category ?? '—'}</td>
         <td className="px-4 py-4">
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={() => navigate(`/clients/${client.id}`)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-[#161b27] text-[#3a4a62] hover:text-[#8a9ab5] transition-colors"
             >
               <MessageSquare size={15} />
             </button>
             <div ref={menuRef} className="relative">
               <button
                 onClick={() => setMenuOpen(o => !o)}
-                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-[#161b27] text-[#3a4a62] hover:text-[#8a9ab5] transition-colors"
               >
                 <MoreHorizontal size={15} />
               </button>
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
+                <div className="absolute right-0 top-full mt-1 w-40 bg-[#161b27] rounded-xl shadow-lg border border-[#242d40] py-1 z-20">
                   <button
                     onClick={archive}
                     disabled={updateClient.isPending}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#8a9ab5] hover:bg-[#0d1117] transition-colors disabled:opacity-50"
                   >
                     <Archive size={14} className="text-amber-500" />
                     {client.status === 'inactive' ? 'Unarchive' : 'Archive'}
                   </button>
-                  <div className="my-1 border-t border-gray-100" />
+                  <div className="my-1 border-t border-[#242d40]" />
                   <button
                     onClick={() => { setMenuOpen(false); setShowConfirm(true) }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-rose-600 hover:bg-rose-400/10 transition-colors"
                   >
                     <Trash2 size={14} />
                     Delete
@@ -816,20 +816,20 @@ function ClientRow({ client }: { client: DbClient }) {
           <td colSpan={7} className="p-0">
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowConfirm(false)} />
-              <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10">
+              <div className="relative bg-[#161b27] rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10">
                 <div className="flex flex-col items-center text-center gap-3 mb-5">
                   <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center">
                     <AlertTriangle size={22} className="text-rose-600" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-gray-900">Delete {client.name}?</h3>
-                    <p className="text-sm text-gray-500 mt-1">This permanently removes the client and all their data. This cannot be undone.</p>
+                    <h3 className="text-base font-bold text-[#e8edf5]">Delete {client.name}?</h3>
+                    <p className="text-sm text-[#4a5a75] mt-1">This permanently removes the client and all their data. This cannot be undone.</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowConfirm(false)}
-                    className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                    className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#161b27] rounded-xl hover:bg-[#1e2535] transition-colors"
                   >
                     Cancel
                   </button>
@@ -872,14 +872,14 @@ export default function Clients() {
       {/* Toolbar */}
       <div className="flex items-center gap-2">
         <div className="flex-shrink-0">
-          <h2 className="text-xl font-bold text-gray-900 leading-none">
-            Clients <span className="text-gray-400 font-normal text-base">{!isLoading && `(${clients.length})`}</span>
+          <h2 className="text-xl font-bold text-[#e8edf5] leading-none">
+            Clients <span className="text-[#3a4a62] font-normal text-base">{!isLoading && `(${clients.length})`}</span>
           </h2>
         </div>
         <div className="flex items-center gap-2 ml-auto">
           <SearchBar value={search} onChange={setSearch} placeholder="Search clients…" />
           <FilterPopover activeCount={statusFilter !== 'all' ? 1 : 0}>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Status</p>
+            <p className="text-xs font-semibold text-[#4a5a75] uppercase tracking-wide mb-2">Status</p>
             <div className="flex flex-wrap gap-1.5">
               {(['all', 'active', 'inactive', 'pending'] as StatusFilter[]).map(s => (
                 <button
@@ -887,7 +887,7 @@ export default function Clients() {
                   onClick={() => setStatusFilter(s)}
                   className={clsx(
                     'px-3 py-1.5 text-xs font-medium rounded-lg capitalize transition-colors',
-                    statusFilter === s ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    statusFilter === s ? 'bg-amber-400 text-white' : 'bg-[#161b27] text-[#8a9ab5] hover:bg-[#1e2535]'
                   )}
                 >
                   {s === 'all' ? 'All' : s}
@@ -897,19 +897,19 @@ export default function Clients() {
           </FilterPopover>
           <button
             onClick={() => setViewMode(v => v === 'table' ? 'grid' : 'table')}
-            className="p-2.5 rounded-xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition-colors flex-shrink-0"
+            className="p-2.5 rounded-xl border border-[#242d40] bg-[#161b27] text-[#4a5a75] hover:bg-[#0d1117] transition-colors flex-shrink-0"
           >
             {viewMode === 'table' ? <LayoutGrid size={16} /> : <List size={16} />}
           </button>
           <button
             onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-3 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-all shadow-sm flex-shrink-0"
+            className="flex items-center gap-2 px-3 py-2.5 bg-[#161b27] border border-[#242d40] text-[#8a9ab5] text-sm font-semibold rounded-xl hover:bg-[#0d1117] transition-all shadow-sm flex-shrink-0"
           >
             <Upload size={15} /><span className="hidden sm:inline">Import</span>
           </button>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all shadow-sm shadow-brand-500/20 flex-shrink-0"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-gradient-to-r from-amber-400 to-amber-300 text-white text-sm font-semibold rounded-xl hover:from-amber-400 hover:to-amber-300 transition-all shadow-sm shadow-amber-400/20 flex-shrink-0"
           >
             <UserPlus size={15} /><span className="hidden sm:inline">Add Client</span>
           </button>
@@ -919,7 +919,7 @@ export default function Clients() {
       {/* Loading */}
       {isLoading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-gray-300" />
+          <Loader2 size={24} className="animate-spin text-[#2e3a52]" />
         </div>
       )}
 
@@ -933,21 +933,21 @@ export default function Clients() {
 
       {/* Table view */}
       {!isLoading && viewMode === 'table' && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+        <div className="bg-[#161b27] rounded-2xl border border-[#242d40] shadow-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/50">
-                  <th className="px-5 py-3 text-left"><input type="checkbox" className="rounded border-gray-300" /></th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Goal</th>
+                <tr className="border-b border-[#242d40] bg-[#0d1117]/50">
+                  <th className="px-5 py-3 text-left"><input type="checkbox" className="rounded border-[#2e3a52]" /></th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#4a5a75] uppercase tracking-wider">Client</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#4a5a75] uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#4a5a75] uppercase tracking-wider">Goal</th>
                   <th className="px-4 py-3 text-left">
-                    <button className="flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700">
+                    <button className="flex items-center gap-1 text-xs font-semibold text-[#4a5a75] uppercase tracking-wider hover:text-[#8a9ab5]">
                       Joined <ArrowUpDown size={12} />
                     </button>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#4a5a75] uppercase tracking-wider">Category</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -969,13 +969,13 @@ export default function Clients() {
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="text-center py-8 text-gray-400 col-span-full">
+    <div className="text-center py-8 text-[#3a4a62] col-span-full">
       <Users size={40} className="mx-auto mb-3 opacity-20" />
       <p className="font-medium text-sm">No clients found</p>
       <p className="text-xs mt-1 mb-4">Add your first client to get started</p>
       <button
         onClick={onAdd}
-        className="px-4 py-2 bg-brand-50 text-brand-600 text-sm font-semibold rounded-xl hover:bg-brand-100 transition-colors"
+        className="px-4 py-2 bg-amber-400/10 text-amber-400 text-sm font-semibold rounded-xl hover:bg-amber-400/10 transition-colors"
       >
         + Add Client
       </button>
