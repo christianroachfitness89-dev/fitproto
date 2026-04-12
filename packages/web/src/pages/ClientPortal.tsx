@@ -7,14 +7,51 @@ import {
   BarChart2, Utensils, History, TrendingUp, Scale, Zap, Moon, ChevronRight, ChevronLeft,
   X, Home, Menu, MessageCircle, Settings, Send, GripVertical,
   Users2, Heart, BookOpen, Video, Headphones, FileText, AlignLeft, ExternalLink,
-  Download, Eye, EyeOff, Check, Repeat2, Play, Plus,
+  Download, Eye, EyeOff, Check, Repeat2, Play, Plus, Scan,
 } from 'lucide-react'
+import { Html5Qrcode } from 'html5-qrcode'
 import { supabase } from '@/lib/supabase'
 import { playRestEndChime } from '@/lib/sound'
 import clsx from 'clsx'
 
 // ─── Types ─────────────────────────────────────────────────────
 type ActiveSection = 'workouts' | 'history' | 'metrics' | 'nutrition' | 'messages' | 'plan' | 'community' | 'habits' | 'accountability' | null
+
+interface FoodProduct {
+  name: string
+  brand: string
+  serving_size: string
+  energy_kcal: number | null
+  protein_g: number | null
+  carbs_g: number | null
+  fat_g: number | null
+}
+
+// ─── Open Food Facts lookup ────────────────────────────────────
+async function lookupBarcode(barcode: string): Promise<FoodProduct | null> {
+  try {
+    const res = await fetch(
+      `https://world.openfoodfacts.org/api/v3/product/${barcode}.json`,
+      { headers: { 'User-Agent': 'FitProto/1.0' } }
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    if (data.status !== 1) return null
+    const p = data.product
+    const n = p.nutriments ?? {}
+    return {
+      name:         p.product_name ?? 'Unknown product',
+      brand:        p.brands ?? '',
+      serving_size: p.serving_size ?? '',
+      energy_kcal:  n['energy-kcal'] ?? n['energy-kcal_value'] ?? null,
+      protein_g:    n['proteins'] ?? null,
+      carbs_g:      n['carbohydrates'] ?? null,
+      fat_g:        n['fat'] ?? null,
+    }
+  } catch {
+    return null
+  }
+}
 
 interface PortalSessionTask {
   id: string
@@ -3321,6 +3358,125 @@ function MetricsView({ clientId }: { clientId: string }) {
   )
 }
 
+// ─── Barcode scanner modal ─────────────────────────────────────
+const SCANNER_ELEMENT_ID = 'fitproto-barcode-reader'
+
+function BarcodeScannerModal({ onClose }: { onClose: () => void }) {
+  const [phase, setPhase] = useState<'scanning' | 'loading' | 'result' | 'error'>('scanning')
+  const [food, setFood]   = useState<FoodProduct | null>(null)
+  const scannerRef        = useRef<Html5Qrcode | null>(null)
+
+  async function startScanner() {
+    const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID)
+    scannerRef.current = scanner
+    await scanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 260, height: 120 }, aspectRatio: 1.777 },
+      async (barcode) => {
+        await scanner.stop().catch(() => {})
+        setPhase('loading')
+        const product = await lookupBarcode(barcode)
+        if (product) { setFood(product); setPhase('result') }
+        else          { setPhase('error') }
+      },
+      () => {} // per-frame errors, ignore
+    ).catch(() => setPhase('error'))
+  }
+
+  useEffect(() => {
+    startScanner()
+    return () => { scannerRef.current?.stop().catch(() => {}) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function handleScanAgain() {
+    setFood(null)
+    setPhase('scanning')
+    await startScanner()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+      {/* Close */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/60 flex items-center justify-center text-white"
+      >
+        <X size={20} />
+      </button>
+
+      {/* Camera viewport — html5-qrcode renders into this div */}
+      <div id={SCANNER_ELEMENT_ID} className="flex-1 overflow-hidden [&>video]:w-full [&>video]:h-full [&>video]:object-cover [&>#fitproto-barcode-reader__scan_region]:flex-1" />
+
+      {phase === 'scanning' && (
+        <div className="absolute bottom-10 left-0 right-0 text-center pointer-events-none">
+          <p className="text-white/70 text-sm font-medium">Point camera at a product barcode</p>
+        </div>
+      )}
+
+      {phase === 'loading' && (
+        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-3">
+          <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+          <p className="text-white/70 text-sm">Looking up product...</p>
+        </div>
+      )}
+
+      {phase === 'result' && food && (
+        <div className="absolute inset-x-0 bottom-0 bg-[#161b27] rounded-t-3xl p-6 space-y-4">
+          <div>
+            <p className="text-white font-bold text-lg leading-tight">{food.name}</p>
+            {food.brand      && <p className="text-white/50 text-sm mt-0.5">{food.brand}</p>}
+            {food.serving_size && <p className="text-white/35 text-xs mt-1">Per serving: {food.serving_size}</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              { label: 'Calories', value: food.energy_kcal, unit: 'kcal' },
+              { label: 'Protein',  value: food.protein_g,   unit: 'g'    },
+              { label: 'Carbs',    value: food.carbs_g,     unit: 'g'    },
+              { label: 'Fat',      value: food.fat_g,       unit: 'g'    },
+            ] as const).map(m => (
+              <div key={m.label} className="rounded-xl bg-white/5 border border-white/8 px-4 py-3">
+                <p className="text-white/45 text-xs">{m.label}</p>
+                <p className="text-white font-bold text-lg leading-none">
+                  {m.value != null ? Number(m.value).toFixed(1) : '—'}
+                  <span className="text-white/40 text-xs font-normal ml-1">{m.unit}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-3 pt-1">
+            <button onClick={handleScanAgain}
+              className="flex-1 py-3 rounded-2xl bg-white/10 text-white font-semibold text-sm active:scale-95 transition-transform">
+              Scan Again
+            </button>
+            <button onClick={onClose}
+              className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold text-sm active:scale-95 transition-transform">
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      {phase === 'error' && (
+        <div className="absolute inset-x-0 bottom-0 bg-[#161b27] rounded-t-3xl p-6 space-y-3 text-center">
+          <p className="text-white font-semibold">Product not found</p>
+          <p className="text-white/50 text-sm">This barcode isn't in the Open Food Facts database.</p>
+          <div className="flex gap-3 pt-1">
+            <button onClick={handleScanAgain}
+              className="flex-1 py-3 rounded-2xl bg-white/10 text-white font-semibold text-sm active:scale-95 transition-transform">
+              Try Again
+            </button>
+            <button onClick={onClose}
+              className="flex-1 py-3 rounded-2xl bg-white/8 text-white/50 font-semibold text-sm active:scale-95 transition-transform">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Nutrition view ─────────────────────────────────────────────
 function NutritionView({ clientId }: { clientId: string }) {
   const [plan, setPlan] = useState<{
@@ -3331,7 +3487,8 @@ function NutritionView({ clientId }: { clientId: string }) {
     fat_g?: number | null
     notes?: string | null
   } | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading]       = useState(true)
+  const [showScanner, setShowScanner] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -3369,60 +3526,75 @@ function NutritionView({ clientId }: { clientId: string }) {
           <div className="flex justify-center pt-16">
             <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
           </div>
-        ) : !plan ? (
-          <div className="flex items-center justify-center min-h-[50vh]">
-            <EmptyState
-              icon={<Utensils size={28} className="text-rose-400/60" />}
-              title="No nutrition plan yet"
-              subtitle="Your coach hasn't set up nutrition guidance yet."
-              gradient="from-rose-500/10 to-pink-500/10"
-            />
-          </div>
         ) : (
           <>
-            {/* Coach notes */}
-            {plan.notes && (
-              <div className="rounded-2xl bg-white/6 border border-white/10 p-5">
-                <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-2">Coach Notes</p>
-                <p className="text-white text-sm leading-relaxed whitespace-pre-wrap">{plan.notes}</p>
+            {!plan ? (
+              <div className="flex items-center justify-center min-h-[35vh]">
+                <EmptyState
+                  icon={<Utensils size={28} className="text-rose-400/60" />}
+                  title="No nutrition plan yet"
+                  subtitle="Your coach hasn't set up nutrition guidance yet."
+                  gradient="from-rose-500/10 to-pink-500/10"
+                />
               </div>
-            )}
+            ) : (
+              <>
+                {/* Coach notes */}
+                {plan.notes && (
+                  <div className="rounded-2xl bg-white/6 border border-white/10 p-5">
+                    <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-2">Coach Notes</p>
+                    <p className="text-white text-sm leading-relaxed whitespace-pre-wrap">{plan.notes}</p>
+                  </div>
+                )}
 
-            {/* Macro targets */}
-            {hasMacros && (
-              <div className="rounded-2xl bg-white/6 border border-white/10 p-5">
-                <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-3">Daily Targets</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: 'Calories', value: plan.calories_target, unit: 'kcal', color: 'from-orange-500 to-amber-400' },
-                    { label: 'Protein',  value: plan.protein_g,       unit: 'g',    color: 'from-rose-500 to-pink-400'   },
-                    { label: 'Carbs',    value: plan.carbs_g,         unit: 'g',    color: 'from-blue-500 to-cyan-400'   },
-                    { label: 'Fat',      value: plan.fat_g,           unit: 'g',    color: 'from-violet-500 to-purple-400' },
-                  ].map(m => m.value != null && (
-                    <div key={m.label} className="rounded-xl bg-white/5 border border-white/8 px-4 py-3 flex flex-col gap-0.5">
-                      <span className="text-white/45 text-xs">{m.label}</span>
-                      <span className="text-white font-bold text-lg leading-none">{m.value}<span className="text-white/40 text-xs font-normal ml-1">{m.unit}</span></span>
+                {/* Macro targets */}
+                {hasMacros && (
+                  <div className="rounded-2xl bg-white/6 border border-white/10 p-5">
+                    <p className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-3">Daily Targets</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: 'Calories', value: plan.calories_target, unit: 'kcal' },
+                        { label: 'Protein',  value: plan.protein_g,       unit: 'g'   },
+                        { label: 'Carbs',    value: plan.carbs_g,         unit: 'g'   },
+                        { label: 'Fat',      value: plan.fat_g,           unit: 'g'   },
+                      ].map(m => m.value != null && (
+                        <div key={m.label} className="rounded-xl bg-white/5 border border-white/8 px-4 py-3 flex flex-col gap-0.5">
+                          <span className="text-white/45 text-xs">{m.label}</span>
+                          <span className="text-white font-bold text-lg leading-none">{m.value}<span className="text-white/40 text-xs font-normal ml-1">{m.unit}</span></span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                )}
+
+                {/* MFP button */}
+                {plan.mfp_username && (
+                  <a
+                    href={`https://www.myfitnesspal.com/food/diary/${plan.mfp_username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold text-sm shadow-lg shadow-rose-500/30 active:scale-95 transition-transform"
+                  >
+                    <ExternalLink size={16} />
+                    Open MyFitnessPal Diary
+                  </a>
+                )}
+              </>
             )}
 
-            {/* MFP button */}
-            {plan.mfp_username && (
-              <a
-                href={`https://www.myfitnesspal.com/food/diary/${plan.mfp_username}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold text-sm shadow-lg shadow-rose-500/30 active:scale-95 transition-transform"
-              >
-                <ExternalLink size={16} />
-                Open MyFitnessPal Diary
-              </a>
-            )}
+            {/* Scan button — always visible */}
+            <button
+              onClick={() => setShowScanner(true)}
+              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-white/8 border border-white/12 text-white font-semibold text-sm active:scale-95 transition-transform"
+            >
+              <Scan size={18} />
+              Scan Food Barcode
+            </button>
           </>
         )}
       </div>
+
+      {showScanner && <BarcodeScannerModal onClose={() => setShowScanner(false)} />}
     </div>
   )
 }

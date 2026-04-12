@@ -34,7 +34,7 @@ export default function AppLayout() {
       : 'FitProto')
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surface-100">
+    <div className="flex h-screen overflow-hidden bg-[#0d1117]">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex flex-shrink-0">
         <Sidebar />

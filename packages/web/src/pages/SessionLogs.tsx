@@ -44,19 +44,19 @@ function SessionCard({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-white border border-gray-200 rounded-2xl p-4 hover:border-brand-300 hover:shadow-sm transition-all group"
+      className="w-full text-left bg-[#161b27] border border-[#242d40] rounded-2xl p-4 hover:border-amber-400/20 hover:bg-[#1e2535] transition-all group"
     >
       {/* Client + status */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm shadow-brand-900/30">
+          <div className="w-8 h-8 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 text-xs font-bold flex-shrink-0">
             {(client?.name ?? '?').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="font-semibold text-gray-900 text-sm truncate group-hover:text-brand-600 transition-colors">
+            <p className="font-semibold text-[#e8edf5] text-sm truncate group-hover:text-amber-400 transition-colors">
               {client?.name ?? 'Unknown'}
             </p>
-            <div className="flex items-center gap-2 text-[11px] text-gray-400 mt-0.5">
+            <div className="flex items-center gap-2 text-[11px] text-[#4a5a75] mt-0.5">
               <span className="flex items-center gap-0.5"><CalendarDays size={10} />{formatDate(log.session_date)}</span>
               {log.session_time && (
                 <span className="flex items-center gap-0.5"><Clock size={10} />{formatTime(log.session_time)}</span>
@@ -67,23 +67,23 @@ function SessionCard({
         <span className={clsx(
           'flex-shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full border',
           isOpen
-            ? 'bg-amber-50 text-amber-700 border-amber-200'
-            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            ? 'bg-amber-400/10 text-amber-400 border-amber-400/20'
+            : 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20'
         )}>
           {isOpen ? 'Active' : 'Done'}
         </span>
       </div>
 
       {/* Workout info */}
-      <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+      <div className="flex items-center gap-3 text-xs text-[#8a9ab5] mb-3">
         {log.workout_type && (
-          <span className="flex items-center gap-1 font-medium text-gray-700">
-            <Dumbbell size={11} className="text-brand-400" />{log.workout_type}
+          <span className="flex items-center gap-1 font-medium text-[#e8edf5]">
+            <Dumbbell size={11} className="text-amber-400" />{log.workout_type}
           </span>
         )}
         {log.client_weight_kg != null && (
           <span className="flex items-center gap-1">
-            <Scale size={11} className="text-teal-400" />{log.client_weight_kg} kg
+            <Scale size={11} className="text-emerald-400" />{log.client_weight_kg} kg
           </span>
         )}
       </div>
@@ -91,25 +91,25 @@ function SessionCard({
       {/* Task summary */}
       {totalTasks > 0 ? (
         <div className="flex items-center gap-2 text-xs">
-          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="flex-1 h-1.5 bg-[#1e2535] rounded-full overflow-hidden">
             <div
               className="h-full bg-emerald-400 rounded-full transition-all"
               style={{ width: `${Math.round((doneTasks / totalTasks) * 100)}%` }}
             />
           </div>
-          <span className="text-gray-500 flex-shrink-0">
+          <span className="text-[#8a9ab5] flex-shrink-0">
             {isOpen && pendingTasks > 0
               ? `${pendingTasks} task${pendingTasks !== 1 ? 's' : ''} to review`
               : `${doneTasks}/${totalTasks} complete`}
           </span>
           {failedTasks > 0 && (
-            <span className="flex items-center gap-0.5 text-rose-500 font-semibold flex-shrink-0">
+            <span className="flex items-center gap-0.5 text-rose-400 font-semibold flex-shrink-0">
               <XCircle size={11} /> {failedTasks} failed
             </span>
           )}
         </div>
       ) : (
-        <p className="text-xs text-gray-400">No accountability tasks</p>
+        <p className="text-xs text-[#4a5a75]">No accountability tasks</p>
       )}
     </button>
   )
@@ -150,19 +150,19 @@ export default function SessionLogs() {
   const isLoading = cLoading || lLoading
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full bg-[#0d1117]">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-[#161b27] border-b border-[#242d40] px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">PT Session Logs</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h1 className="text-xl font-bold text-[#e8edf5]">PT Session Logs</h1>
+            <p className="text-sm text-[#8a9ab5] mt-0.5">
               Workout records, accountability tasks &amp; punishment evidence
             </p>
           </div>
           <button
             onClick={() => setShowNew(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-[#0d1117] text-sm font-black rounded-xl transition-all"
           >
             <Plus size={16} /> New Session
           </button>
@@ -172,37 +172,37 @@ export default function SessionLogs() {
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
         {/* Stat cards */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white border border-gray-200 rounded-2xl p-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Active Sessions</p>
-            <p className="text-2xl font-bold text-amber-600">{openLogs.length}</p>
-            <p className="text-xs text-gray-400 mt-0.5">awaiting review</p>
+          <div className="bg-[#161b27] border border-[#242d40] rounded-2xl p-4">
+            <p className="text-xs font-semibold text-[#8a9ab5] uppercase tracking-wider mb-1">Active Sessions</p>
+            <p className="text-2xl font-bold text-amber-400">{openLogs.length}</p>
+            <p className="text-xs text-[#4a5a75] mt-0.5">awaiting review</p>
           </div>
-          <div className="bg-white border border-gray-200 rounded-2xl p-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">This Week</p>
-            <p className="text-2xl font-bold text-brand-600">{thisWeekLogs.length}</p>
-            <p className="text-xs text-gray-400 mt-0.5">sessions logged</p>
+          <div className="bg-[#161b27] border border-[#242d40] rounded-2xl p-4">
+            <p className="text-xs font-semibold text-[#8a9ab5] uppercase tracking-wider mb-1">This Week</p>
+            <p className="text-2xl font-bold text-amber-400">{thisWeekLogs.length}</p>
+            <p className="text-xs text-[#4a5a75] mt-0.5">sessions logged</p>
           </div>
-          <div className="bg-white border border-gray-200 rounded-2xl p-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Outstanding</p>
-            <p className={clsx('text-2xl font-bold', outstandingPunishments > 0 ? 'text-rose-600' : 'text-gray-400')}>
+          <div className="bg-[#161b27] border border-[#242d40] rounded-2xl p-4">
+            <p className="text-xs font-semibold text-[#8a9ab5] uppercase tracking-wider mb-1">Outstanding</p>
+            <p className={clsx('text-2xl font-bold', outstandingPunishments > 0 ? 'text-rose-400' : 'text-[#4a5a75]')}>
               {outstandingPunishments}
             </p>
-            <p className="text-xs text-gray-400 mt-0.5">punishments unrecorded</p>
+            <p className="text-xs text-[#4a5a75] mt-0.5">punishments unrecorded</p>
           </div>
         </div>
 
         {/* Tabs + search */}
         <div className="flex items-center gap-3">
-          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+          <div className="flex gap-1 bg-[#161b27] border border-[#242d40] p-1 rounded-xl">
             {(['active', 'history'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
                 className={clsx(
                   'px-4 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize',
-                  tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  tab === t ? 'bg-[#1e2535] text-[#e8edf5] shadow-sm' : 'text-[#8a9ab5] hover:text-[#e8edf5]'
                 )}>
                 {t}
                 {t === 'active' && openLogs.length > 0 && (
-                  <span className="ml-1.5 bg-amber-400 text-white text-[10px] font-bold rounded-full w-4 h-4 inline-flex items-center justify-center">
+                  <span className="ml-1.5 bg-amber-400 text-[#0d1117] text-[10px] font-bold rounded-full w-4 h-4 inline-flex items-center justify-center">
                     {openLogs.length}
                   </span>
                 )}
@@ -210,34 +210,34 @@ export default function SessionLogs() {
             ))}
           </div>
           <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4a5a75]" />
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search by client or workout type…"
-              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all" />
+              className="w-full pl-9 pr-4 py-2 text-sm bg-[#1e2535] border border-[#2e3a52] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400/50 transition-all text-[#e8edf5] placeholder-[#4a5a75]" />
           </div>
         </div>
 
         {/* Session list */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 size={22} className="animate-spin text-brand-500" />
+            <Loader2 size={22} className="animate-spin text-amber-400" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
-              {tab === 'active' ? <CheckCircle2 size={24} className="text-emerald-400" /> : <ClipboardList size={24} className="text-gray-400" />}
+            <div className="w-14 h-14 bg-[#1e2535] rounded-2xl flex items-center justify-center mb-4">
+              {tab === 'active' ? <CheckCircle2 size={24} className="text-emerald-400" /> : <ClipboardList size={24} className="text-[#4a5a75]" />}
             </div>
-            <p className="text-base font-semibold text-gray-700">
+            <p className="text-base font-semibold text-[#e8edf5]">
               {tab === 'active' ? 'No active sessions' : 'No completed sessions yet'}
             </p>
-            <p className="text-sm text-gray-400 mt-1 max-w-xs">
+            <p className="text-sm text-[#8a9ab5] mt-1 max-w-xs">
               {tab === 'active'
                 ? 'All accountability tasks are reviewed — great work!'
                 : 'Completed sessions will appear here once reviewed.'}
             </p>
             {tab === 'active' && (
               <button onClick={() => setShowNew(true)}
-                className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-semibold rounded-xl hover:from-brand-700 hover:to-violet-700 transition-all">
+                className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-[#0d1117] text-sm font-black rounded-xl transition-all">
                 <Plus size={16} /> New Session
               </button>
             )}
@@ -257,13 +257,13 @@ export default function SessionLogs() {
 
         {/* Punishment callout */}
         {tab === 'active' && outstandingPunishments > 0 && (
-          <div className="border border-rose-200 bg-rose-50/60 rounded-2xl p-4 flex items-start gap-3">
-            <AlertTriangle size={16} className="text-rose-500 flex-shrink-0 mt-0.5" />
+          <div className="border border-rose-400/20 bg-rose-400/10 rounded-2xl p-4 flex items-start gap-3">
+            <AlertTriangle size={16} className="text-rose-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-rose-700">
+              <p className="text-sm font-semibold text-rose-400">
                 {outstandingPunishments} punishment{outstandingPunishments !== 1 ? 's' : ''} not yet recorded
               </p>
-              <p className="text-xs text-rose-500 mt-0.5">
+              <p className="text-xs text-rose-400/70 mt-0.5">
                 Open a session and add evidence notes for any failed tasks to keep a complete accountability record.
               </p>
             </div>

@@ -7,13 +7,13 @@ interface PlaceholderProps {
 
 export default function Placeholder({ title, description }: PlaceholderProps) {
   return (
-    <div className="flex items-center justify-center min-h-[60vh] p-6">
+    <div className="flex items-center justify-center min-h-[60vh] p-6 bg-[#0d1117]">
       <div className="text-center max-w-sm">
-        <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-5">
-          <Construction size={32} className="text-amber-500" />
+        <div className="w-16 h-16 rounded-2xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center mx-auto mb-5">
+          <Construction size={32} className="text-amber-400" />
         </div>
-        <h2 className="text-xl font-bold text-gray-800 mb-2">{title}</h2>
-        <p className="text-gray-500 text-sm">
+        <h2 className="text-xl font-black text-[#e8edf5] mb-2">{title}</h2>
+        <p className="text-[#4a5a75] text-sm">
           {description ?? 'This section is under construction. Check back soon!'}
         </p>
       </div>

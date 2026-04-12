@@ -17,17 +17,17 @@ function daysSince(dateStr: string): number {
 }
 
 function urgencyColor(days: number | null): string {
-  if (days === null) return 'bg-gray-100 text-gray-500 border-gray-200'
-  if (days <= 7)     return 'bg-emerald-50 text-emerald-700 border-emerald-200'
-  if (days <= 14)    return 'bg-amber-50 text-amber-700 border-amber-200'
-  return 'bg-rose-50 text-rose-700 border-rose-200'
+  if (days === null) return 'bg-[#1e2535] text-[#8a9ab5] border-[#2e3a52]'
+  if (days <= 7)     return 'bg-emerald-400/10 text-emerald-400 border-emerald-400/20'
+  if (days <= 14)    return 'bg-amber-400/10 text-amber-400 border-amber-400/20'
+  return 'bg-rose-400/10 text-rose-400 border-rose-400/20'
 }
 
 function urgencyDot(days: number | null): string {
-  if (days === null) return 'bg-gray-300'
-  if (days <= 7)     return 'bg-emerald-500'
+  if (days === null) return 'bg-[#4a5a75]'
+  if (days <= 7)     return 'bg-emerald-400'
   if (days <= 14)    return 'bg-amber-400'
-  return 'bg-rose-500'
+  return 'bg-rose-400'
 }
 
 function urgencyLabel(days: number | null): string {
@@ -79,20 +79,20 @@ function LogCheckInModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 overflow-y-auto max-h-[90vh]">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-[#161b27] border border-[#242d40] rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 overflow-y-auto max-h-[90vh]">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Log Check-in</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Record metrics for a client</p>
+            <h2 className="text-lg font-bold text-[#e8edf5]">Log Check-in</h2>
+            <p className="text-xs text-[#8a9ab5] mt-0.5">Record metrics for a client</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[#8a9ab5] hover:text-[#e8edf5] hover:bg-[#1e2535]">
             <X size={18} />
           </button>
         </div>
 
         {err && (
-          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700 flex items-start gap-2">
+          <div className="mb-4 p-3 bg-rose-400/10 border border-rose-400/20 rounded-xl text-sm text-rose-400 flex items-start gap-2">
             <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
             {err}
           </div>
@@ -102,12 +102,12 @@ function LogCheckInModal({
           {/* Client selector — only if not pre-selected */}
           {!preselectedClientId && (
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Client</label>
+              <label className="block text-xs font-semibold text-[#8a9ab5] uppercase tracking-wide mb-1.5">Client</label>
               <select
                 value={clientId}
                 onChange={e => setClientId(e.target.value)}
                 required
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all"
+                className="w-full px-3 py-2.5 text-sm border border-[#2e3a52] rounded-xl bg-[#1e2535] text-[#e8edf5] focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400/50 transition-all"
               >
                 <option value="">Select a client…</option>
                 {clients.filter(c => c.status === 'active').map(c => (
@@ -119,40 +119,40 @@ function LogCheckInModal({
 
           {/* Date */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Date</label>
+            <label className="block text-xs font-semibold text-[#8a9ab5] uppercase tracking-wide mb-1.5">Date</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all" />
+              className="w-full px-3 py-2.5 text-sm border border-[#2e3a52] rounded-xl bg-[#1e2535] text-[#e8edf5] focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400/50 transition-all" />
           </div>
 
           {/* Metrics grid */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1.5">
-                <Scale size={11} className="text-emerald-500" /> Weight (kg)
+              <label className="text-xs font-semibold text-[#8a9ab5] flex items-center gap-1 mb-1.5">
+                <Scale size={11} className="text-emerald-400" /> Weight (kg)
               </label>
               <input type="number" step="0.1" min="0" value={weight} onChange={e => setWeight(e.target.value)}
                 placeholder="–"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all" />
+                className="w-full px-3 py-2 text-sm border border-[#2e3a52] rounded-xl bg-[#1e2535] text-[#e8edf5] placeholder-[#4a5a75] focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400/50 transition-all" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1.5">
-                <TrendingUp size={11} className="text-teal-500" /> Body Fat (%)
+              <label className="text-xs font-semibold text-[#8a9ab5] flex items-center gap-1 mb-1.5">
+                <TrendingUp size={11} className="text-emerald-400" /> Body Fat (%)
               </label>
               <input type="number" step="0.1" min="0" max="100" value={fat} onChange={e => setFat(e.target.value)}
                 placeholder="–"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all" />
+                className="w-full px-3 py-2 text-sm border border-[#2e3a52] rounded-xl bg-[#1e2535] text-[#e8edf5] placeholder-[#4a5a75] focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400/50 transition-all" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1.5">
-                <Moon size={11} className="text-violet-500" /> Sleep (hrs)
+              <label className="text-xs font-semibold text-[#8a9ab5] flex items-center gap-1 mb-1.5">
+                <Moon size={11} className="text-[#8a9ab5]" /> Sleep (hrs)
               </label>
               <input type="number" step="0.5" min="0" max="24" value={sleep} onChange={e => setSleep(e.target.value)}
                 placeholder="–"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all" />
+                className="w-full px-3 py-2 text-sm border border-[#2e3a52] rounded-xl bg-[#1e2535] text-[#e8edf5] placeholder-[#4a5a75] focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400/50 transition-all" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1.5">
-                <Zap size={11} className="text-amber-500" /> Energy (1–10)
+              <label className="text-xs font-semibold text-[#8a9ab5] flex items-center gap-1 mb-1.5">
+                <Zap size={11} className="text-amber-400" /> Energy (1–10)
               </label>
               <div className="flex gap-1 flex-wrap">
                 {[1,2,3,4,5,6,7,8,9,10].map(n => (
@@ -160,8 +160,8 @@ function LogCheckInModal({
                     className={clsx(
                       'w-6 h-6 text-[11px] font-bold rounded-md border transition-all',
                       energy === n
-                        ? 'bg-amber-500 border-amber-500 text-white'
-                        : 'border-gray-200 text-gray-500 hover:border-amber-300'
+                        ? 'bg-amber-400 border-amber-400 text-[#0d1117]'
+                        : 'border-[#2e3a52] text-[#8a9ab5] bg-[#1e2535] hover:border-amber-400/50'
                     )}>
                     {n}
                   </button>
@@ -172,19 +172,19 @@ function LogCheckInModal({
 
           {/* Notes */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Notes</label>
+            <label className="block text-xs font-semibold text-[#8a9ab5] uppercase tracking-wide mb-1.5">Notes</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
               placeholder="How are they feeling, any changes…"
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 transition-all resize-none" />
+              className="w-full px-3 py-2.5 text-sm border border-[#2e3a52] rounded-xl bg-[#1e2535] text-[#e8edf5] placeholder-[#4a5a75] focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400/50 transition-all resize-none" />
           </div>
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+              className="flex-1 py-2.5 text-sm font-semibold text-[#8a9ab5] bg-[#1e2535] border border-[#2e3a52] rounded-xl hover:bg-[#242d40] transition-colors">
               Cancel
             </button>
             <button type="submit" disabled={!clientId || createCheckIn.isPending}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-violet-600 rounded-xl hover:from-brand-700 hover:to-violet-700 disabled:opacity-50 transition-all">
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-black text-[#0d1117] bg-amber-400 rounded-xl hover:bg-amber-300 disabled:opacity-50 transition-all">
               {createCheckIn.isPending
                 ? <><Loader2 size={14} className="animate-spin" /> Saving…</>
                 : <><CheckCircle2 size={14} /> Save Check-in</>}
@@ -199,10 +199,10 @@ function LogCheckInModal({
 // ─── Stat card ────────────────────────────────────────────────
 function StatCard({ label, value, sub, color }: { label: string; value: string | number; sub?: string; color: string }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{label}</p>
+    <div className="bg-[#161b27] border border-[#242d40] rounded-2xl p-5">
+      <p className="text-xs font-semibold text-[#8a9ab5] uppercase tracking-wider mb-1">{label}</p>
       <p className={clsx('text-2xl font-bold', color)}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-[#4a5a75] mt-0.5">{sub}</p>}
     </div>
   )
 }
@@ -225,16 +225,16 @@ function ClientCheckInCard({
   const dotClass   = urgencyDot(days)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col gap-3 hover:border-gray-300 hover:shadow-sm transition-all">
+    <div className="bg-[#161b27] border border-[#242d40] rounded-2xl p-4 flex flex-col gap-3 hover:border-amber-400/20 hover:bg-[#1e2535] transition-all">
       {/* Client info */}
       <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm shadow-brand-900/30">
+        <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 text-xs font-bold flex-shrink-0">
           {(client.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase())}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 text-sm truncate">{client.name}</p>
+          <p className="font-semibold text-[#e8edf5] text-sm truncate">{client.name}</p>
           {client.goal && (
-            <p className="text-xs text-gray-400 truncate mt-0.5">{client.goal}</p>
+            <p className="text-xs text-[#4a5a75] truncate mt-0.5">{client.goal}</p>
           )}
         </div>
         <span className={clsx('inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-semibold border flex-shrink-0', colorClass)}>
@@ -247,18 +247,18 @@ function ClientCheckInCard({
       {lastCheckIn && (
         <div className="grid grid-cols-4 gap-1.5">
           {[
-            { key: 'weight_kg',    icon: <Scale size={10} />,      unit: 'kg',  color: 'text-emerald-600' },
-            { key: 'body_fat_pct', icon: <TrendingUp size={10} />, unit: '%',   color: 'text-teal-600'    },
-            { key: 'energy_level', icon: <Zap size={10} />,        unit: '/10', color: 'text-amber-600'   },
-            { key: 'sleep_hours',  icon: <Moon size={10} />,       unit: 'h',   color: 'text-violet-600'  },
+            { key: 'weight_kg',    icon: <Scale size={10} />,      unit: 'kg',  color: 'text-emerald-400' },
+            { key: 'body_fat_pct', icon: <TrendingUp size={10} />, unit: '%',   color: 'text-emerald-400' },
+            { key: 'energy_level', icon: <Zap size={10} />,        unit: '/10', color: 'text-amber-400'   },
+            { key: 'sleep_hours',  icon: <Moon size={10} />,       unit: 'h',   color: 'text-[#8a9ab5]'   },
           ].map(m => {
             const val = lastCheckIn[m.key as keyof DbCheckIn]
             return (
-              <div key={m.key} className="bg-gray-50 rounded-lg px-2 py-1.5 text-center">
+              <div key={m.key} className="bg-[#0d1117] rounded-lg px-2 py-1.5 text-center">
                 <span className={clsx('flex items-center justify-center gap-0.5 mb-0.5', m.color)}>
                   {m.icon}
                 </span>
-                <p className="text-xs font-bold text-gray-700 leading-none">
+                <p className="text-xs font-bold text-[#e8edf5] leading-none">
                   {val != null ? `${val}${m.unit}` : '–'}
                 </p>
               </div>
@@ -268,21 +268,21 @@ function ClientCheckInCard({
       )}
 
       {/* Footer */}
-      <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
-        <span className="text-[11px] text-gray-400 flex-1">
+      <div className="flex items-center gap-2 pt-1 border-t border-[#242d40]">
+        <span className="text-[11px] text-[#4a5a75] flex-1">
           {recentCount > 0
             ? `${recentCount} check-in${recentCount !== 1 ? 's' : ''} total`
             : 'No check-ins yet'}
         </span>
         <button
           onClick={onLog}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-brand-600 bg-brand-50 border border-brand-200 rounded-lg hover:bg-brand-100 transition-colors"
+          className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg hover:bg-amber-400/20 transition-colors"
         >
           <Plus size={11} /> Log
         </button>
         <Link
           to={`/clients/${client.id}`}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-[#8a9ab5] bg-[#1e2535] border border-[#2e3a52] rounded-lg hover:bg-[#242d40] transition-colors"
         >
           View <ChevronRight size={11} />
         </Link>
@@ -341,19 +341,19 @@ export default function CheckIns() {
   const isLoading = clientsLoading || checkInsLoading
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full bg-[#0d1117]">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-[#161b27] border-b border-[#242d40] px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Check-ins</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h1 className="text-xl font-bold text-[#e8edf5]">Check-ins</h1>
+            <p className="text-sm text-[#8a9ab5] mt-0.5">
               Track client progress across weight, body fat, energy and sleep
             </p>
           </div>
           <button
             onClick={() => setLogModal({ open: true })}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-[#0d1117] text-sm font-black rounded-xl transition-all"
           >
             <Plus size={16} /> Log Check-in
           </button>
@@ -367,48 +367,48 @@ export default function CheckIns() {
             label="This Week"
             value={checkInsThisWeek.length}
             sub="check-ins logged"
-            color="text-brand-600"
+            color="text-amber-400"
           />
           <StatCard
             label="Clients Active"
             value={`${clientsActiveWeek} / ${activeClients.length}`}
             sub="checked in this week"
-            color="text-emerald-600"
+            color="text-emerald-400"
           />
           <StatCard
             label="Overdue"
             value={overdueCount}
             sub="clients 7+ days or never"
-            color={overdueCount > 0 ? 'text-rose-600' : 'text-gray-400'}
+            color={overdueCount > 0 ? 'text-rose-400' : 'text-[#4a5a75]'}
           />
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4a5a75]" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search clients…"
-            className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+            className="w-full pl-9 pr-4 py-2.5 text-sm bg-[#1e2535] border border-[#2e3a52] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400/50 transition-all text-[#e8edf5] placeholder-[#4a5a75]"
           />
         </div>
 
         {/* Client grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 size={22} className="animate-spin text-brand-500" />
+            <Loader2 size={22} className="animate-spin text-amber-400" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
-              <ClipboardList size={24} className="text-gray-400" />
+            <div className="w-14 h-14 bg-[#1e2535] rounded-2xl flex items-center justify-center mb-4">
+              <ClipboardList size={24} className="text-[#4a5a75]" />
             </div>
-            <p className="text-base font-semibold text-gray-700">
+            <p className="text-base font-semibold text-[#e8edf5]">
               {activeClients.length === 0 ? 'No active clients yet' : 'No clients match your search'}
             </p>
-            <p className="text-sm text-gray-400 mt-1 max-w-xs">
+            <p className="text-sm text-[#8a9ab5] mt-1 max-w-xs">
               {activeClients.length === 0
                 ? 'Add clients first, then log their check-ins here.'
                 : 'Try a different search term.'}
@@ -419,7 +419,7 @@ export default function CheckIns() {
             {/* Overdue section */}
             {filtered.some(s => s.days === null || s.days > 7) && (
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <p className="text-xs font-semibold text-[#8a9ab5] uppercase tracking-wider mb-3 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-rose-400" />
                   Needs Attention
                 </p>
@@ -443,7 +443,7 @@ export default function CheckIns() {
             {/* On track section */}
             {filtered.some(s => s.days !== null && s.days <= 7) && (
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <p className="text-xs font-semibold text-[#8a9ab5] uppercase tracking-wider mb-3 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400" />
                   On Track
                 </p>

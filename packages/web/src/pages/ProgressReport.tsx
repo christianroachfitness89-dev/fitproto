@@ -85,13 +85,13 @@ function StatCard({ icon, label, value, unit, sub }: {
   icon: React.ReactNode; label: string; value: string | number; unit?: string; sub?: React.ReactNode
 }) {
   return (
-    <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-      <div className="flex items-center gap-2 mb-2 text-gray-400">
+    <div className="bg-[#1e2535] rounded-2xl p-4 border border-[#242d40]">
+      <div className="flex items-center gap-2 mb-2 text-[#8a9ab5]">
         {icon}
         <span className="text-xs font-semibold uppercase tracking-wider">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-gray-900">
-        {value}{unit && <span className="text-sm font-normal text-gray-400 ml-1">{unit}</span>}
+      <p className="text-2xl font-black text-[#e8edf5]">
+        {value}{unit && <span className="text-sm font-normal text-[#8a9ab5] ml-1">{unit}</span>}
       </p>
       {sub && <div className="mt-1">{sub}</div>}
     </div>
@@ -103,11 +103,11 @@ function Trend({ first, last, unit, lowerIsBetter }: {
   first: number; last: number; unit: string; lowerIsBetter?: boolean
 }) {
   const delta = last - first
-  if (Math.abs(delta) < 0.01) return <span className="text-xs text-gray-400 flex items-center gap-1"><Minus size={11} /> No change</span>
+  if (Math.abs(delta) < 0.01) return <span className="text-xs text-[#4a5a75] flex items-center gap-1"><Minus size={11} /> No change</span>
   const good = lowerIsBetter ? delta < 0 : delta > 0
   const Icon = delta > 0 ? TrendingUp : TrendingDown
   return (
-    <span className={`text-xs flex items-center gap-1 ${good ? 'text-emerald-600' : 'text-rose-500'}`}>
+    <span className={`text-xs flex items-center gap-1 ${good ? 'text-emerald-400' : 'text-rose-400'}`}>
       <Icon size={11} />
       {delta > 0 ? '+' : ''}{delta.toFixed(1)} {unit}
     </span>
@@ -119,10 +119,10 @@ function ComplianceDonut({ pct }: { pct: number }) {
   const r  = 36, cx = 44, cy = 44
   const circumference = 2 * Math.PI * r
   const dash = (pct / 100) * circumference
-  const color = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#f43f5e'
+  const color = pct >= 80 ? '#34d399' : pct >= 50 ? '#fbbf24' : '#fb7185'
   return (
     <svg width={88} height={88} className="flex-shrink-0">
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f3f4f6" strokeWidth={8} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1e2535" strokeWidth={8} />
       <circle
         cx={cx} cy={cy} r={r} fill="none"
         stroke={color} strokeWidth={8}
@@ -130,7 +130,7 @@ function ComplianceDonut({ pct }: { pct: number }) {
         strokeLinecap="round"
         transform={`rotate(-90 ${cx} ${cy})`}
       />
-      <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fontSize={14} fontWeight={700} fill="#111">
+      <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fontSize={14} fontWeight={700} fill="#e8edf5">
         {Math.round(pct)}%
       </text>
     </svg>
@@ -276,14 +276,14 @@ export default function ProgressReport({ client, onClose }: {
       `}</style>
 
       {/* Modal backdrop */}
-      <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-start justify-center overflow-y-auto py-8 px-4 no-print">
-        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden">
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center overflow-y-auto py-8 px-4 no-print">
+        <div className="w-full max-w-2xl bg-[#161b27] border border-[#242d40] rounded-3xl shadow-2xl overflow-hidden">
 
           {/* Toolbar */}
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 flex-wrap no-print">
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-[#242d40] flex-wrap no-print">
             <div className="mr-1">
-              <p className="text-base font-bold text-gray-900 leading-none">Progress Report</p>
-              <p className="text-xs text-gray-400 mt-0.5">{client.name}</p>
+              <p className="text-base font-bold text-[#e8edf5] leading-none">Progress Report</p>
+              <p className="text-xs text-[#8a9ab5] mt-0.5">{client.name}</p>
             </div>
 
             {/* Preset buttons */}
@@ -294,8 +294,8 @@ export default function ProgressReport({ client, onClose }: {
                   onClick={() => setPreset(p.key)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                     preset === p.key
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      ? 'bg-amber-400 text-[#0d1117]'
+                      : 'bg-[#1e2535] text-[#8a9ab5] hover:bg-[#242d40] border border-[#2e3a52]'
                   }`}
                 >
                   {p.label}
@@ -306,11 +306,11 @@ export default function ProgressReport({ client, onClose }: {
             <div className="flex items-center gap-2 ml-auto">
               <button
                 onClick={() => window.print()}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-400 text-[#0d1117] text-sm font-black rounded-xl hover:bg-amber-300 transition-colors"
               >
                 <Printer size={14} /> Print / PDF
               </button>
-              <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100">
+              <button onClick={onClose} className="p-2 text-[#8a9ab5] hover:text-[#e8edf5] rounded-xl hover:bg-[#1e2535] transition-colors">
                 <X size={18} />
               </button>
             </div>
@@ -318,26 +318,26 @@ export default function ProgressReport({ client, onClose }: {
 
           {/* Custom date pickers */}
           {preset === 'custom' && (
-            <div className="flex items-center gap-3 px-5 py-3 bg-gray-50 border-b border-gray-100 no-print">
-              <Calendar size={14} className="text-gray-400" />
+            <div className="flex items-center gap-3 px-5 py-3 bg-[#1e2535] border-b border-[#242d40] no-print">
+              <Calendar size={14} className="text-[#8a9ab5]" />
               <div className="flex items-center gap-2">
                 <input
                   type="date"
                   value={customStart}
                   onChange={e => setCustomStart(e.target.value)}
-                  className="text-sm border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                  className="text-sm bg-[#1e2535] border border-[#2e3a52] rounded-xl px-3 py-1.5 text-[#c5cedb] focus:outline-none focus:border-amber-400/50"
                 />
-                <span className="text-gray-400 text-sm">to</span>
+                <span className="text-[#8a9ab5] text-sm">to</span>
                 <input
                   type="date"
                   value={customEnd}
                   onChange={e => setCustomEnd(e.target.value)}
                   max={new Date().toISOString().split('T')[0]}
-                  className="text-sm border border-gray-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                  className="text-sm bg-[#1e2535] border border-[#2e3a52] rounded-xl px-3 py-1.5 text-[#c5cedb] focus:outline-none focus:border-amber-400/50"
                 />
               </div>
               {(!customStart || !customEnd) && (
-                <p className="text-xs text-gray-400">Select a start and end date</p>
+                <p className="text-xs text-[#4a5a75]">Select a start and end date</p>
               )}
             </div>
           )}
@@ -347,28 +347,28 @@ export default function ProgressReport({ client, onClose }: {
             {/* Header */}
             <div className="flex items-start justify-between print-page">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
-                <p className="text-gray-500 text-sm mt-0.5">Progress Report · {sinceLabel} – {untilLabel}</p>
-                {client.goal && <p className="text-gray-400 text-xs mt-1">Goal: {client.goal}</p>}
+                <h1 className="text-2xl font-black text-[#e8edf5]">{client.name}</h1>
+                <p className="text-[#8a9ab5] text-sm mt-0.5">Progress Report · {sinceLabel} – {untilLabel}</p>
+                {client.goal && <p className="text-[#4a5a75] text-xs mt-1">Goal: {client.goal}</p>}
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-400">Generated</p>
-                <p className="text-sm text-gray-600 font-medium">{reportDate}</p>
+                <p className="text-xs text-[#4a5a75]">Generated</p>
+                <p className="text-sm text-[#8a9ab5] font-medium">{reportDate}</p>
               </div>
             </div>
 
-            <div className="border-t border-gray-100" />
+            <div className="border-t border-[#242d40]" />
 
             {/* All sections in a two-column grid when printed */}
             <div className="print-two-col space-y-4">
 
             {/* Body metrics */}
             <div className="print-page space-y-3">
-              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                <Scale size={14} className="text-brand-600" /> Body Metrics
+              <h2 className="text-sm font-bold text-[#8a9ab5] uppercase tracking-wider flex items-center gap-2">
+                <Scale size={14} className="text-amber-400" /> Body Metrics
               </h2>
               {checkIns.length === 0 ? (
-                <p className="text-gray-400 text-sm">No check-ins in this period.</p>
+                <p className="text-[#4a5a75] text-sm">No check-ins in this period.</p>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   {weightSeries.length > 0 && (
@@ -380,7 +380,7 @@ export default function ProgressReport({ client, onClose }: {
                       sub={weightSeries.length > 1
                         ? <div className="flex items-center justify-between">
                             <Trend first={weightSeries[0]} last={weightSeries[weightSeries.length - 1]} unit={weightLabel(unitSystem)} lowerIsBetter />
-                            <Sparkline values={weightSeries} color="#6366f1" />
+                            <Sparkline values={weightSeries} color="#fbbf24" />
                           </div>
                         : null}
                     />
@@ -394,7 +394,7 @@ export default function ProgressReport({ client, onClose }: {
                       sub={bfSeries.length > 1
                         ? <div className="flex items-center justify-between">
                             <Trend first={bfSeries[0]} last={bfSeries[bfSeries.length - 1]} unit="%" lowerIsBetter />
-                            <Sparkline values={bfSeries} color="#14b8a6" />
+                            <Sparkline values={bfSeries} color="#34d399" />
                           </div>
                         : null}
                     />
@@ -405,7 +405,7 @@ export default function ProgressReport({ client, onClose }: {
                       label="Avg Energy"
                       value={(energySeries.reduce((a, b) => a + b, 0) / energySeries.length).toFixed(1)}
                       unit="/ 10"
-                      sub={<Sparkline values={energySeries} color="#f59e0b" />}
+                      sub={<Sparkline values={energySeries} color="#fbbf24" />}
                     />
                   )}
                   {sleepSeries.length > 0 && (
@@ -414,21 +414,21 @@ export default function ProgressReport({ client, onClose }: {
                       label="Avg Sleep"
                       value={(sleepSeries.reduce((a, b) => a + b, 0) / sleepSeries.length).toFixed(1)}
                       unit="hrs"
-                      sub={<Sparkline values={sleepSeries} color="#8b5cf6" />}
+                      sub={<Sparkline values={sleepSeries} color="#818cf8" />}
                     />
                   )}
                 </div>
               )}
               {checkIns.length > 0 && (
-                <p className="text-xs text-gray-400">{checkIns.length} check-in{checkIns.length !== 1 ? 's' : ''} logged</p>
+                <p className="text-xs text-[#4a5a75]">{checkIns.length} check-in{checkIns.length !== 1 ? 's' : ''} logged</p>
               )}
             </div>
 
             {/* Custom metrics */}
             {metricDefs.length > 0 && filteredMetricValues.length > 0 && (
               <div className="print-page space-y-3">
-                <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                  <BarChart2 size={14} className="text-brand-600" /> Custom Metrics
+                <h2 className="text-sm font-bold text-[#8a9ab5] uppercase tracking-wider flex items-center gap-2">
+                  <BarChart2 size={14} className="text-amber-400" /> Custom Metrics
                 </h2>
                 <div className="grid grid-cols-2 gap-3">
                   {metricDefs.map(def => {
@@ -448,7 +448,7 @@ export default function ProgressReport({ client, onClose }: {
                         sub={series.length > 1
                           ? <div className="flex items-center justify-between">
                               <Trend first={series[0]} last={latest} unit={def.unit} />
-                              <Sparkline values={series} color="#6366f1" />
+                              <Sparkline values={series} color="#fbbf24" />
                             </div>
                           : null}
                       />
@@ -460,17 +460,17 @@ export default function ProgressReport({ client, onClose }: {
 
             {/* Workout compliance */}
             <div className="print-page space-y-3">
-              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                <Dumbbell size={14} className="text-brand-600" /> Workout Compliance
+              <h2 className="text-sm font-bold text-[#8a9ab5] uppercase tracking-wider flex items-center gap-2">
+                <Dumbbell size={14} className="text-amber-400" /> Workout Compliance
               </h2>
               {workoutLoad ? (
-                <div className="flex items-center gap-2 text-gray-400 text-sm">
+                <div className="flex items-center gap-2 text-[#8a9ab5] text-sm">
                   <Loader2 size={14} className="animate-spin" /> Loading...
                 </div>
               ) : compliance.assigned === 0 ? (
-                <p className="text-gray-400 text-sm">No workouts assigned in this period.</p>
+                <p className="text-[#4a5a75] text-sm">No workouts assigned in this period.</p>
               ) : (
-                <div className="bg-gray-50 rounded-2xl border border-gray-100 p-5">
+                <div className="bg-[#1e2535] rounded-2xl border border-[#242d40] p-5">
                   <div className="flex items-center gap-6">
                     {/* Donut */}
                     <ComplianceDonut pct={compliancePct ?? 0} />
@@ -478,26 +478,26 @@ export default function ProgressReport({ client, onClose }: {
                     {/* Stats breakdown */}
                     <div className="flex-1 space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">Assigned</span>
-                        <span className="text-sm font-bold text-gray-900">{compliance.assigned}</span>
+                        <span className="text-sm text-[#8a9ab5]">Assigned</span>
+                        <span className="text-sm font-bold text-[#e8edf5]">{compliance.assigned}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-sm text-emerald-600">
+                        <span className="flex items-center gap-1.5 text-sm text-emerald-400">
                           <CheckCircle2 size={13} /> Completed
                         </span>
-                        <span className="text-sm font-bold text-emerald-600">{compliance.completed}</span>
+                        <span className="text-sm font-bold text-emerald-400">{compliance.completed}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-sm text-rose-500">
+                        <span className="flex items-center gap-1.5 text-sm text-rose-400">
                           <XCircle size={13} /> Skipped
                         </span>
-                        <span className="text-sm font-bold text-rose-500">{compliance.skipped}</span>
+                        <span className="text-sm font-bold text-rose-400">{compliance.skipped}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-sm text-gray-400">
+                        <span className="flex items-center gap-1.5 text-sm text-[#4a5a75]">
                           <Clock size={13} /> Pending
                         </span>
-                        <span className="text-sm font-bold text-gray-400">{compliance.pending}</span>
+                        <span className="text-sm font-bold text-[#4a5a75]">{compliance.pending}</span>
                       </div>
                     </div>
                   </div>
@@ -515,38 +515,38 @@ export default function ProgressReport({ client, onClose }: {
 
               return (
                 <div className="print-page space-y-3">
-                  <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                    <Heart size={14} className="text-brand-600" /> Habit Compliance
+                  <h2 className="text-sm font-bold text-[#8a9ab5] uppercase tracking-wider flex items-center gap-2">
+                    <Heart size={14} className="text-amber-400" /> Habit Compliance
                   </h2>
 
                   {/* Overall summary card */}
-                  <div className="bg-gray-50 rounded-2xl border border-gray-100 p-5">
+                  <div className="bg-[#1e2535] rounded-2xl border border-[#242d40] p-5">
                     <div className="flex items-center gap-6">
                       <ComplianceDonut pct={overallPct} />
                       <div className="flex-1 space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-500">Active habits</span>
-                          <span className="text-sm font-bold text-gray-900">{habitStats.length}</span>
+                          <span className="text-sm text-[#8a9ab5]">Active habits</span>
+                          <span className="text-sm font-bold text-[#e8edf5]">{habitStats.length}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-500">Total check-ins</span>
-                          <span className="text-sm font-bold text-gray-900">{totalCompleted} / {totalPossible}</span>
+                          <span className="text-sm text-[#8a9ab5]">Total check-ins</span>
+                          <span className="text-sm font-bold text-[#e8edf5]">{totalCompleted} / {totalPossible}</span>
                         </div>
                         {habitStats.length > 1 && (
                           <>
-                            <div className="flex items-center justify-between pt-1 border-t border-gray-200">
-                              <span className="text-xs text-emerald-600 flex items-center gap-1">
+                            <div className="flex items-center justify-between pt-1 border-t border-[#242d40]">
+                              <span className="text-xs text-emerald-400 flex items-center gap-1">
                                 <CheckCircle2 size={12} /> Best
                               </span>
-                              <span className="text-xs font-semibold text-gray-600 truncate ml-2 max-w-[150px]">
+                              <span className="text-xs font-semibold text-[#8a9ab5] truncate ml-2 max-w-[150px]">
                                 {bestHabit.emoji} {bestHabit.name}
                               </span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-xs text-rose-500 flex items-center gap-1">
+                              <span className="text-xs text-rose-400 flex items-center gap-1">
                                 <XCircle size={12} /> Needs work
                               </span>
-                              <span className="text-xs font-semibold text-gray-600 truncate ml-2 max-w-[150px]">
+                              <span className="text-xs font-semibold text-[#8a9ab5] truncate ml-2 max-w-[150px]">
                                 {worstHabit.emoji} {worstHabit.name}
                               </span>
                             </div>
@@ -565,19 +565,19 @@ export default function ProgressReport({ client, onClose }: {
                           <span className="text-lg w-6 text-center flex-shrink-0">{h.emoji}</span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm text-gray-700 truncate">{h.name}</span>
-                              <span className={`text-xs font-semibold ml-2 flex-shrink-0 ${pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
+                              <span className="text-sm text-[#c5cedb] truncate">{h.name}</span>
+                              <span className={`text-xs font-semibold ml-2 flex-shrink-0 ${pct >= 80 ? 'text-emerald-400' : pct >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>
                                 {pct}%
                               </span>
                             </div>
-                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-1.5 bg-[#1e2535] rounded-full overflow-hidden">
                               <div
-                                className={`h-full rounded-full ${pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-400' : 'bg-rose-400'}`}
+                                className={`h-full rounded-full ${pct >= 80 ? 'bg-emerald-400' : pct >= 50 ? 'bg-amber-400' : 'bg-rose-400'}`}
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
                           </div>
-                          <span className="text-xs text-gray-400 flex-shrink-0">{h.completed}/{h.total}d</span>
+                          <span className="text-xs text-[#4a5a75] flex-shrink-0">{h.completed}/{h.total}d</span>
                         </div>
                       )
                     })}
@@ -589,8 +589,8 @@ export default function ProgressReport({ client, onClose }: {
             </div>{/* end print-two-col */}
 
             {/* Footer */}
-            <div className="border-t border-gray-100 pt-4 text-center">
-              <p className="text-xs text-gray-300">Generated by FitProto · {reportDate}</p>
+            <div className="border-t border-[#242d40] pt-4 text-center">
+              <p className="text-xs text-[#3a4a62]">Generated by FitProto · {reportDate}</p>
             </div>
           </div>
         </div>
