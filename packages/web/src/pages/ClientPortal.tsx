@@ -3375,19 +3375,20 @@ function MetricsView({ clientId }: { clientId: string }) {
 const SCANNER_ELEMENT_ID = 'fitproto-barcode-reader'
 
 function BarcodeScannerModal({ onClose }: { onClose: () => void }) {
-  const [phase, setPhase]   = useState<'scanning' | 'loading' | 'result' | 'camError' | 'error'>('scanning')
-  const [food, setFood]     = useState<FoodProduct | null>(null)
-  const scannerRef          = useRef<Html5Qrcode | null>(null)
-  const mountedRef          = useRef(true)
+  const [phase, setPhase] = useState<'scanning' | 'loading' | 'result' | 'camError' | 'error'>('scanning')
+  const [food, setFood]   = useState<FoodProduct | null>(null)
+  const scannerRef        = useRef<Html5Qrcode | null>(null)
+  const mountedRef        = useRef(true)
 
   async function startScanner() {
+    // html5-qrcode needs a DOM element with concrete pixel dimensions.
+    // We use `fixed inset-0` on the modal so it always has viewport size.
     const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID)
     scannerRef.current = scanner
     try {
       await scanner.start(
         { facingMode: 'environment' },
-        // No qrbox — scan full frame; we draw our own guide overlay
-        { fps: 10, aspectRatio: window.innerHeight / window.innerWidth },
+        { fps: 10 }, // no qrbox — scan full frame, CSS handles the guide
         async (barcode) => {
           if (!mountedRef.current) return
           await stopCamera(scanner)
@@ -3396,9 +3397,9 @@ function BarcodeScannerModal({ onClose }: { onClose: () => void }) {
           const product = await lookupBarcode(barcode)
           if (!mountedRef.current) return
           if (product) { setFood(product); setPhase('result') }
-          else          { setPhase('error') }
+          else         { setPhase('error') }
         },
-        () => {} // per-frame decode errors — normal, ignore
+        () => {} // per-frame decode noise — ignore
       )
     } catch {
       if (mountedRef.current) setPhase('camError')
@@ -3423,85 +3424,80 @@ function BarcodeScannerModal({ onClose }: { onClose: () => void }) {
   async function handleScanAgain() {
     setFood(null)
     setPhase('scanning')
-    // Re-create element so html5-qrcode has a clean DOM node
     const el = document.getElementById(SCANNER_ELEMENT_ID)
     if (el) el.innerHTML = ''
     await startScanner()
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black flex flex-col"
-      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
-    >
-      {/* Top bar */}
-      <div className="relative flex items-center justify-center px-4 py-3 flex-shrink-0">
-        <p className="text-white font-semibold text-sm tracking-wide">Scan Food Barcode</p>
+    // Full-screen fixed overlay — this gives the scanner div a concrete px size
+    <div className="fixed inset-0 z-50 bg-black overflow-hidden">
+
+      {/* Scanner element — CSS in index.css forces video to fill it */}
+      <div id={SCANNER_ELEMENT_ID} />
+
+      {/* ── Header overlay (gradient fade so camera shows through) ── */}
+      <div
+        className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-5 pb-10 bg-gradient-to-b from-black/70 to-transparent pointer-events-none"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 14px)' }}
+      >
+        <p className="text-white font-semibold text-sm tracking-wide pointer-events-auto">Scan Food Barcode</p>
         <button
           onClick={handleClose}
-          className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center active:bg-white/20"
+          className="w-9 h-9 rounded-full bg-black/50 flex items-center justify-center active:bg-black/70 pointer-events-auto"
         >
-          <X size={17} className="text-white" />
+          <X size={18} className="text-white" />
         </button>
       </div>
 
-      {/* Camera — html5-qrcode renders video into this div; we suppress its default UI */}
-      <div className="relative flex-1 overflow-hidden">
-        <div
-          id={SCANNER_ELEMENT_ID}
-          className="absolute inset-0 [&_video]:absolute [&_video]:inset-0 [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_img]:hidden [&_div]:border-0"
-        />
-
-        {/* Scan-frame guide overlay — only during active scanning */}
-        {phase === 'scanning' && (
-          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center gap-5">
-            {/* Dark vignette outside the frame */}
-            <div className="absolute inset-0 bg-black/40" />
-            {/* Scan frame */}
-            <div className="relative z-10 w-72 h-28">
-              {/* Corner brackets */}
-              <span className="absolute top-0 left-0 w-7 h-7 border-t-[3px] border-l-[3px] border-white rounded-tl" />
-              <span className="absolute top-0 right-0 w-7 h-7 border-t-[3px] border-r-[3px] border-white rounded-tr" />
-              <span className="absolute bottom-0 left-0 w-7 h-7 border-b-[3px] border-l-[3px] border-white rounded-bl" />
-              <span className="absolute bottom-0 right-0 w-7 h-7 border-b-[3px] border-r-[3px] border-white rounded-br" />
-              {/* Animated laser line */}
-              <span className="absolute left-2 right-2 h-px bg-rose-400 animate-pulse top-1/2" />
-            </div>
-            <p className="relative z-10 text-white/80 text-sm font-medium">Align barcode within the frame</p>
+      {/* ── Scan-frame guide (corners + laser) ── */}
+      {phase === 'scanning' && (
+        <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+          {/* Dark vignette outside the frame using box-shadow trick */}
+          <div className="relative w-72 h-28" style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' }}>
+            <span className="absolute top-0 left-0 w-7 h-7 border-t-[3px] border-l-[3px] border-white" />
+            <span className="absolute top-0 right-0 w-7 h-7 border-t-[3px] border-r-[3px] border-white" />
+            <span className="absolute bottom-0 left-0 w-7 h-7 border-b-[3px] border-l-[3px] border-white" />
+            <span className="absolute bottom-0 right-0 w-7 h-7 border-b-[3px] border-r-[3px] border-white" />
+            <span className="absolute left-1 right-1 h-px bg-rose-400/80 top-1/2 animate-pulse" />
           </div>
-        )}
-      </div>
+          <p className="absolute text-white/75 text-sm font-medium" style={{ top: 'calc(50% + 78px)' }}>
+            Align barcode within the frame
+          </p>
+        </div>
+      )}
 
-      {/* Loading overlay */}
+      {/* ── Loading ── */}
       {phase === 'loading' && (
-        <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-3 z-20">
+        <div className="absolute inset-0 z-20 bg-black/80 flex flex-col items-center justify-center gap-3">
           <div className="w-9 h-9 border-2 border-white/20 border-t-white rounded-full animate-spin" />
           <p className="text-white/70 text-sm">Looking up product...</p>
         </div>
       )}
 
-      {/* Camera permission error */}
+      {/* ── Camera permission / init error ── */}
       {phase === 'camError' && (
-        <div className="absolute inset-0 bg-black flex flex-col items-center justify-center gap-4 p-8 text-center z-20">
-          <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-2">
-            <Scan size={24} className="text-white/30" />
-          </div>
+        <div className="absolute inset-0 z-20 bg-black flex flex-col items-center justify-center gap-4 p-8 text-center">
+          <Scan size={32} className="text-white/20" />
           <p className="text-white font-semibold">Camera unavailable</p>
-          <p className="text-white/50 text-sm leading-relaxed">Allow camera access and make sure you're using HTTPS.</p>
-          <button onClick={handleClose} className="mt-2 px-8 py-3 rounded-2xl bg-white/10 text-white font-semibold text-sm active:scale-95 transition-transform">
+          <p className="text-white/50 text-sm leading-relaxed">
+            Allow camera access in your browser settings and make sure you're on HTTPS.
+          </p>
+          <button onClick={handleClose} className="px-8 py-3 rounded-2xl bg-white/10 text-white font-semibold text-sm active:scale-95 transition-transform">
             Close
           </button>
         </div>
       )}
 
-      {/* Result sheet */}
+      {/* ── Result sheet ── */}
       {phase === 'result' && food && (
-        <div className="absolute inset-x-0 bottom-0 bg-[#161b27] rounded-t-3xl z-20" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="absolute inset-x-0 bottom-0 z-20 bg-[#161b27] rounded-t-3xl"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="p-6 space-y-4">
             <div className="w-10 h-1 bg-white/20 rounded-full mx-auto" />
             <div>
               <p className="text-white font-bold text-lg leading-snug">{food.name}</p>
-              {food.brand       && <p className="text-white/50 text-sm mt-0.5">{food.brand}</p>}
+              {food.brand        && <p className="text-white/50 text-sm mt-0.5">{food.brand}</p>}
               {food.serving_size && <p className="text-white/35 text-xs mt-1">Per serving: {food.serving_size}</p>}
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -3521,12 +3517,10 @@ function BarcodeScannerModal({ onClose }: { onClose: () => void }) {
               ))}
             </div>
             <div className="flex gap-3 pt-1">
-              <button onClick={handleScanAgain}
-                className="flex-1 py-3.5 rounded-2xl bg-white/10 text-white font-semibold text-sm active:scale-95 transition-transform">
+              <button onClick={handleScanAgain} className="flex-1 py-3.5 rounded-2xl bg-white/10 text-white font-semibold text-sm active:scale-95 transition-transform">
                 Scan Again
               </button>
-              <button onClick={handleClose}
-                className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold text-sm active:scale-95 transition-transform">
+              <button onClick={handleClose} className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold text-sm active:scale-95 transition-transform">
                 Done
               </button>
             </div>
@@ -3534,9 +3528,10 @@ function BarcodeScannerModal({ onClose }: { onClose: () => void }) {
         </div>
       )}
 
-      {/* Not found sheet */}
+      {/* ── Not found sheet ── */}
       {phase === 'error' && (
-        <div className="absolute inset-x-0 bottom-0 bg-[#161b27] rounded-t-3xl z-20" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="absolute inset-x-0 bottom-0 z-20 bg-[#161b27] rounded-t-3xl"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="p-6 space-y-3 text-center">
             <div className="w-10 h-1 bg-white/20 rounded-full mx-auto" />
             <p className="text-white font-semibold pt-1">Product not found</p>
