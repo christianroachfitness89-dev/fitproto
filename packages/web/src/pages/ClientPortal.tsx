@@ -3401,48 +3401,10 @@ function MetricsView({ clientId }: { clientId: string }) {
 // ─── Barcode scanner modal ─────────────────────────────────────
 const SCANNER_ELEMENT_ID = 'fitproto-barcode-reader'
 
-// Derive display macros from a FoodProduct + an optional custom serving size (g)
-function getMacros(food: FoodProduct, customServingG: number | null) {
-  // 1. API has per-serving values → use them directly
-  if (food.energy_kcal_serving != null || food.protein_serving != null) {
-    return {
-      calories: food.energy_kcal_serving,
-      protein:  food.protein_serving,
-      carbs:    food.carbs_serving,
-      fat:      food.fat_serving,
-      label:    food.serving_size || 'per serving',
-      is100g:   false,
-    }
-  }
-  // 2. Serving size known in grams → multiply 100g values
-  const g = customServingG ?? food.serving_size_g
-  if (g != null && g > 0) {
-    const f = g / 100
-    return {
-      calories: food.energy_kcal_100g != null ? food.energy_kcal_100g * f : null,
-      protein:  food.protein_100g     != null ? food.protein_100g     * f : null,
-      carbs:    food.carbs_100g       != null ? food.carbs_100g       * f : null,
-      fat:      food.fat_100g         != null ? food.fat_100g         * f : null,
-      label:    `per ${g}g serving`,
-      is100g:   false,
-    }
-  }
-  // 3. Fallback: per 100g
-  return {
-    calories: food.energy_kcal_100g,
-    protein:  food.protein_100g,
-    carbs:    food.carbs_100g,
-    fat:      food.fat_100g,
-    label:    'per 100g',
-    is100g:   true,
-  }
-}
-
 function BarcodeScannerModal({ onClose }: { onClose: () => void }) {
   const [phase, setPhase]               = useState<'scanning' | 'loading' | 'result' | 'camError' | 'error'>('scanning')
   const [food, setFood]                 = useState<FoodProduct | null>(null)
   const [customServingInput, setCustomServingInput] = useState('')
-  const [appliedServingG, setAppliedServingG]       = useState<number | null>(null)
   const scannerRef                      = useRef<Html5Qrcode | null>(null)
   const mountedRef                      = useRef(true)
 
@@ -3462,7 +3424,7 @@ function BarcodeScannerModal({ onClose }: { onClose: () => void }) {
           setPhase('loading')
           const product = await lookupBarcode(barcode)
           if (!mountedRef.current) return
-          if (product) { setFood(product); setPhase('result') }
+          if (product) { setFood(product); setCustomServingInput(product.serving_size_g?.toString() ?? ''); setPhase('result') }
           else         { setPhase('error') }
         },
         () => {} // per-frame decode noise — ignore
@@ -3490,7 +3452,6 @@ function BarcodeScannerModal({ onClose }: { onClose: () => void }) {
   async function handleScanAgain() {
     setFood(null)
     setCustomServingInput('')
-    setAppliedServingG(null)
     setPhase('scanning')
     const el = document.getElementById(SCANNER_ELEMENT_ID)
     if (el) el.innerHTML = ''
@@ -3559,7 +3520,10 @@ function BarcodeScannerModal({ onClose }: { onClose: () => void }) {
 
       {/* ── Result sheet ── */}
       {phase === 'result' && food && (() => {
-        const macros = getMacros(food, appliedServingG)
+        const servingG = parseFloat(customServingInput)
+        const hasServing = servingG > 0
+        const macro = (per100g: number | null) =>
+          per100g != null && hasServing ? (per100g * servingG / 100).toFixed(1) : '—'
         return (
           <div className="absolute inset-x-0 bottom-0 z-20 bg-[#161b27] rounded-t-3xl"
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -3570,59 +3534,49 @@ function BarcodeScannerModal({ onClose }: { onClose: () => void }) {
               <div>
                 <p className="text-white font-bold text-lg leading-snug">{food.name}</p>
                 {food.brand && <p className="text-white/50 text-sm mt-0.5">{food.brand}</p>}
-                <p className="text-amber-400/70 text-xs mt-1 font-medium">{macros.label}</p>
+                {hasServing && (
+                  <p className="text-amber-400/70 text-xs mt-1 font-medium">per {servingG}g</p>
+                )}
+              </div>
+
+              {/* Serving size input — always visible, pre-filled from API */}
+              <div className="space-y-1.5">
+                <p className="text-white/50 text-xs font-medium">Serving size</p>
+                <div className="relative">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="1"
+                    max="9999"
+                    placeholder="Enter grams e.g. 30"
+                    value={customServingInput}
+                    onChange={e => setCustomServingInput(e.target.value)}
+                    className="w-full bg-[#1e2535] border border-[#2e3a52] text-white text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:border-amber-400/50 placeholder:text-[#3a4a62]"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 text-xs">g</span>
+                </div>
               </div>
 
               {/* Macro grid */}
               <div className="grid grid-cols-2 gap-2">
                 {([
-                  { label: 'Calories', value: macros.calories, unit: 'kcal' },
-                  { label: 'Protein',  value: macros.protein,  unit: 'g'    },
-                  { label: 'Carbs',    value: macros.carbs,    unit: 'g'    },
-                  { label: 'Fat',      value: macros.fat,      unit: 'g'    },
+                  { label: 'Calories', value: macro(food.energy_kcal_100g), unit: 'kcal' },
+                  { label: 'Protein',  value: macro(food.protein_100g),     unit: 'g'    },
+                  { label: 'Carbs',    value: macro(food.carbs_100g),       unit: 'g'    },
+                  { label: 'Fat',      value: macro(food.fat_100g),         unit: 'g'    },
                 ] as const).map(m => (
                   <div key={m.label} className="rounded-xl bg-white/5 border border-white/8 px-4 py-3">
                     <p className="text-white/45 text-xs">{m.label}</p>
                     <p className="text-white font-bold text-xl leading-none mt-0.5">
-                      {m.value != null ? Number(m.value).toFixed(1) : '—'}
+                      {m.value}
                       <span className="text-white/40 text-xs font-normal ml-1">{m.unit}</span>
                     </p>
                   </div>
                 ))}
               </div>
 
-              {/* Serving size input — shown when falling back to per-100g */}
-              {macros.is100g && (
-                <div className="rounded-2xl bg-amber-400/8 border border-amber-400/20 p-4 space-y-2">
-                  <p className="text-amber-400/80 text-xs font-semibold">
-                    No serving size in database — enter yours to recalculate
-                  </p>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        min="1"
-                        max="9999"
-                        placeholder="e.g. 30"
-                        value={customServingInput}
-                        onChange={e => setCustomServingInput(e.target.value)}
-                        className="w-full bg-[#1e2535] border border-[#2e3a52] text-white text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:border-amber-400/50 placeholder:text-[#3a4a62]"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 text-xs">g</span>
-                    </div>
-                    <button
-                      onClick={() => {
-                        const g = parseFloat(customServingInput)
-                        if (g > 0) setAppliedServingG(g)
-                      }}
-                      disabled={!customServingInput || parseFloat(customServingInput) <= 0}
-                      className="px-4 py-2.5 rounded-xl bg-amber-400 text-[#0d1117] text-sm font-black disabled:opacity-40 active:scale-95 transition-transform"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
+              {!hasServing && (
+                <p className="text-amber-400/70 text-xs text-center">Enter a serving size above to see nutrition values</p>
               )}
 
               <div className="flex gap-3 pt-1">
