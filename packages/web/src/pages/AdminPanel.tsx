@@ -138,7 +138,7 @@ function BulkUpload({
               <button
                 onClick={handleImport}
                 disabled={loading}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#0d1117] text-sm font-black disabled:opacity-50 transition-colors"
               >
                 {loading ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
                 Import {validRows.length} rows
@@ -246,7 +246,7 @@ function ExerciseForm({
           <input
             value={name}
             onChange={e => setName(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-amber-400/50"
             placeholder="e.g. Barbell Squat"
           />
         </div>
@@ -255,7 +255,7 @@ function ExerciseForm({
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400/50"
           >
             <option value="">—</option>
             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -266,7 +266,7 @@ function ExerciseForm({
           <input
             value={muscleGroup}
             onChange={e => setMuscleGroup(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-amber-400/50"
             placeholder="e.g. Quads"
           />
         </div>
@@ -275,7 +275,7 @@ function ExerciseForm({
           <input
             value={equipment}
             onChange={e => setEquipment(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-amber-400/50"
             placeholder="e.g. Barbell"
           />
         </div>
@@ -284,7 +284,7 @@ function ExerciseForm({
           <select
             value={metricType}
             onChange={e => setMetricType(e.target.value as any)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400/50"
           >
             {METRIC_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
@@ -294,7 +294,7 @@ function ExerciseForm({
           <select
             value={difficulty}
             onChange={e => setDifficulty(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400/50"
           >
             <option value="">—</option>
             {DIFFICULTIES.map(d => <option key={d} value={d}>{d}</option>)}
@@ -306,7 +306,7 @@ function ExerciseForm({
             value={instructions}
             onChange={e => setInstructions(e.target.value)}
             rows={3}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/60 resize-none"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-amber-400/50 resize-none"
             placeholder="Step-by-step instructions..."
           />
         </div>
@@ -315,7 +315,7 @@ function ExerciseForm({
         <button
           onClick={handleSave}
           disabled={!name.trim() || saving}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium disabled:opacity-40 transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#0d1117] text-sm font-black disabled:opacity-40 transition-colors"
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
           Save
@@ -366,7 +366,7 @@ function MetricForm({
           <input
             value={name}
             onChange={e => setName(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-amber-400/50"
             placeholder="e.g. Body Weight"
           />
         </div>
@@ -375,7 +375,7 @@ function MetricForm({
           <input
             value={unit}
             onChange={e => setUnit(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-amber-400/50"
             placeholder="e.g. kg"
           />
         </div>
@@ -384,7 +384,7 @@ function MetricForm({
           <input
             value={emoji}
             onChange={e => setEmoji(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-amber-400/50"
             placeholder="📊"
           />
         </div>
@@ -393,7 +393,7 @@ function MetricForm({
           <select
             value={category}
             onChange={e => setCategory(e.target.value as any)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400/50"
           >
             {METRIC_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
@@ -403,7 +403,7 @@ function MetricForm({
         <button
           onClick={handleSave}
           disabled={!name.trim() || saving}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium disabled:opacity-40 transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#0d1117] text-sm font-black disabled:opacity-40 transition-colors"
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
           Save
@@ -454,7 +454,7 @@ function HabitForm({
           <input
             value={name}
             onChange={e => setName(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-amber-400/50"
             placeholder="e.g. Drink 2L Water"
           />
         </div>
@@ -463,7 +463,7 @@ function HabitForm({
           <input
             value={emoji}
             onChange={e => setEmoji(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-amber-400/50"
             placeholder="✅"
           />
         </div>
@@ -472,7 +472,7 @@ function HabitForm({
           <input
             value={description}
             onChange={e => setDescription(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-amber-400/50"
             placeholder="Optional description..."
           />
         </div>
@@ -481,7 +481,7 @@ function HabitForm({
           <select
             value={frequency}
             onChange={e => setFrequency(e.target.value as any)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500/60"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400/50"
           >
             {HABIT_FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
@@ -491,7 +491,7 @@ function HabitForm({
         <button
           onClick={handleSave}
           disabled={!name.trim() || saving}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium disabled:opacity-40 transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#0d1117] text-sm font-black disabled:opacity-40 transition-colors"
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
           Save
@@ -578,7 +578,7 @@ function ExercisesTab() {
         <p className="text-white/40 text-sm">{items.length} templates</p>
         <button
           onClick={() => { setAdding(true); setEditId(null) }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#0d1117] text-sm font-black transition-colors"
         >
           <Plus size={14} /> Add Exercise
         </button>
@@ -595,8 +595,8 @@ function ExercisesTab() {
       />
 
       {adding && (
-        <div className="bg-white/5 border border-violet-500/30 rounded-2xl p-4">
-          <p className="text-violet-400 text-xs font-semibold uppercase tracking-wider mb-3">New Exercise Template</p>
+        <div className="bg-white/5 border border-amber-400/20 rounded-2xl p-4">
+          <p className="text-amber-400 text-xs font-bold uppercase tracking-widest mb-3">New Exercise Template</p>
           <ExerciseForm onSave={handleCreate} onCancel={() => setAdding(false)} />
         </div>
       )}
@@ -611,7 +611,7 @@ function ExercisesTab() {
             <div key={item.id} className="bg-white/4 border border-white/8 rounded-2xl overflow-hidden">
               {editId === item.id ? (
                 <div className="p-4">
-                  <p className="text-violet-400 text-xs font-semibold uppercase tracking-wider mb-3">Editing</p>
+                  <p className="text-amber-400 text-xs font-bold uppercase tracking-widest mb-3">Editing</p>
                   <ExerciseForm
                     initial={item}
                     onSave={data => handleUpdate(item.id, data)}
@@ -706,7 +706,7 @@ function MetricsTab() {
         <p className="text-white/40 text-sm">{items.length} templates</p>
         <button
           onClick={() => { setAdding(true); setEditId(null) }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#0d1117] text-sm font-black transition-colors"
         >
           <Plus size={14} /> Add Metric
         </button>
@@ -723,8 +723,8 @@ function MetricsTab() {
       />
 
       {adding && (
-        <div className="bg-white/5 border border-violet-500/30 rounded-2xl p-4">
-          <p className="text-violet-400 text-xs font-semibold uppercase tracking-wider mb-3">New Metric Template</p>
+        <div className="bg-white/5 border border-amber-400/20 rounded-2xl p-4">
+          <p className="text-amber-400 text-xs font-bold uppercase tracking-widest mb-3">New Metric Template</p>
           <MetricForm onSave={handleCreate} onCancel={() => setAdding(false)} />
         </div>
       )}
@@ -832,7 +832,7 @@ function HabitsTab() {
         <p className="text-white/40 text-sm">{items.length} templates</p>
         <button
           onClick={() => { setAdding(true); setEditId(null) }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#0d1117] text-sm font-black transition-colors"
         >
           <Plus size={14} /> Add Habit
         </button>
@@ -849,8 +849,8 @@ function HabitsTab() {
       />
 
       {adding && (
-        <div className="bg-white/5 border border-violet-500/30 rounded-2xl p-4">
-          <p className="text-violet-400 text-xs font-semibold uppercase tracking-wider mb-3">New Habit Template</p>
+        <div className="bg-white/5 border border-amber-400/20 rounded-2xl p-4">
+          <p className="text-amber-400 text-xs font-bold uppercase tracking-widest mb-3">New Habit Template</p>
           <HabitForm onSave={handleCreate} onCancel={() => setAdding(false)} />
         </div>
       )}
@@ -955,7 +955,7 @@ function OrgsTab() {
                 <button
                   onClick={() => seedOrg(org.id)}
                   disabled={seeding === org.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600/80 hover:bg-violet-600 text-white text-xs font-medium disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#0d1117] text-xs font-black disabled:opacity-50 transition-colors"
                 >
                   {seeding === org.id ? <Loader2 size={12} className="animate-spin" /> : <Database size={12} />}
                   Seed Templates
@@ -982,16 +982,16 @@ export default function AdminPanel() {
   const [tab, setTab] = useState<AdminTab>('exercises')
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-[#0d1117] text-white">
       {/* Top bar */}
-      <div className="border-b border-white/8 px-6 py-4 flex items-center gap-4">
+      <div className="border-b border-[#1e2535] px-6 py-4 flex items-center gap-4">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center">
-            <ShieldCheck size={16} className="text-white" />
+          <div className="w-8 h-8 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center">
+            <ShieldCheck size={16} className="text-amber-400" />
           </div>
           <div>
-            <p className="text-white font-bold text-sm leading-none">FitProto Admin</p>
-            <p className="text-white/30 text-xs">Developer Console</p>
+            <p className="text-[#e8edf5] font-black text-sm leading-none" style={{ fontFamily: "'Syne', system-ui, sans-serif" }}>FitProto Admin</p>
+            <p className="text-amber-400/50 text-xs font-bold uppercase tracking-widest">Developer Console</p>
           </div>
         </div>
         <div className="flex-1" />
@@ -1005,15 +1005,15 @@ export default function AdminPanel() {
 
       <div className="max-w-3xl mx-auto px-6 py-8">
         {/* Tabs */}
-        <div className="flex gap-1 bg-white/4 rounded-2xl p-1 mb-8">
+        <div className="flex gap-1 bg-[#161b27] border border-[#242d40] rounded-2xl p-1 mb-8">
           {TABS.map(t => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 tab === t.key
-                  ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20'
-                  : 'text-white/40 hover:text-white/70'
+                  ? 'bg-amber-400 text-[#0d1117] font-black shadow'
+                  : 'text-[#4a5a75] hover:text-[#8a9ab5]'
               }`}
             >
               {t.icon}
